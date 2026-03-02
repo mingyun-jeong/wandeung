@@ -5,17 +5,17 @@ extension ClimbingGradeExt on ClimbingGrade {
   String get label => name.toUpperCase();
 }
 
-/// 난이도 색상
+/// 난이도 색상 (Hard → Easy 순서)
 enum DifficultyColor {
-  white('하얀', 0xFFFFFFFF),
-  yellow('노랑', 0xFFFFEB3B),
-  green('녹색', 0xFF4CAF50),
-  blue('파랑', 0xFF2196F3),
-  red('빨강', 0xFFF44336),
+  brown('갈색', 0xFF6D4C41),
+  gray('회색', 0xFF9E9E9E),
   purple('보라', 0xFF9C27B0),
+  red('빨강', 0xFFF44336),
+  blue('파랑', 0xFF2196F3),
+  green('초록', 0xFF4CAF50),
+  yellow('노랑', 0xFFFFEB3B),
   orange('주황', 0xFFFF9800),
-  pink('핑크', 0xFFE91E63),
-  black('검정', 0xFF212121);
+  white('흰색', 0xFFFFFFFF);
 
   final String korean;
   final int colorValue;

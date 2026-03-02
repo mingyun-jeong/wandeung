@@ -67,7 +67,9 @@ class _GymSelectorState extends ConsumerState<GymSelector> {
               border: OutlineInputBorder(),
               isDense: true,
             ),
+            textInputAction: TextInputAction.done,
             onChanged: widget.onManualInput,
+            onSubmitted: (_) => FocusScope.of(context).unfocus(),
           )
         else
           nearbyGyms.when(
@@ -82,7 +84,7 @@ class _GymSelectorState extends ConsumerState<GymSelector> {
                       separatorBuilder: (_, __) => const SizedBox(width: 8),
                       itemBuilder: (_, i) {
                         final gym = gyms[i];
-                        final isSelected = gym.id == widget.selectedGym?.id;
+                        final isSelected = gym.name == widget.selectedGym?.name;
                         return ChoiceChip(
                           label: Text(gym.name),
                           selected: isSelected,

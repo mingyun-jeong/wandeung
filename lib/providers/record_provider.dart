@@ -39,6 +39,29 @@ final recordDatesProvider =
       .toSet();
 });
 
+/// 캘린더 배지용: 월별 날짜 → 기록 개수 맵
+final recordCountsByDateProvider =
+    FutureProvider.family<Map<DateTime, int>, DateTime>((ref, month) async {
+  final userId = SupabaseConfig.client.auth.currentUser!.id;
+  final firstDay = DateTime(month.year, month.month, 1);
+  final lastDay = DateTime(month.year, month.month + 1, 0);
+
+  final response = await SupabaseConfig.client
+      .from('climbing_records')
+      .select('recorded_at')
+      .eq('user_id', userId)
+      .gte('recorded_at', firstDay.toIso8601String().split('T')[0])
+      .lte('recorded_at', lastDay.toIso8601String().split('T')[0]);
+
+  final counts = <DateTime, int>{};
+  for (final row in response as List) {
+    final date = DateTime.parse(row['recorded_at']);
+    final normalized = DateTime(date.year, date.month, date.day);
+    counts[normalized] = (counts[normalized] ?? 0) + 1;
+  }
+  return counts;
+});
+
 class RecordService {
   static final _supabase = SupabaseConfig.client;
 

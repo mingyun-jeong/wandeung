@@ -4,6 +4,7 @@ import 'package:camera/camera.dart';
 import 'package:path/path.dart' as p;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:permission_handler/permission_handler.dart';
 import '../providers/camera_settings_provider.dart';
 import '../providers/gym_provider.dart';
 import '../widgets/camera_grade_overlay.dart';
@@ -29,6 +30,7 @@ class _CameraTabScreenState extends ConsumerState<CameraTabScreen>
   double _currentZoom = 1.0;
   double _minZoom = 1.0;
   double _maxZoom = 1.0;
+  String? _errorMessage;
 
   @override
   void initState() {
@@ -50,9 +52,35 @@ class _CameraTabScreenState extends ConsumerState<CameraTabScreen>
   }
 
   Future<void> _initCamera() async {
-    _cameras = await availableCameras();
-    if (_cameras.isNotEmpty) {
-      await _setupCamera(_cameras[_selectedCameraIndex]);
+    final cameraStatus = await Permission.camera.request();
+    final audioStatus = await Permission.microphone.request();
+
+    if (!cameraStatus.isGranted || !audioStatus.isGranted) {
+      if (mounted) {
+        setState(() {
+          _errorMessage = '카메라 및 마이크 권한이 필요합니다.\n설정에서 권한을 허용해 주세요.';
+        });
+      }
+      return;
+    }
+
+    try {
+      _cameras = await availableCameras();
+      if (_cameras.isNotEmpty) {
+        await _setupCamera(_cameras[_selectedCameraIndex]);
+      } else {
+        if (mounted) {
+          setState(() {
+            _errorMessage = '사용 가능한 카메라를 찾을 수 없습니다.';
+          });
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _errorMessage = '카메라 초기화 실패: $e';
+        });
+      }
     }
   }
 
@@ -63,16 +91,26 @@ class _CameraTabScreenState extends ConsumerState<CameraTabScreen>
       ResolutionPreset.high,
       enableAudio: true,
     );
-    await controller.initialize();
-    if (mounted) {
-      final minZoom = await controller.getMinZoomLevel();
-      final maxZoom = await controller.getMaxZoomLevel();
-      setState(() {
-        _controller = controller;
-        _minZoom = minZoom;
-        _maxZoom = maxZoom;
-        _currentZoom = minZoom;
-      });
+    try {
+      await controller.initialize();
+      if (mounted) {
+        final minZoom = await controller.getMinZoomLevel();
+        final maxZoom = await controller.getMaxZoomLevel();
+        setState(() {
+          _controller = controller;
+          _minZoom = minZoom;
+          _maxZoom = maxZoom;
+          _currentZoom = minZoom;
+          _errorMessage = null;
+        });
+      }
+    } catch (e) {
+      controller.dispose();
+      if (mounted) {
+        setState(() {
+          _errorMessage = '카메라를 열 수 없습니다: $e';
+        });
+      }
     }
   }
 
@@ -153,6 +191,37 @@ class _CameraTabScreenState extends ConsumerState<CameraTabScreen>
         }
       });
     });
+
+    if (_errorMessage != null) {
+      return Scaffold(
+        backgroundColor: Colors.black,
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(32),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.camera_alt_outlined, color: Colors.white54, size: 64),
+                const SizedBox(height: 16),
+                Text(
+                  _errorMessage!,
+                  style: const TextStyle(color: Colors.white70, fontSize: 16),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 24),
+                ElevatedButton(
+                  onPressed: () async {
+                    setState(() => _errorMessage = null);
+                    await openAppSettings();
+                  },
+                  child: const Text('설정 열기'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
 
     if (_controller == null || !_controller!.value.isInitialized) {
       return const Scaffold(

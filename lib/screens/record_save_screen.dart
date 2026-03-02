@@ -2,9 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:video_player/video_player.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:path/path.dart' as p;
-import 'package:intl/intl.dart';
+import 'package:gal/gal.dart';
 import '../providers/camera_settings_provider.dart';
 import '../providers/record_provider.dart';
 import '../utils/constants.dart';
@@ -49,9 +47,9 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
   Future<void> _saveRecord() async {
     final settings = ref.read(cameraSettingsProvider);
 
-    if (settings.grade == null || settings.color == null) {
+    if (settings.color == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('난이도와 색상을 선택해주세요')),
+        const SnackBar(content: Text('난이도 색상을 선택해주세요')),
       );
       return;
     }
@@ -59,11 +57,11 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
     setState(() => _isSaving = true);
 
     try {
-      // 먼저 로컬 미디어 폴더에 저장
-      final localPath = await _saveToLocalMedia();
+      // 갤러리에 저장
+      await _saveToGallery();
 
       await RecordService.saveRecord(
-        videoPath: localPath ?? widget.videoPath,
+        videoPath: widget.videoPath,
         grade: settings.grade!.name,
         difficultyColor: settings.color!.name,
         status:
@@ -78,7 +76,7 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
         final selectedDate = ref.read(selectedDateProvider);
         final focusedMonth = ref.read(focusedMonthProvider);
         ref.invalidate(recordsByDateProvider(selectedDate));
-        ref.invalidate(recordDatesProvider(focusedMonth));
+        ref.invalidate(recordCountsByDateProvider(focusedMonth));
         Navigator.pop(context, true);
       }
     } catch (e) {
@@ -92,53 +90,33 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
     }
   }
 
-  Future<String?> _saveToLocalMedia() async {
+  Future<void> _saveToGallery() async {
     try {
-      final externalDir = await getExternalStorageDirectory();
-      if (externalDir == null) return null;
-
-      final dateStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
-      final mediaDir = Directory('${externalDir.path}/media/$dateStr');
-      await mediaDir.create(recursive: true);
-
-      final fileName = p.basename(widget.videoPath);
-      final destPath = '${mediaDir.path}/$fileName';
-      await File(widget.videoPath).copy(destPath);
-      return destPath;
+      await Gal.putVideo(widget.videoPath, album: '완등');
     } catch (_) {
-      return null;
+      // 갤러리 저장 실패해도 앱 내 기록은 유지
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final settings = ref.watch(cameraSettingsProvider);
-    final hasGradeColor = settings.grade != null && settings.color != null;
+    final hasColor = settings.color != null;
 
     return Scaffold(
       appBar: AppBar(
         leading: const BackButton(),
         actions: [
-          // 난이도 뱃지
-          if (hasGradeColor)
+          if (hasColor)
             Center(
               child: Container(
                 margin: const EdgeInsets.only(right: 16),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                width: 28,
+                height: 28,
                 decoration: BoxDecoration(
                   color: Color(settings.color!.colorValue),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  settings.grade!.label,
-                  style: TextStyle(
-                    color: settings.color == DifficultyColor.white
-                        ? Colors.black
-                        : Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 13,
-                  ),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.grey.shade300, width: 1.5),
                 ),
               ),
             ),
@@ -179,12 +157,9 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
             const SizedBox(height: 24),
 
             // 난이도 선택 (카메라에서 미선택 시 fallback)
-            if (!hasGradeColor) ...[
+            if (!hasColor) ...[
               DifficultySelector(
-                selectedGrade: settings.grade,
                 selectedColor: settings.color,
-                onGradeChanged: (g) =>
-                    ref.read(cameraSettingsProvider.notifier).setGrade(g),
                 onColorChanged: (c) =>
                     ref.read(cameraSettingsProvider.notifier).setColor(c),
               ),

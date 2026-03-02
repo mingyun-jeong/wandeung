@@ -87,7 +87,7 @@ class _GymSheetState extends ConsumerState<_GymSheet> {
     final settings = ref.watch(cameraSettingsProvider);
 
     return Padding(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -96,7 +96,7 @@ class _GymSheetState extends ConsumerState<_GymSheet> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text('암장',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
               TextButton(
                 onPressed: () => setState(() => _isManualMode = !_isManualMode),
                 child: Text(_isManualMode ? '목록에서 선택' : '직접 입력'),
@@ -119,30 +119,80 @@ class _GymSheetState extends ConsumerState<_GymSheet> {
           else
             nearbyGyms.when(
               data: (gyms) => gyms.isEmpty
-                  ? const Text('등록된 클라이밍장이 없습니다. 직접 입력해주세요.',
-                      style: TextStyle(color: Colors.grey))
-                  : Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
+                  ? const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 12),
+                      child: Text('등록된 클라이밍장이 없습니다. 직접 입력해주세요.',
+                          style: TextStyle(color: Colors.grey)),
+                    )
+                  : Column(
                       children: gyms.map((gym) {
-                        final isSelected = gym.id == settings.selectedGym?.id;
-                        return ChoiceChip(
-                          label: Text(gym.name),
-                          selected: isSelected,
-                          onSelected: (_) {
+                        final isSelected =
+                            gym.name == settings.selectedGym?.name;
+                        return InkWell(
+                          onTap: () {
                             ref
                                 .read(cameraSettingsProvider.notifier)
                                 .setGym(gym);
                             Navigator.pop(context);
                           },
+                          borderRadius: BorderRadius.circular(8),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 4, vertical: 12),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        gym.name,
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: isSelected
+                                              ? FontWeight.bold
+                                              : FontWeight.normal,
+                                          color: isSelected
+                                              ? Theme.of(context)
+                                                  .colorScheme
+                                                  .primary
+                                              : Colors.black87,
+                                        ),
+                                      ),
+                                      if (gym.address != null)
+                                        Text(
+                                          gym.address!,
+                                          style: const TextStyle(
+                                              fontSize: 12,
+                                              color: Colors.grey),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                    ],
+                                  ),
+                                ),
+                                if (isSelected)
+                                  Icon(Icons.check,
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .primary,
+                                      size: 20),
+                              ],
+                            ),
+                          ),
                         );
                       }).toList(),
                     ),
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (e, _) => Text('위치 정보를 가져올 수 없습니다',
-                  style: TextStyle(color: Colors.red.shade700)),
+              loading: () => const Padding(
+                padding: EdgeInsets.symmetric(vertical: 16),
+                child: Center(child: CircularProgressIndicator()),
+              ),
+              error: (e, _) => Padding(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                child: Text('위치 정보를 가져올 수 없습니다',
+                    style: TextStyle(color: Colors.red.shade700)),
+              ),
             ),
-          const SizedBox(height: 16),
         ],
       ),
     );

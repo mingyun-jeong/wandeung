@@ -2,16 +2,12 @@ import 'package:flutter/material.dart';
 import '../utils/constants.dart';
 
 class DifficultySelector extends StatelessWidget {
-  final ClimbingGrade? selectedGrade;
   final DifficultyColor? selectedColor;
-  final ValueChanged<ClimbingGrade> onGradeChanged;
   final ValueChanged<DifficultyColor> onColorChanged;
 
   const DifficultySelector({
     super.key,
-    this.selectedGrade,
     this.selectedColor,
-    required this.onGradeChanged,
     required this.onColorChanged,
   });
 
@@ -20,27 +16,12 @@ class DifficultySelector extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('난이도 등급',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-        const SizedBox(height: 8),
-        Wrap(
-          spacing: 8,
-          children: ClimbingGrade.values.map((grade) {
-            final isSelected = grade == selectedGrade;
-            return ChoiceChip(
-              label: Text(grade.label),
-              selected: isSelected,
-              onSelected: (_) => onGradeChanged(grade),
-            );
-          }).toList(),
-        ),
-        const SizedBox(height: 16),
         const Text('난이도 색상',
             style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
         const SizedBox(height: 8),
         Wrap(
-          spacing: 8,
-          runSpacing: 8,
+          spacing: 12,
+          runSpacing: 12,
           children: DifficultyColor.values.map((dc) {
             final isSelected = dc == selectedColor;
             return GestureDetector(
@@ -54,7 +35,9 @@ class DifficultySelector extends StatelessWidget {
                       color: Color(dc.colorValue),
                       shape: BoxShape.circle,
                       border: Border.all(
-                        color: isSelected ? Colors.green : Colors.grey.shade300,
+                        color: isSelected
+                            ? Theme.of(context).colorScheme.primary
+                            : Colors.grey.shade300,
                         width: isSelected ? 3 : 1,
                       ),
                     ),
@@ -67,8 +50,7 @@ class DifficultySelector extends StatelessWidget {
                         : null,
                   ),
                   const SizedBox(height: 2),
-                  Text(dc.korean,
-                      style: const TextStyle(fontSize: 10)),
+                  Text(dc.korean, style: const TextStyle(fontSize: 10)),
                 ],
               ),
             );

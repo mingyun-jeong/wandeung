@@ -34,7 +34,8 @@ class CameraSettings {
 }
 
 class CameraSettingsNotifier extends StateNotifier<CameraSettings> {
-  CameraSettingsNotifier() : super(const CameraSettings());
+  CameraSettingsNotifier()
+      : super(const CameraSettings(grade: ClimbingGrade.v1));
 
   void setGrade(ClimbingGrade grade) => state = state.copyWith(grade: grade);
   void setColor(DifficultyColor color) => state = state.copyWith(color: color);

@@ -99,4 +99,39 @@ class RecordService {
 
     return ClimbingRecord.fromMap(response);
   }
+
+  /// 기록 수정
+  static Future<ClimbingRecord> updateRecord({
+    required String recordId,
+    required String grade,
+    required String difficultyColor,
+    required String status,
+    String? gymId,
+    String? gymName,
+    List<String> tags = const [],
+  }) async {
+    final response = await _supabase
+        .from('climbing_records')
+        .update({
+          'grade': grade,
+          'difficulty_color': difficultyColor,
+          'status': status,
+          'gym_id': gymId,
+          'gym_name': gymName,
+          'tags': tags,
+        })
+        .eq('id', recordId)
+        .select()
+        .single();
+
+    return ClimbingRecord.fromMap(response);
+  }
+
+  /// 기록 삭제
+  static Future<void> deleteRecord(String recordId) async {
+    await _supabase
+        .from('climbing_records')
+        .delete()
+        .eq('id', recordId);
+  }
 }

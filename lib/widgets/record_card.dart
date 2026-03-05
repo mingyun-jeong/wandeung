@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import '../models/climbing_record.dart';
-import '../screens/record_detail_screen.dart';
+import '../screens/record_save_screen.dart';
 import '../utils/constants.dart';
 
 class RecordCard extends StatelessWidget {
@@ -23,7 +23,7 @@ class RecordCard extends StatelessWidget {
         onTap: () => Navigator.push(
           context,
           MaterialPageRoute(
-              builder: (_) => RecordDetailScreen(record: record)),
+              builder: (_) => RecordSaveScreen(existingRecord: record)),
         ),
         borderRadius: BorderRadius.circular(14),
         child: Padding(

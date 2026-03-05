@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:video_player/video_player.dart';
 import 'package:gal/gal.dart';
+import '../config/supabase_config.dart';
+import '../models/climbing_record.dart';
 import '../providers/camera_settings_provider.dart';
 import '../providers/record_provider.dart';
 import '../utils/constants.dart';
@@ -14,13 +16,17 @@ import '../utils/thumbnail_utils.dart';
 import 'records_tab_screen.dart';
 
 class RecordSaveScreen extends ConsumerStatefulWidget {
-  final String videoPath;
+  final String? videoPath;
   /// 편집된 영상인 경우 원본 파일 경로 (삭제 시 함께 정리)
   final String? originalVideoPath;
+  /// 기존 기록 편집 모드
+  final ClimbingRecord? existingRecord;
+
   const RecordSaveScreen({
     super.key,
-    required this.videoPath,
+    this.videoPath,
     this.originalVideoPath,
+    this.existingRecord,
   });
 
   @override
@@ -28,43 +34,137 @@ class RecordSaveScreen extends ConsumerStatefulWidget {
 }
 
 class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
-  late VideoPlayerController _videoController;
+  VideoPlayerController? _videoController;
   double _displayAspectRatio = 16 / 9;
   ClimbingStatus _status = ClimbingStatus.completed;
   List<String> _tags = [];
   bool _isSaving = false;
 
+  bool get _isEditMode => widget.existingRecord != null;
+
   @override
   void initState() {
     super.initState();
-    _videoController = VideoPlayerController.file(File(widget.videoPath))
-      ..initialize().then((_) {
-        final size = _videoController.value.size;
-        final rotation = _videoController.value.rotationCorrection;
-        if (size.width > 0 && size.height > 0 && (rotation == 90 || rotation == 270)) {
-          _displayAspectRatio = size.height / size.width;
-        } else {
-          _displayAspectRatio = _videoController.value.aspectRatio;
+
+    if (_isEditMode) {
+      final record = widget.existingRecord!;
+      _status = record.status == 'completed'
+          ? ClimbingStatus.completed
+          : ClimbingStatus.inProgress;
+      _tags = List<String>.from(record.tags);
+
+      // 편집 모드: cameraSettings에 기존 기록 값 세팅
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final notifier = ref.read(cameraSettingsProvider.notifier);
+        final grade = ClimbingGrade.values.firstWhere(
+          (g) => g.name == record.grade,
+          orElse: () => ClimbingGrade.v1,
+        );
+        final color = DifficultyColor.values.firstWhere(
+          (c) => c.name == record.difficultyColor,
+          orElse: () => DifficultyColor.white,
+        );
+        notifier.setGrade(grade);
+        notifier.setColor(color);
+        if (record.gymName != null) {
+          notifier.setManualGymName(record.gymName!);
         }
-        setState(() {});
       });
+    }
+
+    _initVideo();
+  }
+
+  Future<void> _initVideo() async {
+    final path = _isEditMode
+        ? widget.existingRecord!.videoPath
+        : widget.videoPath;
+    if (path == null) return;
+
+    if (path.startsWith('/')) {
+      if (!File(path).existsSync()) return;
+      _videoController = VideoPlayerController.file(File(path));
+    } else {
+      // Supabase Storage 경로
+      final url = await SupabaseConfig.client.storage
+          .from('climbing-videos')
+          .createSignedUrl(path, 3600);
+      _videoController = VideoPlayerController.networkUrl(Uri.parse(url));
+    }
+
+    await _videoController!.initialize();
+    final size = _videoController!.value.size;
+    final rotation = _videoController!.value.rotationCorrection;
+    if (size.width > 0 &&
+        size.height > 0 &&
+        (rotation == 90 || rotation == 270)) {
+      _displayAspectRatio = size.height / size.width;
+    } else {
+      _displayAspectRatio = _videoController!.value.aspectRatio;
+    }
+    if (mounted) setState(() {});
   }
 
   @override
   void dispose() {
-    _videoController.dispose();
+    _videoController?.dispose();
     super.dispose();
   }
 
   void _deleteVideo() {
-    File(widget.videoPath).deleteSync();
-    // 편집본인 경우 원본 파일도 정리
+    if (_isEditMode) {
+      _deleteRecord();
+      return;
+    }
+    File(widget.videoPath!).deleteSync();
     if (widget.originalVideoPath != null) {
       try {
         File(widget.originalVideoPath!).deleteSync();
       } catch (_) {}
     }
     Navigator.pop(context, false);
+  }
+
+  Future<void> _deleteRecord() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('기록 삭제'),
+        content: const Text('이 기록을 삭제하시겠습니까?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('취소'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child:
+                const Text('삭제', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _isSaving = true);
+    try {
+      await RecordService.deleteRecord(widget.existingRecord!.id!);
+      if (mounted) {
+        final selectedDate = ref.read(selectedDateProvider);
+        final focusedMonth = ref.read(focusedMonthProvider);
+        ref.invalidate(recordsByDateProvider(selectedDate));
+        ref.invalidate(recordCountsByDateProvider(focusedMonth));
+        Navigator.pop(context, true);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('삭제 실패: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
   }
 
   Future<void> _saveRecord() async {
@@ -80,26 +180,36 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
     setState(() => _isSaving = true);
 
     try {
-      // 갤러리에 저장
-      await _saveToGallery();
-
-      // 썸네일 생성 (실패해도 기록 저장은 계속)
-      final thumbnailPath = await generateThumbnail(widget.videoPath);
-
-      await RecordService.saveRecord(
-        videoPath: widget.videoPath,
-        grade: settings.grade!.name,
-        difficultyColor: settings.color!.name,
-        status:
-            _status == ClimbingStatus.completed ? 'completed' : 'in_progress',
-        gymId: settings.selectedGym?.id,
-        gymName: settings.selectedGym?.name ?? settings.manualGymName,
-        thumbnailPath: thumbnailPath,
-        tags: _tags,
-      );
+      if (_isEditMode) {
+        await RecordService.updateRecord(
+          recordId: widget.existingRecord!.id!,
+          grade: settings.grade!.name,
+          difficultyColor: settings.color!.name,
+          status: _status == ClimbingStatus.completed
+              ? 'completed'
+              : 'in_progress',
+          gymId: settings.selectedGym?.id,
+          gymName: settings.selectedGym?.name ?? settings.manualGymName,
+          tags: _tags,
+        );
+      } else {
+        await _saveToGallery();
+        final thumbnailPath = await generateThumbnail(widget.videoPath!);
+        await RecordService.saveRecord(
+          videoPath: widget.videoPath!,
+          grade: settings.grade!.name,
+          difficultyColor: settings.color!.name,
+          status: _status == ClimbingStatus.completed
+              ? 'completed'
+              : 'in_progress',
+          gymId: settings.selectedGym?.id,
+          gymName: settings.selectedGym?.name ?? settings.manualGymName,
+          thumbnailPath: thumbnailPath,
+          tags: _tags,
+        );
+      }
 
       if (mounted) {
-        // 기록 새로고침
         final selectedDate = ref.read(selectedDateProvider);
         final focusedMonth = ref.read(focusedMonthProvider);
         ref.invalidate(recordsByDateProvider(selectedDate));
@@ -119,10 +229,8 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
 
   Future<void> _saveToGallery() async {
     try {
-      await Gal.putVideo(widget.videoPath, album: '완등');
-    } catch (_) {
-      // 갤러리 저장 실패해도 앱 내 기록은 유지
-    }
+      await Gal.putVideo(widget.videoPath!, album: '완등');
+    } catch (_) {}
   }
 
   @override
@@ -133,6 +241,10 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
     return Scaffold(
       appBar: AppBar(
         leading: const BackButton(),
+        title: _isEditMode
+            ? const Text('기록 편집',
+                style: TextStyle(fontWeight: FontWeight.w700, fontSize: 18))
+            : null,
         actions: [
           if (hasColor)
             Center(
@@ -155,7 +267,8 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // 영상 프리뷰
-            if (_videoController.value.isInitialized)
+            if (_videoController != null &&
+                _videoController!.value.isInitialized)
               LayoutBuilder(
                 builder: (context, constraints) {
                   final maxHeight =
@@ -178,10 +291,10 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
                           child: Stack(
                             alignment: Alignment.center,
                             children: [
-                              VideoPlayer(_videoController),
+                              VideoPlayer(_videoController!),
                               IconButton(
                                 icon: Icon(
-                                  _videoController.value.isPlaying
+                                  _videoController!.value.isPlaying
                                       ? Icons.pause_circle
                                       : Icons.play_circle,
                                   size: 48,
@@ -189,9 +302,9 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
                                 ),
                                 onPressed: () {
                                   setState(() {
-                                    _videoController.value.isPlaying
-                                        ? _videoController.pause()
-                                        : _videoController.play();
+                                    _videoController!.value.isPlaying
+                                        ? _videoController!.pause()
+                                        : _videoController!.play();
                                   });
                                 },
                               ),
@@ -202,10 +315,17 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
                     ),
                   );
                 },
+              )
+            else if (_videoController == null &&
+                _isEditMode &&
+                widget.existingRecord!.videoPath != null)
+              const SizedBox(
+                height: 100,
+                child: Center(child: CircularProgressIndicator()),
               ),
             const SizedBox(height: 16),
 
-            // 난이도 선택 (카메라에서 미선택 시 fallback)
+            // 난이도 선택
             if (!hasColor) ...[
               DifficultySelector(
                 selectedColor: settings.color,
@@ -257,7 +377,6 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
                 ),
               )
             else
-              // 암장 미선택 시 선택 가능
               GymSelector(
                 selectedGym: null,
                 manualGymName: null,
@@ -355,13 +474,13 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
             ),
             const SizedBox(height: 24),
 
-            // 하단 버튼: 삭제 + 저장하기
+            // 하단 버튼
             Row(
               children: [
                 Expanded(
                   flex: 1,
                   child: OutlinedButton.icon(
-                    onPressed: _deleteVideo,
+                    onPressed: _isSaving ? null : _deleteVideo,
                     icon: const Icon(Icons.delete_outline, color: Colors.red),
                     label:
                         const Text('삭제', style: TextStyle(color: Colors.red)),
@@ -385,9 +504,9 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
                               strokeWidth: 2,
                             ),
                           )
-                        : const Icon(Icons.save_alt),
-                    label: const Text('저장하기',
-                        style: TextStyle(fontSize: 16)),
+                        : Icon(_isEditMode ? Icons.check : Icons.save_alt),
+                    label: Text(_isEditMode ? '수정하기' : '저장하기',
+                        style: const TextStyle(fontSize: 16)),
                     style: FilledButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 14),
                     ),

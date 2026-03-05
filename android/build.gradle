@@ -13,7 +13,13 @@ subprojects {
     project.evaluationDependsOn(":app")
     if (project.name != 'app') {
         project.afterEvaluate {
-            // already handled
+            if (project.hasProperty('android')) {
+                project.android {
+                    if (namespace == null || namespace.isEmpty()) {
+                        namespace = project.group.toString()
+                    }
+                }
+            }
         }
         project.beforeEvaluate {
             project.ext.flutter = [

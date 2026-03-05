@@ -15,7 +15,13 @@ import 'records_tab_screen.dart';
 
 class RecordSaveScreen extends ConsumerStatefulWidget {
   final String videoPath;
-  const RecordSaveScreen({super.key, required this.videoPath});
+  /// 편집된 영상인 경우 원본 파일 경로 (삭제 시 함께 정리)
+  final String? originalVideoPath;
+  const RecordSaveScreen({
+    super.key,
+    required this.videoPath,
+    this.originalVideoPath,
+  });
 
   @override
   ConsumerState<RecordSaveScreen> createState() => _RecordSaveScreenState();
@@ -52,6 +58,12 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
 
   void _deleteVideo() {
     File(widget.videoPath).deleteSync();
+    // 편집본인 경우 원본 파일도 정리
+    if (widget.originalVideoPath != null) {
+      try {
+        File(widget.originalVideoPath!).deleteSync();
+      } catch (_) {}
+    }
     Navigator.pop(context, false);
   }
 

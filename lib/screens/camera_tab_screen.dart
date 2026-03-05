@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'package:camera/camera.dart';
 import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -42,13 +43,15 @@ class _CameraTabScreenState extends ConsumerState<CameraTabScreen>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (_controller == null || !_controller!.value.isInitialized) return;
-
     if (state == AppLifecycleState.inactive) {
-      _controller?.dispose();
-      _controller = null;
+      if (_controller != null && _controller!.value.isInitialized) {
+        _controller?.dispose();
+        _controller = null;
+      }
     } else if (state == AppLifecycleState.resumed) {
-      _initCamera();
+      if (_controller == null) {
+        _initCamera();
+      }
     }
   }
 
@@ -138,24 +141,44 @@ class _CameraTabScreenState extends ConsumerState<CameraTabScreen>
         videoPath = mp4Path;
       }
 
-      final result = await Navigator.push<bool>(
+      // 캐시 → 영구 저장소로 이동 (캐시는 OS가 임의로 삭제 가능)
+      final appDir = await getApplicationDocumentsDirectory();
+      final videosDir = Directory(p.join(appDir.path, 'videos'));
+      if (!videosDir.existsSync()) {
+        videosDir.createSync(recursive: true);
+      }
+      final persistentPath = p.join(videosDir.path, p.basename(videoPath));
+      await File(videoPath).rename(persistentPath);
+      videoPath = persistentPath;
+
+      if (!mounted) return;
+      await Navigator.push<bool>(
         context,
         MaterialPageRoute(
           builder: (_) => RecordSaveScreen(videoPath: videoPath),
         ),
       );
 
+      if (!mounted) return;
       setState(() {
         _isRecording = false;
         _recordingSeconds = 0;
       });
 
     } else {
-      await _controller!.startVideoRecording();
-      _timer = Timer.periodic(const Duration(seconds: 1), (_) {
-        setState(() => _recordingSeconds++);
-      });
-      setState(() => _isRecording = true);
+      try {
+        await _controller!.startVideoRecording();
+        if (!mounted) return;
+        _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+          if (mounted) setState(() => _recordingSeconds++);
+        });
+        setState(() => _isRecording = true);
+      } catch (e) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('녹화 시작 실패: $e')),
+        );
+      }
     }
   }
 

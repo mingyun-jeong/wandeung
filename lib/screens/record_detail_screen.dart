@@ -6,6 +6,7 @@ import 'package:video_player/video_player.dart';
 import '../config/supabase_config.dart';
 import '../models/climbing_record.dart';
 import '../utils/constants.dart';
+import 'video_editor_screen.dart';
 
 class RecordDetailScreen extends StatefulWidget {
   final ClimbingRecord record;
@@ -32,6 +33,13 @@ class _RecordDetailScreenState extends State<RecordDetailScreen> {
 
     // 절대 경로면 로컬 파일, 아니면 Supabase Storage (구 기록 호환)
     if (path.startsWith('/')) {
+      if (!File(path).existsSync()) {
+        // 캐시에 저장된 구 기록의 영상이 삭제된 경우
+        if (mounted) {
+          setState(() {}); // _videoController == null → 영상 없음 표시
+        }
+        return;
+      }
       _videoController = VideoPlayerController.file(File(path));
     } else {
       final url = await SupabaseConfig.client.storage
@@ -95,6 +103,24 @@ class _RecordDetailScreenState extends State<RecordDetailScreen> {
           record.gymName ?? '등반 기록',
           style: const TextStyle(fontWeight: FontWeight.w700),
         ),
+        actions: [
+          if (record.videoPath != null)
+            IconButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => VideoEditorScreen(
+                      videoPath: record.videoPath!,
+                      existingRecord: record,
+                    ),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.edit),
+              tooltip: '편집',
+            ),
+        ],
       ),
       body: SingleChildScrollView(
         child: Column(
@@ -105,6 +131,25 @@ class _RecordDetailScreenState extends State<RecordDetailScreen> {
               AspectRatio(
                 aspectRatio: _displayAspectRatio!,
                 child: Chewie(controller: _chewieController!),
+              )
+            else if (record.videoPath != null &&
+                _videoController == null &&
+                record.videoPath!.startsWith('/') &&
+                !File(record.videoPath!).existsSync())
+              Container(
+                height: 200,
+                color: Colors.grey.shade200,
+                child: const Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.videocam_off, size: 48, color: Colors.grey),
+                      SizedBox(height: 8),
+                      Text('영상 파일이 삭제되었습니다',
+                          style: TextStyle(color: Colors.grey)),
+                    ],
+                  ),
+                ),
               )
             else if (record.videoPath != null)
               const SizedBox(

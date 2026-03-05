@@ -39,6 +39,7 @@ dependencies:
   google_sign_in: ^6.2.2
   camera: ^0.11.0+2
   video_player: ^2.9.5
+  chewie: ^1.8.5
   geolocator: ^13.0.0
   geocoding: ^3.0.0
   table_calendar: ^3.2.0
@@ -51,6 +52,7 @@ dependencies:
   http: ^1.2.2
   permission_handler: ^11.3.1
   gal: ^1.1.0
+  video_thumbnail: ^0.5.3
   flutter_naver_map: ^1.4.0
 
 dev_dependencies:

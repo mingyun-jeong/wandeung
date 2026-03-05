@@ -54,5 +54,5 @@ final cameraSettingsProvider =
   (ref) => CameraSettingsNotifier(),
 );
 
-/// 하단 네비게이션 탭 인덱스 (0=지도, 1=촬영, 2=캘린더)
-final bottomNavIndexProvider = StateProvider<int>((ref) => 1);
+/// 하단 네비게이션 탭 인덱스 (0=촬영, 1=캘린더)
+final bottomNavIndexProvider = StateProvider<int>((ref) => 0);

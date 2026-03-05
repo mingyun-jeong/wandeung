@@ -73,6 +73,7 @@ class RecordService {
     required String status,
     String? gymId,
     String? gymName,
+    String? thumbnailPath,
     List<String> tags = const [],
   }) async {
     final userId = _supabase.auth.currentUser!.id;
@@ -85,6 +86,7 @@ class RecordService {
       difficultyColor: difficultyColor,
       status: status,
       videoPath: videoPath,
+      thumbnailPath: thumbnailPath,
       tags: tags,
       recordedAt: DateTime.now(),
     );

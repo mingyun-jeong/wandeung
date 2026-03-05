@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:geolocator/geolocator.dart';
 import '../providers/camera_settings_provider.dart';
 import '../providers/gym_provider.dart';
 
@@ -81,9 +82,15 @@ class _GymSheetState extends ConsumerState<_GymSheet> {
     super.dispose();
   }
 
+  String _formatDistance(double meters) {
+    if (meters < 1000) return '${meters.round()}m';
+    return '${(meters / 1000).toStringAsFixed(1)}km';
+  }
+
   @override
   Widget build(BuildContext context) {
     final nearbyGyms = ref.watch(nearbyGymsProvider);
+    final position = ref.watch(userPositionProvider);
     final settings = ref.watch(cameraSettingsProvider);
 
     return Padding(
@@ -118,71 +125,102 @@ class _GymSheetState extends ConsumerState<_GymSheet> {
             )
           else
             nearbyGyms.when(
-              data: (gyms) => gyms.isEmpty
-                  ? const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 12),
-                      child: Text('등록된 클라이밍장이 없습니다. 직접 입력해주세요.',
-                          style: TextStyle(color: Colors.grey)),
-                    )
-                  : Column(
-                      children: gyms.map((gym) {
-                        final isSelected =
-                            gym.name == settings.selectedGym?.name;
-                        return InkWell(
-                          onTap: () {
-                            ref
-                                .read(cameraSettingsProvider.notifier)
-                                .setGym(gym);
-                            Navigator.pop(context);
-                          },
-                          borderRadius: BorderRadius.circular(8),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 4, vertical: 12),
-                            child: Row(
-                              children: [
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        gym.name,
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          fontWeight: isSelected
-                                              ? FontWeight.bold
-                                              : FontWeight.normal,
-                                          color: isSelected
-                                              ? Theme.of(context)
-                                                  .colorScheme
-                                                  .primary
-                                              : Colors.black87,
-                                        ),
-                                      ),
-                                      if (gym.address != null)
-                                        Text(
-                                          gym.address!,
-                                          style: const TextStyle(
-                                              fontSize: 12,
-                                              color: Colors.grey),
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                    ],
+              data: (gyms) {
+                final displayGyms = gyms.take(5).toList();
+                if (displayGyms.isEmpty) {
+                  return const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 12),
+                    child: Text('주변 클라이밍장을 찾을 수 없습니다. 직접 입력해주세요.',
+                        style: TextStyle(color: Colors.grey)),
+                  );
+                }
+                final pos = position.valueOrNull;
+                return Column(
+                  children: displayGyms.map((gym) {
+                    final isSelected =
+                        gym.name == settings.selectedGym?.name;
+                    String? distText;
+                    if (pos != null &&
+                        gym.latitude != null &&
+                        gym.longitude != null) {
+                      final dist = Geolocator.distanceBetween(
+                        pos.latitude,
+                        pos.longitude,
+                        gym.latitude!,
+                        gym.longitude!,
+                      );
+                      distText = _formatDistance(dist);
+                    }
+                    return InkWell(
+                      onTap: () {
+                        ref
+                            .read(cameraSettingsProvider.notifier)
+                            .setGym(gym);
+                        Navigator.pop(context);
+                      },
+                      borderRadius: BorderRadius.circular(8),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 4, vertical: 12),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment:
+                                    CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    gym.name,
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: isSelected
+                                          ? FontWeight.bold
+                                          : FontWeight.normal,
+                                      color: isSelected
+                                          ? Theme.of(context)
+                                              .colorScheme
+                                              .primary
+                                          : Colors.black87,
+                                    ),
+                                  ),
+                                  if (gym.address != null)
+                                    Text(
+                                      gym.address!,
+                                      style: const TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.grey),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                ],
+                              ),
+                            ),
+                            if (distText != null)
+                              Padding(
+                                padding: const EdgeInsets.only(left: 8),
+                                child: Text(
+                                  distText,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey.shade600,
                                   ),
                                 ),
-                                if (isSelected)
-                                  Icon(Icons.check,
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .primary,
-                                      size: 20),
-                              ],
-                            ),
-                          ),
-                        );
-                      }).toList(),
-                    ),
+                              ),
+                            if (isSelected)
+                              Padding(
+                                padding: const EdgeInsets.only(left: 8),
+                                child: Icon(Icons.check,
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .primary,
+                                    size: 20),
+                              ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                );
+              },
               loading: () => const Padding(
                 padding: EdgeInsets.symmetric(vertical: 16),
                 child: Center(child: CircularProgressIndicator()),

@@ -24,6 +24,7 @@ class _CameraTabScreenState extends ConsumerState<CameraTabScreen>
   CameraController? _controller;
   List<CameraDescription> _cameras = [];
   bool _isRecording = false;
+  bool _isInitializing = false;
   int _recordingSeconds = 0;
   Timer? _timer;
   int _selectedCameraIndex = 0;
@@ -52,28 +53,31 @@ class _CameraTabScreenState extends ConsumerState<CameraTabScreen>
   }
 
   Future<void> _initCamera() async {
-    final cameraStatus = await Permission.camera.request();
-    final audioStatus = await Permission.microphone.request();
+    if (_isInitializing) return;
+    _isInitializing = true;
 
-    if (!cameraStatus.isGranted || !audioStatus.isGranted) {
-      if (mounted) {
+    try {
+      final cameraStatus = await Permission.camera.request();
+      final audioStatus = await Permission.microphone.request();
+
+      if (!mounted) return;
+
+      if (!cameraStatus.isGranted || !audioStatus.isGranted) {
         setState(() {
           _errorMessage = '카메라 및 마이크 권한이 필요합니다.\n설정에서 권한을 허용해 주세요.';
         });
+        return;
       }
-      return;
-    }
 
-    try {
       _cameras = await availableCameras();
+      if (!mounted) return;
+
       if (_cameras.isNotEmpty) {
         await _setupCamera(_cameras[_selectedCameraIndex]);
       } else {
-        if (mounted) {
-          setState(() {
-            _errorMessage = '사용 가능한 카메라를 찾을 수 없습니다.';
-          });
-        }
+        setState(() {
+          _errorMessage = '사용 가능한 카메라를 찾을 수 없습니다.';
+        });
       }
     } catch (e) {
       if (mounted) {
@@ -81,11 +85,14 @@ class _CameraTabScreenState extends ConsumerState<CameraTabScreen>
           _errorMessage = '카메라 초기화 실패: $e';
         });
       }
+    } finally {
+      _isInitializing = false;
     }
   }
 
   Future<void> _setupCamera(CameraDescription camera) async {
     _controller?.dispose();
+    _controller = null;
     final controller = CameraController(
       camera,
       ResolutionPreset.high,
@@ -349,10 +356,10 @@ class _CameraTabScreenState extends ConsumerState<CameraTabScreen>
             ),
           ),
 
-          // 우측 하단: 줌 컨트롤
+          // 우측: 줌 컨트롤 (암장 선택과 같은 높이)
           Positioned(
-            bottom: 48,
             right: 16,
+            bottom: 160,
             child: ZoomControls(
               currentZoom: _currentZoom,
               minZoom: _minZoom,

@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import '../models/climbing_record.dart';
 import '../screens/record_detail_screen.dart';
@@ -29,34 +30,8 @@ class RecordCard extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           child: Row(
             children: [
-              // 난이도 뱃지
-              Container(
-                width: 46,
-                height: 46,
-                decoration: BoxDecoration(
-                  color: Color(color.colorValue),
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Color(color.colorValue).withOpacity(0.3),
-                      blurRadius: 6,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: Center(
-                  child: Text(
-                    record.grade.toUpperCase(),
-                    style: TextStyle(
-                      color: color == DifficultyColor.white
-                          ? Colors.black87
-                          : Colors.white,
-                      fontWeight: FontWeight.w800,
-                      fontSize: 13,
-                    ),
-                  ),
-                ),
-              ),
+              // 썸네일 또는 난이도 뱃지
+              _buildThumbnailOrBadge(color),
               const SizedBox(width: 14),
               // 정보
               Expanded(
@@ -94,6 +69,67 @@ class RecordCard extends StatelessWidget {
                   size: 20,
                 ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildThumbnailOrBadge(DifficultyColor color) {
+    if (record.thumbnailPath != null &&
+        File(record.thumbnailPath!).existsSync()) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: SizedBox(
+          width: 46,
+          height: 46,
+          child: Image.file(
+            File(record.thumbnailPath!),
+            width: 46,
+            height: 46,
+            fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => _GradeBadge(
+              grade: record.grade,
+              color: color,
+            ),
+          ),
+        ),
+      );
+    }
+    return _GradeBadge(grade: record.grade, color: color);
+  }
+}
+
+class _GradeBadge extends StatelessWidget {
+  final String grade;
+  final DifficultyColor color;
+  const _GradeBadge({required this.grade, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 46,
+      height: 46,
+      decoration: BoxDecoration(
+        color: Color(color.colorValue),
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Color(color.colorValue).withOpacity(0.3),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Center(
+        child: Text(
+          grade.toUpperCase(),
+          style: TextStyle(
+            color: color == DifficultyColor.white
+                ? Colors.black87
+                : Colors.white,
+            fontWeight: FontWeight.w800,
+            fontSize: 13,
           ),
         ),
       ),

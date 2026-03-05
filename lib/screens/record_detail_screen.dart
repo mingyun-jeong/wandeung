@@ -1,5 +1,7 @@
 import 'dart:io';
+import 'package:chewie/chewie.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:video_player/video_player.dart';
 import '../config/supabase_config.dart';
 import '../models/climbing_record.dart';
@@ -15,6 +17,8 @@ class RecordDetailScreen extends StatefulWidget {
 
 class _RecordDetailScreenState extends State<RecordDetailScreen> {
   VideoPlayerController? _videoController;
+  ChewieController? _chewieController;
+  double? _displayAspectRatio;
 
   @override
   void initState() {
@@ -37,12 +41,41 @@ class _RecordDetailScreenState extends State<RecordDetailScreen> {
     }
 
     await _videoController!.initialize();
+
+    // 세로 촬영 영상의 회전 메타데이터를 반영한 비율 계산
+    final size = _videoController!.value.size;
+    final rotation = _videoController!.value.rotationCorrection;
+    if (size.width > 0 && size.height > 0 && (rotation == 90 || rotation == 270)) {
+      _displayAspectRatio = size.height / size.width;
+    } else {
+      _displayAspectRatio = _videoController!.value.aspectRatio;
+    }
+
+    _chewieController = ChewieController(
+      videoPlayerController: _videoController!,
+      aspectRatio: _displayAspectRatio,
+      autoPlay: false,
+      looping: false,
+      allowFullScreen: true,
+      allowedScreenSleep: false,
+      deviceOrientationsOnEnterFullScreen: [
+        DeviceOrientation.landscapeLeft,
+        DeviceOrientation.landscapeRight,
+        DeviceOrientation.portraitUp,
+      ],
+      deviceOrientationsAfterFullScreen: [
+        DeviceOrientation.portraitUp,
+      ],
+    );
+
     if (mounted) setState(() {});
   }
 
   @override
   void dispose() {
+    _chewieController?.dispose();
     _videoController?.dispose();
+    SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
     super.dispose();
   }
 
@@ -68,40 +101,10 @@ class _RecordDetailScreenState extends State<RecordDetailScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // 영상 플레이어
-            if (_videoController != null &&
-                _videoController!.value.isInitialized)
-              Stack(
-                alignment: Alignment.center,
-                children: [
-                  AspectRatio(
-                    aspectRatio: _videoController!.value.aspectRatio,
-                    child: VideoPlayer(_videoController!),
-                  ),
-                  GestureDetector(
-                    onTap: () => setState(() {
-                      _videoController!.value.isPlaying
-                          ? _videoController!.pause()
-                          : _videoController!.play();
-                    }),
-                    child: AnimatedOpacity(
-                      opacity: _videoController!.value.isPlaying ? 0.0 : 1.0,
-                      duration: const Duration(milliseconds: 200),
-                      child: Container(
-                        width: 64,
-                        height: 64,
-                        decoration: BoxDecoration(
-                          color: Colors.black.withOpacity(0.5),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.play_arrow_rounded,
-                          size: 36,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
+            if (_chewieController != null)
+              AspectRatio(
+                aspectRatio: _displayAspectRatio!,
+                child: Chewie(controller: _chewieController!),
               )
             else if (record.videoPath != null)
               const SizedBox(

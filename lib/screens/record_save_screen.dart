@@ -10,6 +10,7 @@ import '../widgets/difficulty_selector.dart';
 import '../widgets/gym_selector.dart';
 import '../widgets/tag_input.dart';
 import '../widgets/recommended_tags.dart';
+import '../utils/thumbnail_utils.dart';
 import 'records_tab_screen.dart';
 
 class RecordSaveScreen extends ConsumerStatefulWidget {
@@ -22,6 +23,7 @@ class RecordSaveScreen extends ConsumerStatefulWidget {
 
 class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
   late VideoPlayerController _videoController;
+  double _displayAspectRatio = 16 / 9;
   ClimbingStatus _status = ClimbingStatus.completed;
   List<String> _tags = [];
   bool _isSaving = false;
@@ -30,7 +32,16 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
   void initState() {
     super.initState();
     _videoController = VideoPlayerController.file(File(widget.videoPath))
-      ..initialize().then((_) => setState(() {}));
+      ..initialize().then((_) {
+        final size = _videoController.value.size;
+        final rotation = _videoController.value.rotationCorrection;
+        if (size.width > 0 && size.height > 0 && (rotation == 90 || rotation == 270)) {
+          _displayAspectRatio = size.height / size.width;
+        } else {
+          _displayAspectRatio = _videoController.value.aspectRatio;
+        }
+        setState(() {});
+      });
   }
 
   @override
@@ -60,6 +71,9 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
       // 갤러리에 저장
       await _saveToGallery();
 
+      // 썸네일 생성 (실패해도 기록 저장은 계속)
+      final thumbnailPath = await generateThumbnail(widget.videoPath);
+
       await RecordService.saveRecord(
         videoPath: widget.videoPath,
         grade: settings.grade!.name,
@@ -68,6 +82,7 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
             _status == ClimbingStatus.completed ? 'completed' : 'in_progress',
         gymId: settings.selectedGym?.id,
         gymName: settings.selectedGym?.name ?? settings.manualGymName,
+        thumbnailPath: thumbnailPath,
         tags: _tags,
       );
 
@@ -130,7 +145,7 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
             // 영상 프리뷰
             if (_videoController.value.isInitialized)
               AspectRatio(
-                aspectRatio: _videoController.value.aspectRatio,
+                aspectRatio: _displayAspectRatio,
                 child: Stack(
                   alignment: Alignment.center,
                   children: [

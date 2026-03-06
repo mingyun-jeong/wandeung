@@ -57,6 +57,8 @@ dependencies:
   video_editor_2: ^3.1.1
   ffmpeg_kit_flutter_new: ^4.1.0
   cross_file: ^0.3.4+2
+  file_picker: ^8.0.0
+  shared_preferences: ^2.3.0
 
 dev_dependencies:
   flutter_test:

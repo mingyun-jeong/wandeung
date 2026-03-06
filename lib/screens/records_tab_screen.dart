@@ -99,10 +99,33 @@ class _RecordsTabScreenState extends ConsumerState<RecordsTabScreen> {
         ),
         centerTitle: false,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.logout_rounded, size: 22),
-            tooltip: '로그아웃',
-            onPressed: () => ref.read(authProvider.notifier).signOut(),
+          PopupMenuButton<String>(
+            onSelected: (value) {
+              if (value == 'logout') {
+                ref.read(authProvider.notifier).signOut();
+              }
+            },
+            itemBuilder: (_) => [
+              const PopupMenuItem<String>(
+                value: 'logout',
+                child: Text('로그아웃'),
+              ),
+            ],
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: () {
+                final user = ref.watch(authProvider).valueOrNull;
+                final photoUrl = user?.userMetadata?['picture'] as String?;
+                return CircleAvatar(
+                  radius: 16,
+                  backgroundImage:
+                      photoUrl != null ? NetworkImage(photoUrl) : null,
+                  child: photoUrl == null
+                      ? const Icon(Icons.person, size: 18)
+                      : null,
+                );
+              }(),
+            ),
           ),
         ],
       ),

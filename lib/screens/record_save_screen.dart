@@ -5,6 +5,7 @@ import 'package:video_player/video_player.dart';
 import 'package:gal/gal.dart';
 import '../config/supabase_config.dart';
 import '../models/climbing_record.dart';
+import '../providers/auth_provider.dart';
 import '../providers/camera_settings_provider.dart';
 import '../providers/record_provider.dart';
 import '../utils/constants.dart';
@@ -268,7 +269,6 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
   @override
   Widget build(BuildContext context) {
     final settings = ref.watch(cameraSettingsProvider);
-    final hasColor = settings.color != null;
 
     return Scaffold(
       appBar: AppBar(
@@ -278,19 +278,21 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
                 style: TextStyle(fontWeight: FontWeight.w700, fontSize: 18))
             : null,
         actions: [
-          if (hasColor)
-            Center(
-              child: Container(
-                margin: const EdgeInsets.only(right: 16),
-                width: 28,
-                height: 28,
-                decoration: BoxDecoration(
-                  color: Color(settings.color!.colorValue),
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.grey.shade300, width: 1.5),
-                ),
-              ),
-            ),
+          Padding(
+            padding: const EdgeInsets.only(right: 12),
+            child: () {
+              final user = ref.watch(authProvider).valueOrNull;
+              final photoUrl = user?.userMetadata?['picture'] as String?;
+              return CircleAvatar(
+                radius: 16,
+                backgroundImage:
+                    photoUrl != null ? NetworkImage(photoUrl) : null,
+                child: photoUrl == null
+                    ? const Icon(Icons.person, size: 18)
+                    : null,
+              );
+            }(),
+          ),
         ],
       ),
       body: SingleChildScrollView(
@@ -393,14 +395,12 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
             const SizedBox(height: 16),
 
             // 난이도 선택
-            if (!hasColor) ...[
-              DifficultySelector(
-                selectedColor: settings.color,
-                onColorChanged: (c) =>
-                    ref.read(cameraSettingsProvider.notifier).setColor(c),
-              ),
-              const SizedBox(height: 16),
-            ],
+            DifficultySelector(
+              selectedColor: settings.color,
+              onColorChanged: (c) =>
+                  ref.read(cameraSettingsProvider.notifier).setColor(c),
+            ),
+            const SizedBox(height: 16),
 
             // 암장
             const Text('암장',

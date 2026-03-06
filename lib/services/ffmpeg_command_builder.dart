@@ -1,5 +1,6 @@
 import 'dart:ui';
 
+import '../models/subtitle_item.dart';
 import '../models/video_edit_models.dart';
 
 /// FFmpeg 필터 체인을 조합하여 내보내기 명령을 생성하는 순수 함수 서비스
@@ -23,6 +24,8 @@ class FFmpegCommandBuilder {
     required Duration trimEnd,
     List<SpeedSegment> speedSegments = const [],
     List<OverlayItem> overlays = const [],
+    List<SubtitleItem> subtitles = const [],
+    Map<String, String> subtitleFontPaths = const {},
     required Size videoResolution,
     String? fontPath,
   }) {
@@ -41,7 +44,7 @@ class FFmpegCommandBuilder {
 
     // 필터 체인 빌드
     final filterComplex =
-        _buildFilterComplex(speedSegments, overlays, videoResolution, fontPath);
+        _buildFilterComplex(speedSegments, overlays, subtitles, subtitleFontPaths, videoResolution, fontPath);
 
     if (filterComplex != null) {
       parts.addAll(['-filter_complex', "'$filterComplex'"]);
@@ -74,6 +77,8 @@ class FFmpegCommandBuilder {
   static String? _buildFilterComplex(
     List<SpeedSegment> speedSegments,
     List<OverlayItem> overlays,
+    List<SubtitleItem> subtitles,
+    Map<String, String> subtitleFontPaths,
     Size videoResolution,
     String? fontPath,
   ) {
@@ -81,8 +86,9 @@ class FFmpegCommandBuilder {
     final hasSpeedChange =
         speedSegments.isNotEmpty && speedSegments.any((s) => s.speed != 1.0);
     final hasOverlays = overlays.isNotEmpty;
+    final hasSubtitles = subtitles.isNotEmpty;
 
-    if (!hasSpeedChange && !hasOverlays) return null;
+    if (!hasSpeedChange && !hasOverlays && !hasSubtitles) return null;
 
     final filters = <String>[];
 
@@ -104,18 +110,41 @@ class FFmpegCommandBuilder {
           hasSpeedChange ? '[vspeed]' : '[0:v]';
 
       for (int i = 0; i < overlays.length; i++) {
-        final isLast = i == overlays.length - 1;
+        final isLast = i == overlays.length - 1 && !hasSubtitles;
         final outputLabel = isLast ? '[vout]' : '[vtxt$i]';
         final drawtext =
             _buildDrawtext(overlays[i], videoResolution, fontPath);
         filters.add('${currentLabel}drawtext=$drawtext$outputLabel');
         currentLabel = outputLabel;
       }
-    } else if (hasSpeedChange) {
-      // 배속만 있고 오버레이 없음 → vspeed를 vout으로 변경
+    } else if (hasSpeedChange && !hasSubtitles) {
+      // 배속만 있고 오버레이/자막 없음 → vspeed를 vout으로 변경
       final lastIdx = filters.lastIndexWhere((f) => f.contains('[vspeed]'));
       if (lastIdx >= 0) {
         filters[lastIdx] = filters[lastIdx].replaceAll('[vspeed]', '[vout]');
+      }
+    }
+
+    // --- 자막(drawtext with enable) 처리 ---
+    if (hasSubtitles) {
+      // Determine input label for first subtitle
+      String currentLabel;
+      if (hasOverlays) {
+        currentLabel = '[vtxt${overlays.length - 1}]'; // last overlay output
+      } else if (hasSpeedChange) {
+        currentLabel = '[vspeed]';
+      } else {
+        currentLabel = '[0:v]';
+      }
+
+      for (int i = 0; i < subtitles.length; i++) {
+        final isLast = i == subtitles.length - 1;
+        final outputLabel = isLast ? '[vout]' : '[vsub$i]';
+        final drawtext = _buildSubtitleDrawtext(
+          subtitles[i], videoResolution, fontPath, subtitleFontPaths,
+        );
+        filters.add('${currentLabel}drawtext=$drawtext$outputLabel');
+        currentLabel = outputLabel;
       }
     }
 
@@ -190,6 +219,53 @@ class FFmpegCommandBuilder {
       parts.add(
           'boxcolor=${_colorToFFmpeg(item.backgroundColor!)}@0.6');
       parts.add('boxborderw=8');
+    }
+
+    return parts.join(':');
+  }
+
+  /// 자막용 drawtext 필터 파라미터 생성 (enable/between 포함)
+  static String _buildSubtitleDrawtext(
+    SubtitleItem item,
+    Size videoResolution,
+    String? defaultFontPath,
+    Map<String, String> subtitleFontPaths,
+  ) {
+    final x = (item.position.dx * videoResolution.width).round();
+    final y = (item.position.dy * videoResolution.height).round();
+    final fontSize = (item.fontSize * (videoResolution.height / 800)).round();
+    final startSec = item.startTime.inMilliseconds / 1000.0;
+    final endSec = item.endTime.inMilliseconds / 1000.0;
+
+    final parts = <String>[];
+
+    final fontPath = subtitleFontPaths[item.fontFamily] ?? defaultFontPath;
+    if (fontPath != null) {
+      parts.add("fontfile=${_escapePath(fontPath)}");
+    }
+
+    parts.add("text=${_escapeText(item.text)}");
+    parts.add('x=$x');
+    parts.add('y=$y');
+    parts.add('fontsize=$fontSize');
+    parts.add('fontcolor=${_colorToFFmpeg(item.color)}');
+    parts.add("enable='between(t,${startSec.toStringAsFixed(3)},${endSec.toStringAsFixed(3)})'");
+
+    if (item.strokeColor != null && item.strokeWidth > 0) {
+      parts.add('borderw=${item.strokeWidth.round()}');
+      parts.add('bordercolor=${_colorToFFmpeg(item.strokeColor!)}');
+    }
+
+    if (item.backgroundColor != null) {
+      parts.add('box=1');
+      parts.add('boxcolor=${_colorToFFmpeg(item.backgroundColor!)}@0.6');
+      parts.add('boxborderw=8');
+    }
+
+    if (item.hasShadow) {
+      parts.add('shadowcolor=0x000000@0.5');
+      parts.add('shadowx=2');
+      parts.add('shadowy=2');
     }
 
     return parts.join(':');

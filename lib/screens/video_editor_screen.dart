@@ -10,8 +10,11 @@ import 'package:video_editor_2/video_editor.dart';
 import 'package:gal/gal.dart';
 
 import '../models/climbing_record.dart';
+import '../models/subtitle_item.dart';
 import '../providers/record_provider.dart';
+import '../providers/subtitle_provider.dart';
 import '../providers/video_editor_provider.dart';
+import '../services/custom_font_service.dart';
 import '../services/video_export_service.dart';
 import '../utils/thumbnail_utils.dart';
 import '../widgets/editor/export_progress_dialog.dart';
@@ -19,6 +22,9 @@ import '../widgets/editor/overlay_layer.dart';
 import '../widgets/editor/overlay_sticker_sheet.dart';
 import '../widgets/editor/speed_picker_sheet.dart';
 import '../widgets/editor/speed_segment_bar.dart';
+import '../widgets/editor/subtitle_editor_sheet.dart';
+import '../widgets/editor/subtitle_overlay_layer.dart';
+import '../widgets/editor/subtitle_timeline_track.dart';
 import 'record_save_screen.dart';
 
 /// 비디오 편집 화면
@@ -42,6 +48,7 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
   late VideoEditorController _controller;
   bool _isInitialized = false;
   bool _isExporting = false;
+  Duration _currentPosition = Duration.zero;
 
   @override
   void initState() {
@@ -58,12 +65,23 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
         ref
             .read(speedSegmentsProvider.notifier)
             .initWithFullRange(_controller.videoDuration);
+        _controller.video.addListener(_onVideoPositionChanged);
+        // 기본 폰트 에셋 복사
+        CustomFontService.ensureDefaultFonts();
       }
     });
   }
 
+  void _onVideoPositionChanged() {
+    final pos = _controller.video.value.position;
+    if (mounted && pos != _currentPosition) {
+      setState(() => _currentPosition = pos);
+    }
+  }
+
   @override
   void dispose() {
+    _controller.video.removeListener(_onVideoPositionChanged);
     _controller.dispose();
     super.dispose();
   }
@@ -93,9 +111,25 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
     try {
       final segments = ref.read(speedSegmentsProvider);
       final overlays = ref.read(overlaysProvider);
+      final subtitles = ref.read(subtitlesProvider);
 
       // 폰트 경로 확인
       final fontPath = await _getFontPath();
+
+      // 자막에 사용된 폰트 경로 맵 구성
+      final subtitleFontPaths = <String, String>{};
+      for (final sub in subtitles) {
+        if (!subtitleFontPaths.containsKey(sub.fontFamily)) {
+          final isDefault = CustomFontService.defaultFonts
+              .any((f) => f.filePath == sub.fontFamily);
+          if (isDefault) {
+            subtitleFontPaths[sub.fontFamily] =
+                await CustomFontService.getDefaultFontPath(sub.fontFamily);
+          } else {
+            subtitleFontPaths[sub.fontFamily] = sub.fontFamily;
+          }
+        }
+      }
 
       final result = await VideoExportService.exportVideo(
         inputPath: widget.videoPath,
@@ -103,6 +137,8 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
         trimEnd: _controller.endTrim,
         speedSegments: segments,
         overlays: overlays,
+        subtitles: subtitles,
+        subtitleFontPaths: subtitleFontPaths,
         videoResolution: _controller.videoDimension,
         fontPath: fontPath,
         onProgress: (progress) {
@@ -185,6 +221,19 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
     showModalBottomSheet(
       context: context,
       builder: (_) => const OverlayStickerSheet(),
+    );
+  }
+
+  void _showSubtitleEditor({SubtitleItem? existingItem}) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => SubtitleEditorSheet(
+        currentPosition: _currentPosition,
+        videoDuration: _controller.videoDuration,
+        existingItem: existingItem,
+      ),
     );
   }
 
@@ -297,6 +346,30 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
                           ),
                         ),
                       ),
+
+                      // Text 오버레이 레이어
+                      Positioned.fill(
+                        child: SubtitleOverlayLayer(
+                          previewSize: Size(
+                            constraints.maxWidth,
+                            constraints.maxHeight,
+                          ),
+                          currentPosition: _currentPosition,
+                          onSubtitleTap: () {
+                            final selectedId =
+                                ref.read(selectedSubtitleIdProvider);
+                            if (selectedId != null) {
+                              final sub = ref
+                                  .read(subtitlesProvider)
+                                  .where((s) => s.id == selectedId)
+                                  .firstOrNull;
+                              if (sub != null) {
+                                _showSubtitleEditor(existingItem: sub);
+                              }
+                            }
+                          },
+                        ),
+                      ),
                     ],
                   );
                 },
@@ -307,6 +380,13 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
             SpeedSegmentBar(
               segments: segments,
               totalDuration: _controller.videoDuration,
+            ),
+
+            // ─── 자막 타임라인 트랙 ─────────────────────
+            SubtitleTimelineTrack(
+              totalDuration: _controller.videoDuration,
+              currentPosition: _currentPosition,
+              onSubtitleTap: (sub) => _showSubtitleEditor(existingItem: sub),
             ),
 
             // ─── 트림 슬라이더 ────────────────────────
@@ -343,9 +423,17 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
                     onTap: _showSpeedPicker,
                   ),
                   _ToolbarButton(
-                    icon: Icons.text_fields,
+                    icon: Icons.emoji_emotions,
                     label: '스티커',
                     onTap: _showOverlayStickers,
+                  ),
+                  _ToolbarButton(
+                    icon: Icons.title,
+                    label: '텍스트',
+                    badge: ref.watch(subtitlesProvider).isNotEmpty
+                        ? '${ref.watch(subtitlesProvider).length}'
+                        : null,
+                    onTap: () => _showSubtitleEditor(),
                   ),
                 ],
               ),

@@ -4,6 +4,7 @@ import 'package:ffmpeg_kit_flutter_new/ffmpeg_kit.dart';
 import 'package:ffmpeg_kit_flutter_new/return_code.dart';
 import 'package:path_provider/path_provider.dart';
 
+import '../models/subtitle_item.dart';
 import '../models/video_edit_models.dart';
 import 'ffmpeg_command_builder.dart';
 
@@ -23,6 +24,8 @@ class VideoExportService {
     List<OverlayItem> overlays = const [],
     required Size videoResolution,
     String? fontPath,
+    List<SubtitleItem> subtitles = const [],
+    Map<String, String> subtitleFontPaths = const {},
     required void Function(double progress) onProgress,
   }) async {
     final appDir = await getApplicationDocumentsDirectory();
@@ -38,6 +41,8 @@ class VideoExportService {
       overlays: overlays,
       videoResolution: videoResolution,
       fontPath: fontPath,
+      subtitles: subtitles,
+      subtitleFontPaths: subtitleFontPaths,
     );
 
     // 예상 출력 길이 계산 (진행률 추적용)
@@ -78,6 +83,8 @@ class VideoExportService {
     List<OverlayItem> overlays = const [],
     required Size videoResolution,
     String? fontPath,
+    List<SubtitleItem> subtitles = const [],
+    Map<String, String> subtitleFontPaths = const {},
     required void Function(double progress) onProgress,
   }) async {
     final appDir = await getApplicationDocumentsDirectory();
@@ -93,6 +100,8 @@ class VideoExportService {
       overlays: overlays,
       videoResolution: videoResolution,
       fontPath: fontPath,
+      subtitles: subtitles,
+      subtitleFontPaths: subtitleFontPaths,
     );
 
     final expectedDurationMs = _calculateExpectedDuration(

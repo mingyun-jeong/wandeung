@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import '../models/climbing_record.dart';
+import '../screens/record_detail_screen.dart';
 import '../screens/record_save_screen.dart';
 import '../utils/constants.dart';
 
@@ -61,12 +62,32 @@ class RecordCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              // 비디오 아이콘
+              // 비디오 재생 버튼
               if (record.videoPath != null)
-                Icon(
-                  Icons.play_circle_outline_rounded,
-                  color: colorScheme.onSurface.withOpacity(0.25),
-                  size: 20,
+                GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) =>
+                            RecordDetailScreen(record: record, autoPlay: true),
+                      ),
+                    );
+                  },
+                  behavior: HitTestBehavior.opaque,
+                  child: Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: colorScheme.primaryContainer.withOpacity(0.5),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.play_arrow_rounded,
+                      color: colorScheme.primary,
+                      size: 22,
+                    ),
+                  ),
                 ),
             ],
           ),

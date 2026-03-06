@@ -10,7 +10,8 @@ import 'video_editor_screen.dart';
 
 class RecordDetailScreen extends StatefulWidget {
   final ClimbingRecord record;
-  const RecordDetailScreen({super.key, required this.record});
+  final bool autoPlay;
+  const RecordDetailScreen({super.key, required this.record, this.autoPlay = false});
 
   @override
   State<RecordDetailScreen> createState() => _RecordDetailScreenState();
@@ -72,7 +73,7 @@ class _RecordDetailScreenState extends State<RecordDetailScreen> {
     _chewieController = ChewieController(
       videoPlayerController: _videoController!,
       aspectRatio: _displayAspectRatio,
-      autoPlay: false,
+      autoPlay: widget.autoPlay,
       looping: false,
       allowFullScreen: true,
       allowedScreenSleep: false,

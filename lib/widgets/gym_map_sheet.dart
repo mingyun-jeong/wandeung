@@ -65,6 +65,7 @@ class _GymMapSheetState extends ConsumerState<GymMapSheet> {
   ClimbingGym? _tappedGym;
   List<ClimbingGym> _gyms = [];
   final _searchController = TextEditingController();
+  bool _showSearchResults = false;
 
   bool get _isPickMode => widget.onGymSelected != null;
 
@@ -78,10 +79,6 @@ class _GymMapSheetState extends ConsumerState<GymMapSheet> {
   void dispose() {
     _disposed = true;
     _searchController.dispose();
-    // Reset picker search query on close
-    if (_isPickMode) {
-      ref.read(_mapPickerQueryProvider.notifier).state = '';
-    }
     super.dispose();
   }
 
@@ -126,8 +123,9 @@ class _GymMapSheetState extends ConsumerState<GymMapSheet> {
         position: NLatLng(gym.latitude!, gym.longitude!),
       );
       marker.setIconTintColor(
-          isHighlighted ? colorScheme.primary : Colors.grey);
-      marker.setSize(isHighlighted ? const Size(28, 36) : const Size(20, 26));
+          isHighlighted ? colorScheme.primary : const Color(0xFFE53935));
+      marker.setSize(isHighlighted ? const Size(36, 46) : const Size(30, 38));
+      marker.setAlpha(isHighlighted ? 1.0 : 0.9);
 
       marker.setOnTapListener((_) {
         setState(() => _tappedGym = gym);
@@ -148,6 +146,7 @@ class _GymMapSheetState extends ConsumerState<GymMapSheet> {
       ref.read(_mapPickerQueryProvider.notifier).state = query.trim();
       // Also update global search so gymsProvider picks it up
       ref.read(searchQueryProvider.notifier).state = query.trim();
+      setState(() => _showSearchResults = query.trim().isNotEmpty);
     }
   }
 
@@ -156,6 +155,23 @@ class _GymMapSheetState extends ConsumerState<GymMapSheet> {
     if (_isPickMode) {
       ref.read(_mapPickerQueryProvider.notifier).state = '';
       ref.read(searchQueryProvider.notifier).state = '';
+      setState(() => _showSearchResults = false);
+    }
+  }
+
+  void _selectFromList(ClimbingGym gym) {
+    setState(() {
+      _tappedGym = gym;
+      _showSearchResults = false;
+    });
+    _refreshMarkers();
+    if (gym.latitude != null && gym.longitude != null) {
+      _controller?.updateCamera(
+        NCameraUpdate.scrollAndZoomTo(
+          target: NLatLng(gym.latitude!, gym.longitude!),
+          zoom: 15,
+        ),
+      );
     }
   }
 
@@ -252,7 +268,7 @@ class _GymMapSheetState extends ConsumerState<GymMapSheet> {
             ),
           ),
 
-        // Map
+        // Map + search results overlay
         Expanded(
           child: Stack(
             children: [
@@ -267,7 +283,10 @@ class _GymMapSheetState extends ConsumerState<GymMapSheet> {
                 onMapReady: _onMapReady,
                 onMapTapped: (_, __) {
                   if (_isPickMode) {
-                    setState(() => _tappedGym = null);
+                    setState(() {
+                      _tappedGym = null;
+                      _showSearchResults = false;
+                    });
                     _refreshMarkers();
                   }
                 },
@@ -295,6 +314,88 @@ class _GymMapSheetState extends ConsumerState<GymMapSheet> {
                             Text('검색 중…',
                                 style: TextStyle(fontSize: 13)),
                           ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              // Search results overlay
+              if (_isPickMode && _showSearchResults)
+                Positioned.fill(
+                  child: Container(
+                    color: colorScheme.surface,
+                    child: gymsAsync.when(
+                      data: (gyms) {
+                        if (gyms.isEmpty) {
+                          return Center(
+                            child: Text(
+                              '검색 결과가 없습니다',
+                              style: TextStyle(
+                                color: colorScheme.onSurface.withOpacity(0.5),
+                              ),
+                            ),
+                          );
+                        }
+                        return ListView.separated(
+                          padding: const EdgeInsets.symmetric(vertical: 4),
+                          itemCount: gyms.length,
+                          separatorBuilder: (_, __) =>
+                              const Divider(height: 1, indent: 56),
+                          itemBuilder: (context, index) {
+                            final gym = gyms[index];
+                            final dist = _formatDistance(gym);
+                            return ListTile(
+                              dense: true,
+                              leading: CircleAvatar(
+                                radius: 18,
+                                backgroundColor:
+                                    colorScheme.primaryContainer,
+                                child: Icon(
+                                  Icons.terrain_rounded,
+                                  size: 17,
+                                  color: colorScheme.primary,
+                                ),
+                              ),
+                              title: Text(
+                                gym.name,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 14,
+                                ),
+                              ),
+                              subtitle: gym.address != null
+                                  ? Text(
+                                      gym.address!,
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: colorScheme.onSurface
+                                            .withOpacity(0.6),
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    )
+                                  : null,
+                              trailing: dist.isNotEmpty
+                                  ? Text(
+                                      dist,
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: colorScheme.primary,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    )
+                                  : null,
+                              onTap: () => _selectFromList(gym),
+                            );
+                          },
+                        );
+                      },
+                      loading: () =>
+                          const Center(child: CircularProgressIndicator()),
+                      error: (_, __) => Center(
+                        child: Text(
+                          '오류가 발생했습니다',
+                          style: TextStyle(color: colorScheme.error),
                         ),
                       ),
                     ),

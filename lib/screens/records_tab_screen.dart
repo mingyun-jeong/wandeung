@@ -35,14 +35,6 @@ List<ClimbingRecord> _applyFilters(
 }
 
 bool _hasFilterableOptions(List<ClimbingRecord> records) {
-  if (ClimbingStatus.values
-          .where((s) => records.any((r) => r.status == s.name))
-          .length >=
-      2) return true;
-  if (DifficultyColor.values
-          .where((c) => records.any((r) => r.difficultyColor == c.name))
-          .length >=
-      2) return true;
   if (records.expand((r) => r.tags).toSet().length >= 2) return true;
   return false;
 }
@@ -284,17 +276,9 @@ class _RecordsTabScreenState extends ConsumerState<RecordsTabScreen> {
                     final hasActiveFilters = selectedColor != null ||
                         selectedStatus != null ||
                         selectedTag != null;
-                    final showFilterBar =
-                        list.length >= 2 && _hasFilterableOptions(list);
-
                     return Column(
                       children: [
-                        if (showFilterBar) ...[
-                          _FilterBar(records: list),
-                          Divider(
-                              height: 1,
-                              color: colorScheme.outline.withOpacity(0.15)),
-                        ],
+                        _FilterBar(records: list),
                         Expanded(
                           child: filtered.isEmpty
                               ? Center(
@@ -359,40 +343,32 @@ class _FilterBar extends ConsumerWidget {
     final selectedStatus = ref.watch(selectedStatusFilterProvider);
     final selectedTag = ref.watch(selectedTagFilterProvider);
 
-    final availableStatuses = ClimbingStatus.values
-        .where((s) => records.any((r) => r.status == s.name))
-        .toList();
-    final availableColors = DifficultyColor.values
-        .where((c) => records.any((r) => r.difficultyColor == c.name))
-        .toList();
     final availableTags = records.expand((r) => r.tags).toSet().toList()..sort();
 
-    final boxes = <Widget>[];
+    final activeDc = selectedColor != null
+        ? DifficultyColor.values.firstWhere((c) => c.name == selectedColor)
+        : null;
 
-    if (availableStatuses.length >= 2) {
-      boxes.add(_SelectBox(
+    final boxes = <Widget>[
+      // 상태 (항상 표시)
+      _SelectBox(
         label: '상태',
         selectedValue: selectedStatus,
         selectedDisplay: selectedStatus != null
             ? ClimbingStatus.values.firstWhere((s) => s.name == selectedStatus).label
             : null,
-        items: availableStatuses
+        items: ClimbingStatus.values
             .map((s) => _SelectItem(value: s.name, child: Text(s.label)))
             .toList(),
         onChanged: (v) => ref.read(selectedStatusFilterProvider.notifier).state = v,
-      ));
-    }
-
-    if (availableColors.length >= 2) {
-      final activeDc = selectedColor != null
-          ? DifficultyColor.values.firstWhere((c) => c.name == selectedColor)
-          : null;
-      boxes.add(_SelectBox(
+      ),
+      // 난이도 색상 (항상 표시)
+      _SelectBox(
         label: '난이도',
         selectedValue: selectedColor,
         selectedDisplay: activeDc?.korean,
         selectedLeading: activeDc != null ? _ColorDot(activeDc) : null,
-        items: availableColors
+        items: DifficultyColor.values
             .map((dc) => _SelectItem(
                   value: dc.name,
                   child: Row(mainAxisSize: MainAxisSize.min, children: [
@@ -402,9 +378,10 @@ class _FilterBar extends ConsumerWidget {
                   ]),
                 ))
             .toList(),
-        onChanged: (v) => ref.read(selectedColorFilterProvider.notifier).state = v,
-      ));
-    }
+        onChanged: (v) =>
+            ref.read(selectedColorFilterProvider.notifier).state = v,
+      ),
+    ];
 
     if (availableTags.length >= 2) {
       boxes.add(_SelectBox(
@@ -418,16 +395,34 @@ class _FilterBar extends ConsumerWidget {
       ));
     }
 
-    if (boxes.isEmpty) return const SizedBox.shrink();
-
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.end,
-        children: boxes
-            .expand((b) => [b, const SizedBox(width: 8)])
-            .toList()
-          ..removeLast(),
+        children: [
+          ...boxes.expand((b) => [b, const SizedBox(width: 8)]),
+          SizedBox(
+              width: 32,
+              height: 32,
+              child: IconButton(
+                onPressed: () {
+                  ref.read(selectedColorFilterProvider.notifier).state = null;
+                  ref.read(selectedStatusFilterProvider.notifier).state = null;
+                  ref.read(selectedTagFilterProvider.notifier).state = null;
+                },
+                icon: Icon(
+                  Icons.refresh_rounded,
+                  size: 18,
+                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                ),
+                style: IconButton.styleFrom(
+                  backgroundColor:
+                      Theme.of(context).colorScheme.surfaceContainerHighest,
+                  padding: EdgeInsets.zero,
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }

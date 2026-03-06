@@ -47,18 +47,26 @@ class _MapTabScreenState extends ConsumerState<MapTabScreen> {
     final controller = _controller;
     if (controller == null) return;
 
+    final colorScheme = Theme.of(context).colorScheme;
     await controller.clearOverlays();
 
     for (final gym in gyms) {
       if (gym.latitude == null || gym.longitude == null) continue;
 
+      final isSelected = _selectedGym?.name == gym.name;
+
       final marker = NMarker(
         id: gym.name,
         position: NLatLng(gym.latitude!, gym.longitude!),
       );
+      marker.setSize(isSelected ? const Size(36, 46) : const Size(30, 38));
+      marker.setIconTintColor(
+          isSelected ? colorScheme.primary : const Color(0xFFE53935));
+      marker.setAlpha(isSelected ? 1.0 : 0.9);
 
       marker.setOnTapListener((_) {
         setState(() => _selectedGym = gym);
+        _addMarkers(gyms);
       });
 
       await controller.addOverlay(marker);

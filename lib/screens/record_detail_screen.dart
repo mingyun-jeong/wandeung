@@ -48,7 +48,17 @@ class _RecordDetailScreenState extends State<RecordDetailScreen> {
       _videoController = VideoPlayerController.networkUrl(Uri.parse(url));
     }
 
-    await _videoController!.initialize();
+    try {
+      await _videoController!.initialize().timeout(
+        const Duration(seconds: 10),
+      );
+    } catch (e) {
+      debugPrint('영상 초기화 실패: $e');
+      _videoController?.dispose();
+      _videoController = null;
+      if (mounted) setState(() {});
+      return;
+    }
 
     // 세로 촬영 영상의 회전 메타데이터를 반영한 비율 계산
     final size = _videoController!.value.size;

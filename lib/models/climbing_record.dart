@@ -12,6 +12,7 @@ class ClimbingRecord {
   final String? memo;
   final DateTime recordedAt;
   final DateTime? createdAt;
+  final String? parentRecordId;
 
   ClimbingRecord({
     this.id,
@@ -27,6 +28,7 @@ class ClimbingRecord {
     this.memo,
     required this.recordedAt,
     this.createdAt,
+    this.parentRecordId,
   });
 
   Map<String, dynamic> toInsertMap() => {
@@ -41,6 +43,7 @@ class ClimbingRecord {
         'tags': tags,
         'memo': memo,
         'recorded_at': recordedAt.toIso8601String().split('T')[0],
+        if (parentRecordId != null) 'parent_record_id': parentRecordId,
       };
 
   factory ClimbingRecord.fromMap(Map<String, dynamic> map) => ClimbingRecord(
@@ -59,5 +62,6 @@ class ClimbingRecord {
         createdAt: map['created_at'] != null
             ? DateTime.parse(map['created_at'])
             : null,
+        parentRecordId: map['parent_record_id'],
       );
 }

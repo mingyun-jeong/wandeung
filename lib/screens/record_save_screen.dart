@@ -11,15 +11,13 @@ import '../utils/constants.dart';
 import '../widgets/difficulty_selector.dart';
 import '../widgets/gym_selector.dart';
 import '../widgets/tag_input.dart';
-import '../widgets/recommended_tags.dart';
 import '../utils/thumbnail_utils.dart';
 import 'records_tab_screen.dart';
+import 'video_editor_screen.dart';
 
 class RecordSaveScreen extends ConsumerStatefulWidget {
   final String? videoPath;
-  /// 편집된 영상인 경우 원본 파일 경로 (삭제 시 함께 정리)
   final String? originalVideoPath;
-  /// 기존 기록 편집 모드
   final ClimbingRecord? existingRecord;
 
   const RecordSaveScreen({
@@ -53,7 +51,6 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
           : ClimbingStatus.inProgress;
       _tags = List<String>.from(record.tags);
 
-      // 편집 모드: cameraSettings에 기존 기록 값 세팅
       WidgetsBinding.instance.addPostFrameCallback((_) {
         final notifier = ref.read(cameraSettingsProvider.notifier);
         final grade = ClimbingGrade.values.firstWhere(
@@ -85,14 +82,23 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
       if (!File(path).existsSync()) return;
       _videoController = VideoPlayerController.file(File(path));
     } else {
-      // Supabase Storage 경로
       final url = await SupabaseConfig.client.storage
           .from('climbing-videos')
           .createSignedUrl(path, 3600);
       _videoController = VideoPlayerController.networkUrl(Uri.parse(url));
     }
 
-    await _videoController!.initialize();
+    try {
+      await _videoController!.initialize().timeout(
+        const Duration(seconds: 10),
+      );
+    } catch (e) {
+      debugPrint('영상 초기화 실패: $e');
+      _videoController?.dispose();
+      _videoController = null;
+      if (mounted) setState(() {});
+      return;
+    }
     final size = _videoController!.value.size;
     final rotation = _videoController!.value.rotationCorrection;
     if (size.width > 0 &&
@@ -109,6 +115,32 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
   void dispose() {
     _videoController?.dispose();
     super.dispose();
+  }
+
+  void _openVideoEditor() {
+    final videoPath = widget.existingRecord!.videoPath;
+    if (videoPath == null) return;
+
+    if (!videoPath.startsWith('/') || !File(videoPath).existsSync()) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('로컬 영상 파일이 없어 편집할 수 없습니다')),
+      );
+      return;
+    }
+
+    Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => VideoEditorScreen(
+          videoPath: videoPath,
+          existingRecord: widget.existingRecord,
+        ),
+      ),
+    ).then((exported) {
+      if (exported == true && mounted) {
+        ref.invalidate(exportedRecordsProvider(widget.existingRecord!.id!));
+      }
+    });
   }
 
   void _deleteVideo() {
@@ -266,55 +298,90 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 영상 프리뷰
+            // 영상 프리뷰 (원본)
             if (_videoController != null &&
                 _videoController!.value.isInitialized)
-              LayoutBuilder(
-                builder: (context, constraints) {
-                  final maxHeight =
-                      MediaQuery.of(context).size.height * 0.22;
-                  final naturalHeight =
-                      constraints.maxWidth / _displayAspectRatio;
-                  final playerHeight =
-                      naturalHeight > maxHeight ? maxHeight : naturalHeight;
+              Stack(
+                children: [
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      final maxHeight =
+                          MediaQuery.of(context).size.height * 0.22;
+                      final naturalHeight =
+                          constraints.maxWidth / _displayAspectRatio;
+                      final playerHeight =
+                          naturalHeight > maxHeight ? maxHeight : naturalHeight;
 
-                  return ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: SizedBox(
-                      width: double.infinity,
-                      height: playerHeight,
-                      child: Container(
-                        color: Colors.black,
-                        alignment: Alignment.center,
-                        child: AspectRatio(
-                          aspectRatio: _displayAspectRatio,
-                          child: Stack(
+                      return ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: SizedBox(
+                          width: double.infinity,
+                          height: playerHeight,
+                          child: Container(
+                            color: Colors.black,
                             alignment: Alignment.center,
-                            children: [
-                              VideoPlayer(_videoController!),
-                              IconButton(
-                                icon: Icon(
-                                  _videoController!.value.isPlaying
-                                      ? Icons.pause_circle
-                                      : Icons.play_circle,
-                                  size: 48,
-                                  color: Colors.white,
-                                ),
-                                onPressed: () {
-                                  setState(() {
-                                    _videoController!.value.isPlaying
-                                        ? _videoController!.pause()
-                                        : _videoController!.play();
-                                  });
-                                },
+                            child: AspectRatio(
+                              aspectRatio: _displayAspectRatio,
+                              child: Stack(
+                                alignment: Alignment.center,
+                                children: [
+                                  VideoPlayer(_videoController!),
+                                  IconButton(
+                                    icon: Icon(
+                                      _videoController!.value.isPlaying
+                                          ? Icons.pause_circle
+                                          : Icons.play_circle,
+                                      size: 48,
+                                      color: Colors.white,
+                                    ),
+                                    onPressed: () {
+                                      setState(() {
+                                        _videoController!.value.isPlaying
+                                            ? _videoController!.pause()
+                                            : _videoController!.play();
+                                      });
+                                    },
+                                  ),
+                                ],
                               ),
-                            ],
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                  // 편집 버튼 (편집 모드에서만)
+                  if (_isEditMode && widget.existingRecord!.videoPath != null)
+                    Positioned(
+                      top: 8,
+                      right: 8,
+                      child: Material(
+                        color: Colors.black54,
+                        borderRadius: BorderRadius.circular(20),
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(20),
+                          onTap: _openVideoEditor,
+                          child: const Padding(
+                            padding: EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 6),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.movie_edit,
+                                    color: Colors.white, size: 16),
+                                SizedBox(width: 4),
+                                Text('편집',
+                                    style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600)),
+                              ],
+                            ),
                           ),
                         ),
                       ),
                     ),
-                  );
-                },
+                ],
               )
             else if (_videoController == null &&
                 _isEditMode &&
@@ -465,13 +532,6 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
               tags: _tags,
               onTagsChanged: (tags) => setState(() => _tags = tags),
             ),
-            const SizedBox(height: 8),
-
-            // 추천 태그
-            RecommendedTags(
-              currentTags: _tags,
-              onTagsChanged: (tags) => setState(() => _tags = tags),
-            ),
             const SizedBox(height: 24),
 
             // 하단 버튼
@@ -514,8 +574,250 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
                 ),
               ],
             ),
+
+            // 내보내기 영상 목록 (편집 모드에서만)
+            if (_isEditMode && widget.existingRecord!.id != null) ...[
+              const SizedBox(height: 28),
+              _ExportedVideosList(
+                  parentRecordId: widget.existingRecord!.id!),
+            ],
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// 내보내기 영상 목록 위젯
+class _ExportedVideosList extends ConsumerWidget {
+  final String parentRecordId;
+  const _ExportedVideosList({required this.parentRecordId});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final exportsAsync = ref.watch(exportedRecordsProvider(parentRecordId));
+
+    return exportsAsync.when(
+      data: (exports) {
+        if (exports.isEmpty) return const SizedBox.shrink();
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.video_library,
+                    size: 18, color: Colors.grey.shade600),
+                const SizedBox(width: 6),
+                Text(
+                  '내보내기 영상 (${exports.length})',
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold, fontSize: 15),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            ...exports.map((export) => _ExportedVideoCard(
+                  record: export,
+                  onDelete: () async {
+                    await RecordService.deleteRecord(export.id!);
+                    ref.invalidate(exportedRecordsProvider(parentRecordId));
+                  },
+                )),
+          ],
+        );
+      },
+      loading: () => const Padding(
+        padding: EdgeInsets.only(top: 16),
+        child: Center(child: CircularProgressIndicator()),
+      ),
+      error: (_, __) => const SizedBox.shrink(),
+    );
+  }
+}
+
+/// 내보내기 영상 카드
+class _ExportedVideoCard extends StatelessWidget {
+  final ClimbingRecord record;
+  final VoidCallback onDelete;
+  const _ExportedVideoCard({required this.record, required this.onDelete});
+
+  String _formatDate(DateTime? dt) {
+    if (dt == null) return '';
+    return '${dt.month}/${dt.day} ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final hasThumbnail = record.thumbnailPath != null &&
+        File(record.thumbnailPath!).existsSync();
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: () {
+          if (record.videoPath != null &&
+              record.videoPath!.startsWith('/') &&
+              File(record.videoPath!).existsSync()) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) =>
+                    _FullScreenVideoPlayer(videoPath: record.videoPath!),
+              ),
+            );
+          }
+        },
+        child: Padding(
+          padding: const EdgeInsets.all(10),
+          child: Row(
+            children: [
+              // 썸네일
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: SizedBox(
+                  width: 56,
+                  height: 42,
+                  child: hasThumbnail
+                      ? Image.file(
+                          File(record.thumbnailPath!),
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => Container(
+                            color: Colors.grey.shade300,
+                            child: const Icon(Icons.movie,
+                                color: Colors.white, size: 20),
+                          ),
+                        )
+                      : Container(
+                          color: Colors.grey.shade300,
+                          child: const Icon(Icons.movie,
+                              color: Colors.white, size: 20),
+                        ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      '편집 영상',
+                      style: TextStyle(
+                          fontSize: 14, fontWeight: FontWeight.w500),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      _formatDate(record.createdAt),
+                      style: TextStyle(
+                          fontSize: 12, color: Colors.grey.shade500),
+                    ),
+                  ],
+                ),
+              ),
+              IconButton(
+                onPressed: () async {
+                  final confirmed = await showDialog<bool>(
+                    context: context,
+                    builder: (ctx) => AlertDialog(
+                      title: const Text('삭제'),
+                      content:
+                          const Text('이 내보내기 영상을 삭제하시겠습니까?'),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(ctx, false),
+                          child: const Text('취소'),
+                        ),
+                        TextButton(
+                          onPressed: () => Navigator.pop(ctx, true),
+                          child: const Text('삭제',
+                              style: TextStyle(color: Colors.red)),
+                        ),
+                      ],
+                    ),
+                  );
+                  if (confirmed == true) onDelete();
+                },
+                icon: Icon(Icons.delete_outline,
+                    size: 20, color: Colors.grey.shade400),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// 전체화면 영상 플레이어
+class _FullScreenVideoPlayer extends StatefulWidget {
+  final String videoPath;
+  const _FullScreenVideoPlayer({required this.videoPath});
+
+  @override
+  State<_FullScreenVideoPlayer> createState() => _FullScreenVideoPlayerState();
+}
+
+class _FullScreenVideoPlayerState extends State<_FullScreenVideoPlayer> {
+  late VideoPlayerController _controller;
+  bool _initialized = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = VideoPlayerController.file(File(widget.videoPath))
+      ..initialize().then((_) {
+        if (mounted) {
+          setState(() => _initialized = true);
+          _controller.play();
+        }
+      });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.black,
+        foregroundColor: Colors.white,
+        title: const Text('편집 영상'),
+      ),
+      body: Center(
+        child: _initialized
+            ? GestureDetector(
+                onTap: () {
+                  setState(() {
+                    _controller.value.isPlaying
+                        ? _controller.pause()
+                        : _controller.play();
+                  });
+                },
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    AspectRatio(
+                      aspectRatio: _controller.value.aspectRatio,
+                      child: VideoPlayer(_controller),
+                    ),
+                    if (!_controller.value.isPlaying)
+                      const Icon(Icons.play_circle,
+                          size: 64, color: Colors.white70),
+                  ],
+                ),
+              )
+            : const CircularProgressIndicator(color: Colors.white),
       ),
     );
   }

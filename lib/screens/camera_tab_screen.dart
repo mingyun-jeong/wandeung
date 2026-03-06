@@ -102,7 +102,12 @@ class _CameraTabScreenState extends ConsumerState<CameraTabScreen>
       enableAudio: true,
     );
     try {
-      await controller.initialize();
+      await controller.initialize().timeout(
+        const Duration(seconds: 10),
+        onTimeout: () {
+          throw Exception('카메라 초기화 시간 초과 (에뮬레이터에서는 카메라가 지원되지 않을 수 있습니다)');
+        },
+      );
       if (mounted) {
         final minZoom = await controller.getMinZoomLevel();
         final maxZoom = await controller.getMaxZoomLevel();

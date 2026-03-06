@@ -13,6 +13,7 @@ final recordsByDateProvider =
       .select()
       .eq('user_id', userId)
       .eq('recorded_at', dateStr)
+      .isFilter('parent_record_id', null)
       .order('created_at', ascending: false);
 
   return (response as List)
@@ -32,7 +33,8 @@ final recordDatesProvider =
       .select('recorded_at')
       .eq('user_id', userId)
       .gte('recorded_at', firstDay.toIso8601String().split('T')[0])
-      .lte('recorded_at', lastDay.toIso8601String().split('T')[0]);
+      .lte('recorded_at', lastDay.toIso8601String().split('T')[0])
+      .isFilter('parent_record_id', null);
 
   return (response as List)
       .map((e) => DateTime.parse(e['recorded_at']))
@@ -51,7 +53,8 @@ final recordCountsByDateProvider =
       .select('recorded_at')
       .eq('user_id', userId)
       .gte('recorded_at', firstDay.toIso8601String().split('T')[0])
-      .lte('recorded_at', lastDay.toIso8601String().split('T')[0]);
+      .lte('recorded_at', lastDay.toIso8601String().split('T')[0])
+      .isFilter('parent_record_id', null);
 
   final counts = <DateTime, int>{};
   for (final row in response as List) {
@@ -60,6 +63,20 @@ final recordCountsByDateProvider =
     counts[normalized] = (counts[normalized] ?? 0) + 1;
   }
   return counts;
+});
+
+/// 내보내기 영상 목록 (원본 기록 기준)
+final exportedRecordsProvider =
+    FutureProvider.family<List<ClimbingRecord>, String>((ref, parentId) async {
+  final response = await SupabaseConfig.client
+      .from('climbing_records')
+      .select()
+      .eq('parent_record_id', parentId)
+      .order('created_at', ascending: false);
+
+  return (response as List)
+      .map((e) => ClimbingRecord.fromMap(e))
+      .toList();
 });
 
 class RecordService {
@@ -121,6 +138,38 @@ class RecordService {
           'tags': tags,
         })
         .eq('id', recordId)
+        .select()
+        .single();
+
+    return ClimbingRecord.fromMap(response);
+  }
+
+  /// 내보내기 영상 저장 (원본 기록의 메타데이터를 복사)
+  static Future<ClimbingRecord> saveExport({
+    required String parentRecordId,
+    required ClimbingRecord parentRecord,
+    required String videoPath,
+    String? thumbnailPath,
+  }) async {
+    final userId = _supabase.auth.currentUser!.id;
+
+    final record = ClimbingRecord(
+      userId: userId,
+      gymId: parentRecord.gymId,
+      gymName: parentRecord.gymName,
+      grade: parentRecord.grade,
+      difficultyColor: parentRecord.difficultyColor,
+      status: parentRecord.status,
+      videoPath: videoPath,
+      thumbnailPath: thumbnailPath,
+      tags: parentRecord.tags,
+      recordedAt: parentRecord.recordedAt,
+      parentRecordId: parentRecordId,
+    );
+
+    final response = await _supabase
+        .from('climbing_records')
+        .insert(record.toInsertMap())
         .select()
         .single();
 

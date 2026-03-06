@@ -112,13 +112,10 @@ class FFmpegCommandBuilder {
         currentLabel = outputLabel;
       }
     } else if (hasSpeedChange) {
-      // 배속만 있고 오버레이 없음 → vspeed를 vout으로 복사
-      // 단일 구간인 경우 레이블 수정
-      if (speedSegments.length == 1) {
-        final lastIdx = filters.indexWhere((f) => f.contains('[vspeed]'));
-        if (lastIdx >= 0) {
-          filters[lastIdx] = filters[lastIdx].replaceAll('[vspeed]', '[vout]');
-        }
+      // 배속만 있고 오버레이 없음 → vspeed를 vout으로 변경
+      final lastIdx = filters.lastIndexWhere((f) => f.contains('[vspeed]'));
+      if (lastIdx >= 0) {
+        filters[lastIdx] = filters[lastIdx].replaceAll('[vspeed]', '[vout]');
       }
     }
 
@@ -142,9 +139,9 @@ class FFmpegCommandBuilder {
       final endSec = seg.end.inMilliseconds / 1000.0;
       final pts = (1.0 / seg.speed).toStringAsFixed(4);
 
-      // 비디오: trim → setpts
+      // 비디오: trim → setpts (PTS-STARTPTS로 타임스탬프 리셋 필수)
       filters.add(
-        '[0:v]trim=start=$startSec:end=$endSec,setpts=$pts*PTS[v$i]',
+        '[0:v]trim=start=$startSec:end=$endSec,setpts=$pts*(PTS-STARTPTS)[v$i]',
       );
       videoLabels.add('[v$i]');
 
@@ -178,9 +175,9 @@ class FFmpegCommandBuilder {
 
     final parts = <String>[];
     if (fontPath != null) {
-      parts.add("fontfile='$fontPath'");
+      parts.add("fontfile=${_escapePath(fontPath)}");
     }
-    parts.add("text='${_escapeText(item.text)}'");
+    parts.add("text=${_escapeText(item.text)}");
     parts.add('x=$x');
     parts.add('y=$y');
     parts.add('fontsize=$fontSize');
@@ -226,12 +223,21 @@ class FFmpegCommandBuilder {
     return '$hours:$minutes:$seconds.$millis';
   }
 
-  /// drawtext용 텍스트 이스케이프
+  /// drawtext용 텍스트 이스케이프 (backslash를 먼저 이스케이프해야 함)
   static String _escapeText(String text) {
     return text
+        .replaceAll('\\', '\\\\')
         .replaceAll("'", "\\'")
         .replaceAll(':', '\\:')
-        .replaceAll('\\', '\\\\');
+        .replaceAll(';', '\\;');
+  }
+
+  /// drawtext용 파일 경로 이스케이프
+  static String _escapePath(String path) {
+    return path
+        .replaceAll('\\', '\\\\')
+        .replaceAll(':', '\\:')
+        .replaceAll("'", "\\'");
   }
 
   /// Color를 FFmpeg 색상 문자열로 변환 (0xRRGGBB)

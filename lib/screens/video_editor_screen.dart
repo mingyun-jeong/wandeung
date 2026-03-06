@@ -7,9 +7,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:video_editor_2/video_editor.dart';
 
+import 'package:gal/gal.dart';
+
 import '../models/climbing_record.dart';
+import '../providers/record_provider.dart';
 import '../providers/video_editor_provider.dart';
 import '../services/video_export_service.dart';
+import '../utils/thumbnail_utils.dart';
 import '../widgets/editor/export_progress_dialog.dart';
 import '../widgets/editor/overlay_layer.dart';
 import '../widgets/editor/overlay_sticker_sheet.dart';
@@ -44,7 +48,7 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
     super.initState();
     _controller = VideoEditorController.file(
       XFile(widget.videoPath),
-      minDuration: const Duration(seconds: 1),
+      minDuration: Duration.zero,
       maxDuration: const Duration(minutes: 10),
     );
     _controller.initialize().then((_) {
@@ -107,19 +111,37 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
       );
 
       if (mounted) {
-        // 다이얼로그 닫기
-        Navigator.pop(context);
+        Navigator.pop(context); // 다이얼로그 닫기
 
-        // 저장 화면으로 이동
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (_) => RecordSaveScreen(
-              videoPath: result.outputPath,
-              originalVideoPath: widget.videoPath,
+        if (widget.existingRecord != null) {
+          // 기존 기록 편집 → 내보내기 영상을 자식 레코드로 저장
+          try {
+            await Gal.putVideo(result.outputPath, album: '완등');
+          } catch (_) {}
+          final thumbnailPath = await generateThumbnail(result.outputPath);
+          await RecordService.saveExport(
+            parentRecordId: widget.existingRecord!.id!,
+            parentRecord: widget.existingRecord!,
+            videoPath: result.outputPath,
+            thumbnailPath: thumbnailPath,
+          );
+          if (mounted) {
+            ref.invalidate(
+                exportedRecordsProvider(widget.existingRecord!.id!));
+            Navigator.pop(context, true); // RecordSaveScreen으로 복귀
+          }
+        } else {
+          // 신규 촬영 → 저장 화면으로 이동
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (_) => RecordSaveScreen(
+                videoPath: result.outputPath,
+                originalVideoPath: widget.videoPath,
+              ),
             ),
-          ),
-        );
+          );
+        }
       }
     } catch (e) {
       if (mounted) {

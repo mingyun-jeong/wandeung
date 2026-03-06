@@ -9,6 +9,8 @@ import '../widgets/record_card.dart';
 
 final selectedDateProvider = StateProvider<DateTime>((ref) => DateTime.now());
 final focusedMonthProvider = StateProvider<DateTime>((ref) => DateTime.now());
+final calendarFormatProvider =
+    StateProvider<CalendarFormat>((ref) => CalendarFormat.month);
 
 // 필터 상태 (카테고리별 단일 선택)
 final selectedColorFilterProvider = StateProvider<String?>((ref) => null);
@@ -45,8 +47,29 @@ bool _hasFilterableOptions(List<ClimbingRecord> records) {
   return false;
 }
 
-class RecordsTabScreen extends ConsumerWidget {
+class RecordsTabScreen extends ConsumerStatefulWidget {
   const RecordsTabScreen({super.key});
+
+  @override
+  ConsumerState<RecordsTabScreen> createState() => _RecordsTabScreenState();
+}
+
+class _RecordsTabScreenState extends ConsumerState<RecordsTabScreen> {
+  // PageView는 항상 3페이지: [이전날 | 선택날(1) | 다음날]
+  // 가운데(1)에서 시작하고, 스와이프 완료 시 날짜를 바꾸고 다시 가운데로 점프
+  late final PageController _pageController;
+
+  @override
+  void initState() {
+    super.initState();
+    _pageController = PageController(initialPage: 1);
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
 
   void _resetFilters(WidgetRef ref) {
     ref.read(selectedColorFilterProvider.notifier).state = null;
@@ -55,7 +78,8 @@ class RecordsTabScreen extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
+    final ref = this.ref;
     final selectedDate = ref.watch(selectedDateProvider);
     final focusedMonth = ref.watch(focusedMonthProvider);
     final records = ref.watch(recordsByDateProvider(selectedDate));
@@ -64,6 +88,7 @@ class RecordsTabScreen extends ConsumerWidget {
     final selectedStatus = ref.watch(selectedStatusFilterProvider);
     final selectedTag = ref.watch(selectedTagFilterProvider);
 
+    final calendarFormat = ref.watch(calendarFormatProvider);
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
@@ -87,6 +112,14 @@ class RecordsTabScreen extends ConsumerWidget {
             firstDay: DateTime(2020),
             lastDay: DateTime(2030),
             focusedDay: focusedMonth,
+            calendarFormat: calendarFormat,
+            availableCalendarFormats: const {
+              CalendarFormat.month: '주간',
+              CalendarFormat.week: '월간',
+            },
+            onFormatChanged: (format) {
+              ref.read(calendarFormatProvider.notifier).state = format;
+            },
             selectedDayPredicate: (day) => isSameDay(day, selectedDate),
             onDaySelected: (selected, focused) {
               ref.read(selectedDateProvider.notifier).state = selected;
@@ -143,7 +176,16 @@ class RecordsTabScreen extends ConsumerWidget {
               weekNumberTextStyle: const TextStyle(fontSize: 11),
             ),
             headerStyle: HeaderStyle(
-              formatButtonVisible: false,
+              formatButtonVisible: true,
+              formatButtonShowsNext: true,
+              formatButtonDecoration: BoxDecoration(
+                border: Border.all(color: colorScheme.outline.withOpacity(0.4)),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              formatButtonTextStyle: TextStyle(
+                fontSize: 12,
+                color: colorScheme.onSurface.withOpacity(0.7),
+              ),
               titleCentered: true,
               titleTextStyle: const TextStyle(
                 fontSize: 15,
@@ -173,76 +215,107 @@ class RecordsTabScreen extends ConsumerWidget {
           ),
           Divider(height: 1, color: colorScheme.outline.withOpacity(0.15)),
           Expanded(
-            child: records.when(
-              data: (list) {
-                if (list.isEmpty) {
-                  return Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
+            child: PageView.builder(
+              controller: _pageController,
+              itemCount: 3,
+              onPageChanged: (page) {
+                if (page == 1) return;
+                final delta = page == 0 ? -1 : 1;
+                final newDate = selectedDate.add(Duration(days: delta));
+                ref.read(selectedDateProvider.notifier).state = newDate;
+                ref.read(focusedMonthProvider.notifier).state = newDate;
+                _resetFilters(ref);
+                // 날짜 변경 후 가운데 페이지로 즉시 복귀
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  _pageController.jumpToPage(1);
+                });
+              },
+              itemBuilder: (context, page) {
+                // 가운데 페이지(1)만 실제 데이터 표시, 양쪽은 빈 컨테이너
+                if (page != 1) return const SizedBox.shrink();
+                return records.when(
+                  data: (list) {
+                    if (list.isEmpty) {
+                      return Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.terrain_outlined,
+                                size: 48,
+                                color: colorScheme.onSurface.withOpacity(0.2)),
+                            const SizedBox(height: 10),
+                            Text(
+                              '이 날의 등반 기록이 없습니다',
+                              style: TextStyle(
+                                  fontSize: 14,
+                                  color:
+                                      colorScheme.onSurface.withOpacity(0.4)),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+
+                    final filtered = _applyFilters(
+                        list, selectedColor, selectedStatus, selectedTag);
+                    final hasActiveFilters = selectedColor != null ||
+                        selectedStatus != null ||
+                        selectedTag != null;
+                    final showFilterBar =
+                        list.length >= 2 && _hasFilterableOptions(list);
+
+                    return Column(
                       children: [
-                        Icon(Icons.terrain_outlined,
-                            size: 48, color: colorScheme.onSurface.withOpacity(0.2)),
-                        const SizedBox(height: 10),
-                        Text(
-                          '이 날의 등반 기록이 없습니다',
-                          style: TextStyle(
-                              fontSize: 14, color: colorScheme.onSurface.withOpacity(0.4)),
+                        if (showFilterBar) ...[
+                          _FilterBar(records: list),
+                          Divider(
+                              height: 1,
+                              color: colorScheme.outline.withOpacity(0.15)),
+                        ],
+                        Expanded(
+                          child: filtered.isEmpty
+                              ? Center(
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(Icons.filter_list_off_rounded,
+                                          size: 40,
+                                          color: colorScheme.onSurface
+                                              .withOpacity(0.2)),
+                                      const SizedBox(height: 10),
+                                      Text(
+                                        '필터 조건에 맞는 기록이 없습니다',
+                                        style: TextStyle(
+                                            fontSize: 14,
+                                            color: colorScheme.onSurface
+                                                .withOpacity(0.4)),
+                                      ),
+                                      if (hasActiveFilters) ...[
+                                        const SizedBox(height: 12),
+                                        TextButton(
+                                          onPressed: () => _resetFilters(ref),
+                                          child: const Text('필터 초기화'),
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                )
+                              : ListView.builder(
+                                  padding: const EdgeInsets.fromLTRB(
+                                      16, 12, 16, 16),
+                                  itemCount: filtered.length,
+                                  itemBuilder: (_, i) =>
+                                      RecordCard(record: filtered[i]),
+                                ),
                         ),
                       ],
-                    ),
-                  );
-                }
-
-                final filtered = _applyFilters(
-                    list, selectedColor, selectedStatus, selectedTag);
-                final hasActiveFilters = selectedColor != null ||
-                    selectedStatus != null ||
-                    selectedTag != null;
-                final showFilterBar = list.length >= 2 && _hasFilterableOptions(list);
-
-                return Column(
-                  children: [
-                    if (showFilterBar) ...[
-                      _FilterBar(records: list),
-                      Divider(height: 1, color: colorScheme.outline.withOpacity(0.15)),
-                    ],
-                    Expanded(
-                      child: filtered.isEmpty
-                          ? Center(
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(Icons.filter_list_off_rounded,
-                                      size: 40,
-                                      color: colorScheme.onSurface.withOpacity(0.2)),
-                                  const SizedBox(height: 10),
-                                  Text(
-                                    '필터 조건에 맞는 기록이 없습니다',
-                                    style: TextStyle(
-                                        fontSize: 14,
-                                        color: colorScheme.onSurface.withOpacity(0.4)),
-                                  ),
-                                  if (hasActiveFilters) ...[
-                                    const SizedBox(height: 12),
-                                    TextButton(
-                                      onPressed: () => _resetFilters(ref),
-                                      child: const Text('필터 초기화'),
-                                    ),
-                                  ],
-                                ],
-                              ),
-                            )
-                          : ListView.builder(
-                              padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-                              itemCount: filtered.length,
-                              itemBuilder: (_, i) => RecordCard(record: filtered[i]),
-                            ),
-                    ),
-                  ],
+                    );
+                  },
+                  loading: () =>
+                      const Center(child: CircularProgressIndicator()),
+                  error: (e, _) => Center(child: Text('오류: $e')),
                 );
               },
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (e, _) => Center(child: Text('오류: $e')),
             ),
           ),
         ],

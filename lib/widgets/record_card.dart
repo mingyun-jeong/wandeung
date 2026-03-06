@@ -81,12 +81,12 @@ class RecordCard extends StatelessWidget {
       return ClipRRect(
         borderRadius: BorderRadius.circular(12),
         child: SizedBox(
-          width: 46,
-          height: 46,
+          width: 72,
+          height: 72,
           child: Image.file(
             File(record.thumbnailPath!),
-            width: 46,
-            height: 46,
+            width: 72,
+            height: 72,
             fit: BoxFit.cover,
             errorBuilder: (_, __, ___) => _GradeBadge(
               grade: record.grade,
@@ -108,8 +108,8 @@ class _GradeBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 46,
-      height: 46,
+      width: 72,
+      height: 72,
       decoration: BoxDecoration(
         color: Color(color.colorValue),
         borderRadius: BorderRadius.circular(12),

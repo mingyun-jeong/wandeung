@@ -16,20 +16,6 @@ enum StatsPeriod {
 final statsPeriodProvider =
     StateProvider<StatsPeriod>((ref) => StatsPeriod.month);
 
-class GradeStat {
-  final int total;
-  final int completed;
-  final int inProgress;
-  final int prevTotal;
-
-  const GradeStat({
-    required this.total,
-    required this.completed,
-    required this.inProgress,
-    required this.prevTotal,
-  });
-}
-
 class GymStat {
   final String name;
   final int total;
@@ -78,21 +64,6 @@ class PeriodStatsData {
       prevTotalClimbs > 0 ? prevTotalCompleted / prevTotalClimbs * 100 : 0;
 
   bool get hasPrevious => previous.isNotEmpty;
-
-  Map<String, GradeStat> get gradeBreakdown {
-    final result = <String, GradeStat>{};
-    for (final grade in ['v1', 'v2', 'v3', 'v4', 'v5']) {
-      final curr = current.where((r) => r.grade == grade);
-      final prev = previous.where((r) => r.grade == grade);
-      result[grade] = GradeStat(
-        total: curr.length,
-        completed: curr.where((r) => r.status == 'completed').length,
-        inProgress: curr.where((r) => r.status == 'in_progress').length,
-        prevTotal: prev.length,
-      );
-    }
-    return result;
-  }
 
   /// 기간별 난이도 색상 시계열 데이터
   List<ColorTimePoint> getColorTimeSeries(StatsPeriod period) {

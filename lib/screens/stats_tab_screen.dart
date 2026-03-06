@@ -122,7 +122,6 @@ class StatsTabScreen extends ConsumerWidget {
                   delegate: SliverChildListDelegate([
                     _SummarySection(stats: stats, period: period),
                     _ColorTrendSection(stats: stats, period: period),
-                    _GradeSection(stats: stats),
                     if (stats.gymBreakdown
                         .where((g) => g.total > 0)
                         .isNotEmpty)
@@ -525,7 +524,7 @@ class _ColorTrendSection extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              '색상별 추이',
+              '난이도 추이',
               style: TextStyle(
                 fontSize: 17,
                 fontWeight: FontWeight.w700,
@@ -704,196 +703,6 @@ class _ColorTrendSection extends StatelessWidget {
   }
 }
 
-class _GradeSection extends StatelessWidget {
-  final PeriodStatsData stats;
-  const _GradeSection({required this.stats});
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final breakdown = stats.gradeBreakdown;
-
-    final maxTotal = breakdown.values
-        .map((s) => s.total)
-        .fold<int>(1, (a, b) => max(a, b));
-
-    const grades = ['v1', 'v2', 'v3', 'v4', 'v5'];
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-      child: Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: const Color(0xFFE8ECF0)),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              '난이도별 통계',
-              style: TextStyle(
-                fontSize: 17,
-                fontWeight: FontWeight.w700,
-                color: colorScheme.onSurface,
-              ),
-            ),
-            const SizedBox(height: 16),
-            ...grades.map((grade) {
-              final stat = breakdown[grade]!;
-              final diff = stat.total - stat.prevTotal;
-
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: Row(
-                  children: [
-                    SizedBox(
-                      width: 28,
-                      child: Text(
-                        grade.toUpperCase(),
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                          color: colorScheme.onSurface.withOpacity(0.7),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: SizedBox(
-                        height: 20,
-                        child: Stack(
-                          children: [
-                            Container(
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFF1F5F9),
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                            ),
-                            if (stat.total > 0)
-                              FractionallySizedBox(
-                                widthFactor: stat.total / maxTotal,
-                                child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(4),
-                                  child: Row(
-                                    children: [
-                                      if (stat.completed > 0)
-                                        Expanded(
-                                          flex: stat.completed,
-                                          child: Container(
-                                            color: const Color(0xFF4ADE80),
-                                          ),
-                                        ),
-                                      if (stat.inProgress > 0)
-                                        Expanded(
-                                          flex: stat.inProgress,
-                                          child: Container(
-                                            color: const Color(0xFFFBBF24),
-                                          ),
-                                        ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    SizedBox(
-                      width: 28,
-                      child: Text(
-                        '${stat.total}',
-                        textAlign: TextAlign.right,
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                          color: colorScheme.onSurface,
-                        ),
-                      ),
-                    ),
-                    if (stats.hasPrevious) ...[
-                      const SizedBox(width: 6),
-                      SizedBox(
-                        width: 36,
-                        child: _buildDiffBadge(diff, colorScheme),
-                      ),
-                    ],
-                  ],
-                ),
-              );
-            }),
-            const SizedBox(height: 4),
-            Row(
-              children: [
-                Container(
-                  width: 10,
-                  height: 10,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF4ADE80),
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  '완등',
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: colorScheme.onSurface.withOpacity(0.5),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Container(
-                  width: 10,
-                  height: 10,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFBBF24),
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  '도전중',
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: colorScheme.onSurface.withOpacity(0.5),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDiffBadge(int diff, ColorScheme colorScheme) {
-    if (diff == 0) {
-      return Text(
-        '—',
-        textAlign: TextAlign.center,
-        style: TextStyle(
-          fontSize: 11,
-          color: colorScheme.onSurface.withOpacity(0.3),
-        ),
-      );
-    }
-    final isPositive = diff > 0;
-    final color =
-        isPositive ? const Color(0xFF22C55E) : const Color(0xFFEF4444);
-    return Text(
-      '${isPositive ? '+' : ''}$diff',
-      textAlign: TextAlign.center,
-      style: TextStyle(
-        fontSize: 11,
-        fontWeight: FontWeight.w700,
-        color: color,
-      ),
-    );
-  }
-}
-
 class _GymSection extends StatelessWidget {
   final PeriodStatsData stats;
   const _GymSection({required this.stats});
@@ -901,9 +710,10 @@ class _GymSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final gymStats = stats.gymBreakdown.where((g) => g.total > 0).toList();
-    if (gymStats.isEmpty) return const SizedBox.shrink();
+    final allGymStats = stats.gymBreakdown.where((g) => g.total > 0).toList();
+    if (allGymStats.isEmpty) return const SizedBox.shrink();
 
+    final gymStats = allGymStats.take(5).toList();
     final maxTotal =
         gymStats.map((g) => g.total).fold<int>(1, (a, b) => max(a, b));
 
@@ -920,7 +730,7 @@ class _GymSection extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              '암장별 통계',
+              '암장별 통계 TOP 5',
               style: TextStyle(
                 fontSize: 17,
                 fontWeight: FontWeight.w700,

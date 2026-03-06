@@ -28,6 +28,7 @@ class GymMapSheet extends ConsumerStatefulWidget {
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
       isScrollControlled: true,
+      enableDrag: false,
       builder: (_) => FractionallySizedBox(
         heightFactor: 0.7,
         child: GymMapSheet(selectedGym: selectedGym),
@@ -44,6 +45,7 @@ class GymMapSheet extends ConsumerStatefulWidget {
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
       isScrollControlled: true,
+      enableDrag: false,
       builder: (ctx) => FractionallySizedBox(
         heightFactor: 0.8,
         child: GymMapSheet(

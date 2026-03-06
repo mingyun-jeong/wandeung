@@ -18,8 +18,7 @@ class MainActivity : FlutterActivity() {
         val plugins: List<Pair<String, () -> FlutterPlugin>> = listOf(
             "app_links" to { com.llfbandit.app_links.AppLinksPlugin() },
             "camera_android_camerax" to { io.flutter.plugins.camerax.CameraAndroidCameraxPlugin() },
-            // FFmpegKit excluded: throws UnsatisfiedLinkError on some devices,
-            // and even partial registration causes fatal NoClassDefFoundError.
+            "ffmpeg_kit_flutter_new" to { com.antonkarpenko.ffmpegkit.FFmpegKitFlutterPlugin() },
             "file_picker" to { com.mr.flutter.plugin.filepicker.FilePickerPlugin() },
             // FlutterNaverMapPlugin is Kotlin-internal; use reflection
             "flutter_naver_map" to {

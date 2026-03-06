@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:video_editor_2/video_editor.dart';
+import 'package:video_player/video_player.dart';
 
 import 'package:gal/gal.dart';
 
@@ -49,6 +50,17 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
   bool _isInitialized = false;
   bool _isExporting = false;
   Duration _currentPosition = Duration.zero;
+  double _displayAspectRatio = 16 / 9;
+  bool _isRotationCorrected = false;
+
+  /// 회전 보정된 영상 해상도 (FFmpeg export용)
+  Size get _correctedVideoDimension {
+    final dim = _controller.videoDimension;
+    if (_isRotationCorrected) {
+      return Size(dim.height, dim.width);
+    }
+    return dim;
+  }
 
   @override
   void initState() {
@@ -60,6 +72,18 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
     );
     _controller.initialize().then((_) {
       if (mounted) {
+        // 회전 보정된 비율 계산
+        final size = _controller.video.value.size;
+        final rotation = _controller.video.value.rotationCorrection;
+        if (size.width > 0 &&
+            size.height > 0 &&
+            (rotation == 90 || rotation == 270)) {
+          _displayAspectRatio = size.height / size.width;
+          _isRotationCorrected = true;
+        } else {
+          _displayAspectRatio = _controller.video.value.aspectRatio;
+        }
+
         setState(() => _isInitialized = true);
         // 배속 구간 초기화 (전체 영상, 1x)
         ref
@@ -139,7 +163,7 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
         overlays: overlays,
         subtitles: subtitles,
         subtitleFontPaths: subtitleFontPaths,
-        videoResolution: _controller.videoDimension,
+        videoResolution: _correctedVideoDimension,
         fontPath: fontPath,
         onProgress: (progress) {
           ref.read(exportProgressProvider.notifier).state = progress;
@@ -309,9 +333,21 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
                   return Stack(
                     alignment: Alignment.center,
                     children: [
-                      // video_editor_2 프리뷰
-                      CropGridViewer.preview(
-                        controller: _controller,
+                      // 비디오 프리뷰 (회전 보정 적용)
+                      Center(
+                        child: AspectRatio(
+                          aspectRatio: _displayAspectRatio,
+                          child: GestureDetector(
+                            onTap: () {
+                              if (_controller.video.value.isPlaying) {
+                                _controller.video.pause();
+                              } else {
+                                _controller.video.play();
+                              }
+                            },
+                            child: VideoPlayer(_controller.video),
+                          ),
+                        ),
                       ),
 
                       // 배속 표시 배지

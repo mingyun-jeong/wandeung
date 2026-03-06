@@ -32,7 +32,7 @@ class VideoExportService {
     final timestamp = DateTime.now().millisecondsSinceEpoch;
     final outputPath = '${appDir.path}/edited_$timestamp.mp4';
 
-    final command = FFmpegCommandBuilder.buildExportCommand(
+    final args = FFmpegCommandBuilder.buildExportArgs(
       inputPath: inputPath,
       outputPath: outputPath,
       trimStart: trimStart,
@@ -52,9 +52,7 @@ class VideoExportService {
       speedSegments,
     );
 
-    final session = await FFmpegKit.execute(command);
-    // Note: executeAsync가 아닌 execute를 사용하여 완료 대기
-    // 진행률은 통계 콜백 대신 로그 파싱으로 처리
+    final session = await FFmpegKit.executeWithArguments(args);
 
     final returnCode = await session.getReturnCode();
 
@@ -91,7 +89,7 @@ class VideoExportService {
     final timestamp = DateTime.now().millisecondsSinceEpoch;
     final outputPath = '${appDir.path}/edited_$timestamp.mp4';
 
-    final command = FFmpegCommandBuilder.buildExportCommand(
+    final args = FFmpegCommandBuilder.buildExportArgs(
       inputPath: inputPath,
       outputPath: outputPath,
       trimStart: trimStart,
@@ -110,8 +108,8 @@ class VideoExportService {
       speedSegments,
     );
 
-    final session = await FFmpegKit.executeAsync(
-      command,
+    final session = await FFmpegKit.executeWithArgumentsAsync(
+      args,
       (session) async {
         // 완료 콜백 — Completer로 처리
       },

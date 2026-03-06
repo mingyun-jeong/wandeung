@@ -7,7 +7,7 @@ import '../models/video_edit_models.dart';
 class FFmpegCommandBuilder {
   FFmpegCommandBuilder._();
 
-  /// 전체 내보내기 명령 생성
+  /// 전체 내보내기 명령을 인수 리스트로 생성
   ///
   /// [inputPath] 입력 파일 경로
   /// [outputPath] 출력 파일 경로
@@ -17,7 +17,7 @@ class FFmpegCommandBuilder {
   /// [overlays] 오버레이 아이템 목록
   /// [videoResolution] 영상의 원본 해상도
   /// [fontPath] drawtext용 폰트 파일 경로
-  static String buildExportCommand({
+  static List<String> buildExportArgs({
     required String inputPath,
     required String outputPath,
     required Duration trimStart,
@@ -29,13 +29,13 @@ class FFmpegCommandBuilder {
     required Size videoResolution,
     String? fontPath,
   }) {
-    final parts = <String>['-y'];
+    final args = <String>['-y'];
 
     // 입력 파일
-    parts.addAll(['-i', "'$inputPath'"]);
+    args.addAll(['-i', inputPath]);
 
     // 트림: -ss와 -to를 input 이후에 배치 (정확한 디코딩)
-    parts.addAll([
+    args.addAll([
       '-ss',
       _formatDuration(trimStart),
       '-to',
@@ -47,19 +47,19 @@ class FFmpegCommandBuilder {
         _buildFilterComplex(speedSegments, overlays, subtitles, subtitleFontPaths, videoResolution, fontPath);
 
     if (filterComplex != null) {
-      parts.addAll(['-filter_complex', "'$filterComplex'"]);
+      args.addAll(['-filter_complex', filterComplex]);
 
       // 필터 출력 매핑
       if (filterComplex.contains('[vout]')) {
-        parts.addAll(['-map', '[vout]']);
+        args.addAll(['-map', '[vout]']);
       }
       if (filterComplex.contains('[aout]')) {
-        parts.addAll(['-map', '[aout]']);
+        args.addAll(['-map', '[aout]']);
       }
     }
 
     // 인코딩 설정
-    parts.addAll([
+    args.addAll([
       '-c:v', 'libx264',
       '-preset', 'fast',
       '-crf', '23',
@@ -67,10 +67,10 @@ class FFmpegCommandBuilder {
       '-b:a', '128k',
       '-movflags', '+faststart',
       '-r', '30',
-      "'$outputPath'",
+      outputPath,
     ]);
 
-    return parts.join(' ');
+    return args;
   }
 
   /// filter_complex 문자열 생성 (필터가 없으면 null)

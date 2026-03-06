@@ -4,6 +4,9 @@ import 'package:wandeung/models/subtitle_item.dart';
 import 'package:wandeung/models/video_edit_models.dart';
 import 'package:wandeung/services/ffmpeg_command_builder.dart';
 
+/// 인수 리스트를 하나의 문자열로 합쳐서 내용 검증에 사용
+String _joinArgs(List<String> args) => args.join(' ');
+
 void main() {
   group('FFmpegCommandBuilder subtitle support', () {
     test('includes subtitle drawtext with enable/between', () {
@@ -17,7 +20,7 @@ void main() {
         color: Color(0xFFFFFFFF),
       );
 
-      final command = FFmpegCommandBuilder.buildExportCommand(
+      final args = FFmpegCommandBuilder.buildExportArgs(
         inputPath: '/input.mp4',
         outputPath: '/output.mp4',
         trimStart: Duration.zero,
@@ -26,6 +29,7 @@ void main() {
         videoResolution: const Size(1920, 1080),
         fontPath: '/fonts/NotoSansKR-Bold.otf',
       );
+      final command = _joinArgs(args);
 
       expect(command, contains('drawtext='));
       expect(command, contains("enable='between(t,2.000,5.000)'"));
@@ -42,7 +46,7 @@ void main() {
         strokeWidth: 3.0,
       );
 
-      final command = FFmpegCommandBuilder.buildExportCommand(
+      final args = FFmpegCommandBuilder.buildExportArgs(
         inputPath: '/input.mp4',
         outputPath: '/output.mp4',
         trimStart: Duration.zero,
@@ -50,6 +54,7 @@ void main() {
         subtitles: [subtitle],
         videoResolution: const Size(1920, 1080),
       );
+      final command = _joinArgs(args);
 
       expect(command, contains('borderw=3'));
       expect(command, contains('bordercolor=0x000000'));
@@ -64,7 +69,7 @@ void main() {
         hasShadow: true,
       );
 
-      final command = FFmpegCommandBuilder.buildExportCommand(
+      final args = FFmpegCommandBuilder.buildExportArgs(
         inputPath: '/input.mp4',
         outputPath: '/output.mp4',
         trimStart: Duration.zero,
@@ -72,6 +77,7 @@ void main() {
         subtitles: [subtitle],
         videoResolution: const Size(1920, 1080),
       );
+      final command = _joinArgs(args);
 
       expect(command, contains('shadowcolor='));
       expect(command, contains('shadowx='));
@@ -87,7 +93,7 @@ void main() {
         backgroundColor: Color(0xFF000000),
       );
 
-      final command = FFmpegCommandBuilder.buildExportCommand(
+      final args = FFmpegCommandBuilder.buildExportArgs(
         inputPath: '/input.mp4',
         outputPath: '/output.mp4',
         trimStart: Duration.zero,
@@ -95,6 +101,7 @@ void main() {
         subtitles: [subtitle],
         videoResolution: const Size(1920, 1080),
       );
+      final command = _joinArgs(args);
 
       expect(command, contains('box=1'));
       expect(command, contains('boxcolor=0x000000'));
@@ -109,7 +116,7 @@ void main() {
         fontFamily: 'MyCustomFont',
       );
 
-      final command = FFmpegCommandBuilder.buildExportCommand(
+      final args = FFmpegCommandBuilder.buildExportArgs(
         inputPath: '/input.mp4',
         outputPath: '/output.mp4',
         trimStart: Duration.zero,
@@ -120,6 +127,7 @@ void main() {
           'MyCustomFont': '/fonts/MyCustomFont.ttf',
         },
       );
+      final command = _joinArgs(args);
 
       expect(command, contains('fontfile=/fonts/MyCustomFont.ttf'));
     });
@@ -137,7 +145,7 @@ void main() {
         endTime: Duration(seconds: 3),
       );
 
-      final command = FFmpegCommandBuilder.buildExportCommand(
+      final args = FFmpegCommandBuilder.buildExportArgs(
         inputPath: '/input.mp4',
         outputPath: '/output.mp4',
         trimStart: Duration.zero,
@@ -146,6 +154,7 @@ void main() {
         subtitles: [subtitle],
         videoResolution: const Size(1920, 1080),
       );
+      final command = _joinArgs(args);
 
       // Both drawtext filters present
       expect('drawtext='.allMatches(command).length, 2);
@@ -153,13 +162,14 @@ void main() {
     });
 
     test('works without subtitles (backward compat)', () {
-      final command = FFmpegCommandBuilder.buildExportCommand(
+      final args = FFmpegCommandBuilder.buildExportArgs(
         inputPath: '/input.mp4',
         outputPath: '/output.mp4',
         trimStart: Duration.zero,
         trimEnd: const Duration(seconds: 10),
         videoResolution: const Size(1920, 1080),
       );
+      final command = _joinArgs(args);
 
       expect(command, contains('/output.mp4'));
       expect(command, isNot(contains("enable='between")));
@@ -173,7 +183,7 @@ void main() {
         endTime: Duration(seconds: 3),
       );
 
-      final command = FFmpegCommandBuilder.buildExportCommand(
+      final args = FFmpegCommandBuilder.buildExportArgs(
         inputPath: '/input.mp4',
         outputPath: '/output.mp4',
         trimStart: Duration.zero,
@@ -188,10 +198,36 @@ void main() {
         subtitles: [subtitle],
         videoResolution: const Size(1920, 1080),
       );
+      final command = _joinArgs(args);
 
       expect(command, contains('[vspeed]'));
       expect(command, contains('[vout]'));
       expect(command, contains("enable='between(t,0.000,3.000)'"));
+    });
+
+    test('filter_complex is passed as single argument (no quote splitting)', () {
+      const subtitle = SubtitleItem(
+        id: '1',
+        text: 'test',
+        startTime: Duration(seconds: 1),
+        endTime: Duration(seconds: 3),
+      );
+
+      final args = FFmpegCommandBuilder.buildExportArgs(
+        inputPath: '/input.mp4',
+        outputPath: '/output.mp4',
+        trimStart: Duration.zero,
+        trimEnd: const Duration(seconds: 10),
+        subtitles: [subtitle],
+        videoResolution: const Size(1920, 1080),
+      );
+
+      final fcIndex = args.indexOf('-filter_complex');
+      expect(fcIndex, isNot(-1));
+      // filter_complex 값이 하나의 인수로 전달되는지 확인
+      final filterValue = args[fcIndex + 1];
+      expect(filterValue, contains("enable='between(t,"));
+      expect(filterValue, contains('[vout]'));
     });
   });
 }

@@ -93,7 +93,7 @@ class _SubtitleEditorSheetState extends ConsumerState<SubtitleEditorSheet> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    isEditing ? 'Text 편집' : 'Text 추가',
+                    isEditing ? '텍스트 편집' : '텍스트 추가',
                     style: const TextStyle(
                         fontSize: 18, fontWeight: FontWeight.w700),
                   ),
@@ -114,7 +114,6 @@ class _SubtitleEditorSheetState extends ConsumerState<SubtitleEditorSheet> {
                   TextField(
                     controller: _textController,
                     decoration: const InputDecoration(
-                      labelText: 'Text',
                       hintText: '텍스트를 입력하세요',
                       border: OutlineInputBorder(),
                     ),
@@ -285,7 +284,7 @@ class _SubtitlePreview extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     Widget text = Text(
-      item.text.isEmpty ? 'Text 미리보기' : item.text,
+      item.text.isEmpty ? '미리보기' : item.text,
       style: TextStyle(
         fontSize: item.fontSize,
         color: item.color,
@@ -306,7 +305,7 @@ class _SubtitlePreview extends StatelessWidget {
       text = Stack(
         children: [
           Text(
-            item.text.isEmpty ? 'Text 미리보기' : item.text,
+            item.text.isEmpty ? '미리보기' : item.text,
             style: TextStyle(
               fontSize: item.fontSize,
               fontWeight: item.isBold ? FontWeight.w800 : FontWeight.normal,

@@ -5,8 +5,7 @@ import '../models/climbing_record.dart';
 enum StatsPeriod {
   week('7일', 7),
   month('30일', 30),
-  quarter('90일', 90),
-  all('전체', 0);
+  quarter('90일', 90);
 
   final String label;
   final int days;
@@ -93,20 +92,6 @@ class PeriodStatsData {
           final nextMonth = DateTime(month.year, month.month + 1, 1);
           result.add(_buildColorPoint(month, nextMonth, '${month.month}월', colors));
         }
-      case StatsPeriod.all:
-        final earliest = current
-            .map((r) => r.recordedAt)
-            .reduce((a, b) => a.isBefore(b) ? a : b);
-        var month = DateTime(earliest.year, earliest.month, 1);
-        final lastMonth = DateTime(today.year, today.month + 1, 1);
-        while (month.isBefore(lastMonth)) {
-          final nextMonth = DateTime(month.year, month.month + 1, 1);
-          final label = month.year == today.year
-              ? '${month.month}월'
-              : '${month.year % 100}.${month.month}';
-          result.add(_buildColorPoint(month, nextMonth, label, colors));
-          month = nextMonth;
-        }
     }
 
     return result;
@@ -180,10 +165,6 @@ final periodStatsProvider = FutureProvider<PeriodStatsData>((ref) async {
   final allRecords = (response as List)
       .map((e) => ClimbingRecord.fromMap(e))
       .toList();
-
-  if (period == StatsPeriod.all) {
-    return PeriodStatsData(current: allRecords, previous: const []);
-  }
 
   final now = DateTime.now();
   final today = DateTime(now.year, now.month, now.day);

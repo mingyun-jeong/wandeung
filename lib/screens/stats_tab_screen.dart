@@ -181,9 +181,7 @@ class _SummarySection extends StatelessWidget {
             Row(
               children: [
                 Text(
-                  period == StatsPeriod.all
-                      ? '전체 기간'
-                      : '최근 ${period.label}',
+                  '최근 ${period.label}',
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w500,

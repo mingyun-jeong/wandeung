@@ -113,10 +113,10 @@ final nearbyGymsProvider = FutureProvider<List<ClimbingGym>>((ref) async {
   final clientSecret = dotenv.env['NAVER_CLIENT_SECRET'] ?? '';
   if (clientId.isEmpty || clientSecret.isEmpty) return [];
 
-  String searchQuery = '클라이밍장';
+  String searchQuery = '클라이밍짐';
   if (position != null) {
     final prefix = await _reverseGeocodePrefix(position);
-    if (prefix.isNotEmpty) searchQuery = '$prefix 클라이밍장';
+    if (prefix.isNotEmpty) searchQuery = '$prefix 클라이밍짐';
   }
 
   return _searchNaverGyms(
@@ -144,7 +144,7 @@ final gymsProvider = FutureProvider<List<ClimbingGym>>((ref) async {
   final clientSecret = dotenv.env['NAVER_CLIENT_SECRET'] ?? '';
   if (clientId.isEmpty || clientSecret.isEmpty) return [];
 
-  final searchQuery = query.contains('클라이밍') ? query : '$query 클라이밍장';
+  final searchQuery = query.contains('클라이밍') ? query : '$query 클라이밍짐';
 
   return _searchNaverGyms(
     searchQuery: searchQuery,

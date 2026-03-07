@@ -69,6 +69,14 @@ class _GymMapSheetState extends ConsumerState<GymMapSheet> {
   void initState() {
     super.initState();
     _tappedGym = widget.selectedGym;
+    // 지도에서 찾기 모드: 열릴 때 기본으로 근처 클라이밍장 조회 후 목록 표시
+    if (_isPickMode) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        ref.read(searchQueryProvider.notifier).state = '';
+        setState(() => _showSearchResults = true);
+      });
+    }
   }
 
   @override
@@ -223,14 +231,34 @@ class _GymMapSheetState extends ConsumerState<GymMapSheet> {
               textInputAction: TextInputAction.search,
               onSubmitted: _onSearch,
               decoration: InputDecoration(
-                hintText: '클라이밍장 검색...',
-                prefixIcon: const Icon(Icons.search_rounded, size: 20),
+                hintText: '근처 클라이밍장',
+                prefixIcon: IconButton(
+                  icon: const Icon(Icons.search_rounded, size: 20),
+                  onPressed: () => _onSearch(_searchController.text),
+                  style: IconButton.styleFrom(
+                    minimumSize: Size.zero,
+                    padding: const EdgeInsets.all(12),
+                  ),
+                ),
                 suffixIcon: pickerQuery.isNotEmpty
                     ? IconButton(
                         icon: const Icon(Icons.close_rounded, size: 20),
                         onPressed: _clearSearch,
                       )
-                    : null,
+                    : TextButton(
+                        onPressed: () => _onSearch(
+                            _searchController.text.trim().isEmpty
+                                ? ''
+                                : _searchController.text.trim()),
+                        style: TextButton.styleFrom(
+                          minimumSize: Size.zero,
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          foregroundColor: colorScheme.primary,
+                        ),
+                        child: const Text('찾기',
+                            style: TextStyle(
+                                fontSize: 14, fontWeight: FontWeight.w600)),
+                      ),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10),
                   borderSide: BorderSide.none,
@@ -296,80 +324,157 @@ class _GymMapSheetState extends ConsumerState<GymMapSheet> {
                 Positioned.fill(
                   child: Container(
                     color: colorScheme.surface,
-                    child: gymsAsync.when(
-                      data: (gyms) {
-                        if (gyms.isEmpty) {
-                          return Center(
-                            child: Text(
-                              '검색 결과가 없습니다',
-                              style: TextStyle(
-                                color: colorScheme.onSurface.withOpacity(0.5),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                          child: Row(
+                            children: [
+                              Text(
+                                pickerQuery.isEmpty
+                                    ? '근처 클라이밍장'
+                                    : '검색 결과',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: colorScheme.onSurface,
+                                ),
+                              ),
+                              const Spacer(),
+                              IconButton(
+                                icon: const Icon(Icons.close_rounded),
+                                onPressed: () =>
+                                    setState(() => _showSearchResults = false),
+                                tooltip: '목록 닫기',
+                                style: IconButton.styleFrom(
+                                  minimumSize: Size.zero,
+                                  padding: const EdgeInsets.all(4),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Expanded(
+                          child: gymsAsync.when(
+                            data: (gyms) {
+                              if (gyms.isEmpty) {
+                                return Center(
+                                  child: Text(
+                                    pickerQuery.isEmpty
+                                        ? '주변 클라이밍장을 찾을 수 없습니다'
+                                        : '검색 결과가 없습니다',
+                                    style: TextStyle(
+                                      color: colorScheme.onSurface
+                                          .withOpacity(0.5),
+                                    ),
+                                  ),
+                                );
+                              }
+                              return ListView.separated(
+                                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                                itemCount: gyms.length,
+                                separatorBuilder: (_, __) =>
+                                    const SizedBox(height: 8),
+                                itemBuilder: (context, index) {
+                                  final gym = gyms[index];
+                                  final dist = _formatDistance(gym);
+                                  return Material(
+                                    color: colorScheme.surfaceContainerHighest
+                                        .withOpacity(0.5),
+                                    borderRadius: BorderRadius.circular(12),
+                                    child: InkWell(
+                                      onTap: () => _selectFromList(gym),
+                                      borderRadius: BorderRadius.circular(12),
+                                      child: Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 16, vertical: 12),
+                                        child: Row(
+                                          children: [
+                                            CircleAvatar(
+                                              radius: 20,
+                                              backgroundColor:
+                                                  colorScheme.primaryContainer,
+                                              child: Icon(
+                                                Icons.terrain_rounded,
+                                                size: 20,
+                                                color: colorScheme.primary,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 12),
+                                            Expanded(
+                                              child: Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: [
+                                                  Text(
+                                                    gym.name,
+                                                    style: const TextStyle(
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                      fontSize: 15,
+                                                    ),
+                                                  ),
+                                                  if (gym.address != null)
+                                                    Padding(
+                                                      padding: const EdgeInsets
+                                                          .only(top: 4),
+                                                      child: Text(
+                                                        gym.address!,
+                                                        style: TextStyle(
+                                                          fontSize: 12,
+                                                          color: colorScheme
+                                                              .onSurface
+                                                              .withOpacity(0.6),
+                                                        ),
+                                                        maxLines: 1,
+                                                        overflow:
+                                                            TextOverflow.ellipsis,
+                                                      ),
+                                                    ),
+                                                ],
+                                              ),
+                                            ),
+                                            if (dist.isNotEmpty)
+                                              Padding(
+                                                padding: const EdgeInsets.only(
+                                                    left: 8),
+                                                child: Text(
+                                                  dist,
+                                                  style: TextStyle(
+                                                    fontSize: 13,
+                                                    color: colorScheme.primary,
+                                                    fontWeight:
+                                                        FontWeight.w600,
+                                                  ),
+                                                ),
+                                              ),
+                                            const SizedBox(width: 4),
+                                            Icon(
+                                              Icons.chevron_right_rounded,
+                                              color: colorScheme.onSurface
+                                                  .withOpacity(0.4),
+                                              size: 20,
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                },
+                              );
+                            },
+                            loading: () => const Center(
+                                child: CircularProgressIndicator()),
+                            error: (_, __) => Center(
+                              child: Text(
+                                '오류가 발생했습니다',
+                                style: TextStyle(color: colorScheme.error),
                               ),
                             ),
-                          );
-                        }
-                        return ListView.separated(
-                          padding: const EdgeInsets.symmetric(vertical: 4),
-                          itemCount: gyms.length,
-                          separatorBuilder: (_, __) =>
-                              const Divider(height: 1, indent: 56),
-                          itemBuilder: (context, index) {
-                            final gym = gyms[index];
-                            final dist = _formatDistance(gym);
-                            return ListTile(
-                              dense: true,
-                              leading: CircleAvatar(
-                                radius: 18,
-                                backgroundColor:
-                                    colorScheme.primaryContainer,
-                                child: Icon(
-                                  Icons.terrain_rounded,
-                                  size: 17,
-                                  color: colorScheme.primary,
-                                ),
-                              ),
-                              title: Text(
-                                gym.name,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 14,
-                                ),
-                              ),
-                              subtitle: gym.address != null
-                                  ? Text(
-                                      gym.address!,
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        color: colorScheme.onSurface
-                                            .withOpacity(0.6),
-                                      ),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    )
-                                  : null,
-                              trailing: dist.isNotEmpty
-                                  ? Text(
-                                      dist,
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: colorScheme.primary,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    )
-                                  : null,
-                              onTap: () => _selectFromList(gym),
-                            );
-                          },
-                        );
-                      },
-                      loading: () =>
-                          const Center(child: CircularProgressIndicator()),
-                      error: (_, __) => Center(
-                        child: Text(
-                          '오류가 발생했습니다',
-                          style: TextStyle(color: colorScheme.error),
+                          ),
                         ),
-                      ),
+                      ],
                     ),
                   ),
                 ),

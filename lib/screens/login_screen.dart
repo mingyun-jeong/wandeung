@@ -59,10 +59,11 @@ class LoginScreen extends ConsumerWidget {
                             color: Colors.white.withOpacity(0.25),
                           ),
                         ),
-                        child: const Icon(
-                          Icons.terrain_rounded,
-                          size: 40,
-                          color: Colors.white,
+                        child: Image.asset(
+                          'assets/images/app_icon.png',
+                          width: 80,
+                          height: 80,
+                          fit: BoxFit.cover,
                         ),
                       ),
                     ),

@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import '../config/supabase_config.dart';
+import '../models/climbing_gym.dart';
 import '../models/climbing_record.dart';
 import '../models/user_climbing_stats.dart';
 
@@ -10,6 +10,8 @@ final selectedStatusFilterProvider = StateProvider<String?>((ref) => null);
 final selectedTagFilterProvider = StateProvider<String?>((ref) => null);
 final selectedGymFilterProvider = StateProvider<String?>((ref) => null);
 
+const _selectWithGym = '*, climbing_gyms(name)';
+
 final recordsByDateProvider =
     FutureProvider.family<List<ClimbingRecord>, DateTime>((ref, date) async {
   final userId = SupabaseConfig.client.auth.currentUser!.id;
@@ -17,7 +19,7 @@ final recordsByDateProvider =
 
   final response = await SupabaseConfig.client
       .from('climbing_records')
-      .select()
+      .select(_selectWithGym)
       .eq('user_id', userId)
       .eq('recorded_at', dateStr)
       .isFilter('parent_record_id', null)
@@ -62,7 +64,7 @@ final recordCountsByDateProvider =
 
   final response = await SupabaseConfig.client
       .from('climbing_records')
-      .select('recorded_at, status, difficulty_color, gym_name, tags')
+      .select('recorded_at, status, difficulty_color, tags, climbing_gyms(name)')
       .eq('user_id', userId)
       .gte('recorded_at', firstDay.toIso8601String().split('T')[0])
       .lte('recorded_at', lastDay.toIso8601String().split('T')[0])
@@ -72,7 +74,10 @@ final recordCountsByDateProvider =
   for (final row in response as List) {
     if (color != null && row['difficulty_color'] != color) continue;
     if (status != null && row['status'] != status) continue;
-    if (gymName != null && row['gym_name'] != gymName) continue;
+    if (gymName != null) {
+      final rowGymName = (row['climbing_gyms'] as Map?)?['name'];
+      if (rowGymName != gymName) continue;
+    }
     if (tag != null) {
       final tags = (row['tags'] as List?)?.cast<String>() ?? [];
       if (!tags.contains(tag)) continue;
@@ -90,7 +95,7 @@ final exportedRecordsProvider =
     FutureProvider.family<List<ClimbingRecord>, String>((ref, parentId) async {
   final response = await SupabaseConfig.client
       .from('climbing_records')
-      .select()
+      .select(_selectWithGym)
       .eq('parent_record_id', parentId)
       .order('created_at', ascending: false);
 
@@ -171,7 +176,7 @@ final recentRecordsProvider =
 
   final response = await SupabaseConfig.client
       .from('climbing_records')
-      .select()
+      .select(_selectWithGym)
       .eq('user_id', userId)
       .isFilter('parent_record_id', null)
       .order('recorded_at', ascending: false)
@@ -189,18 +194,18 @@ final recentGymsProvider = FutureProvider<List<String>>((ref) async {
 
   final response = await SupabaseConfig.client
       .from('climbing_records')
-      .select('gym_name, recorded_at')
+      .select('climbing_gyms(name), recorded_at')
       .eq('user_id', userId)
       .isFilter('parent_record_id', null)
-      .not('gym_name', 'is', null)
+      .not('gym_id', 'is', null)
       .order('recorded_at', ascending: false)
       .limit(50);
 
   final seen = <String>{};
   final gyms = <String>[];
   for (final row in response as List) {
-    final name = row['gym_name'] as String;
-    if (seen.add(name)) gyms.add(name);
+    final name = (row['climbing_gyms'] as Map?)?['name'] as String?;
+    if (name != null && seen.add(name)) gyms.add(name);
     if (gyms.length >= 5) break;
   }
   return gyms;
@@ -212,13 +217,15 @@ final userVisitedGymsProvider = FutureProvider<List<String>>((ref) async {
 
   final response = await SupabaseConfig.client
       .from('climbing_records')
-      .select('gym_name')
+      .select('climbing_gyms(name)')
       .eq('user_id', userId)
       .isFilter('parent_record_id', null)
-      .not('gym_name', 'is', null);
+      .not('gym_id', 'is', null);
 
   final gyms = (response as List)
-      .map((e) => e['gym_name'] as String)
+      .map((e) => (e['climbing_gyms'] as Map?)?['name'] as String?)
+      .where((name) => name != null)
+      .cast<String>()
       .toSet()
       .toList()
     ..sort();
@@ -229,23 +236,60 @@ final userVisitedGymsProvider = FutureProvider<List<String>>((ref) async {
 class RecordService {
   static final _supabase = SupabaseConfig.client;
 
+  /// Google Place ID로 기존 gym 찾거나 새로 생성
+  static Future<String> _findOrCreateGym(ClimbingGym gym) async {
+    final userId = _supabase.auth.currentUser!.id;
+
+    if (gym.googlePlaceId != null) {
+      // google_place_id로 기존 gym 검색
+      final existing = await _supabase
+          .from('climbing_gyms')
+          .select('id')
+          .eq('google_place_id', gym.googlePlaceId!)
+          .maybeSingle();
+
+      if (existing != null) return existing['id'] as String;
+    }
+
+    // 새 gym 생성
+    final inserted = await _supabase
+        .from('climbing_gyms')
+        .insert({
+          ...gym.toInsertMap(),
+          'created_by': userId,
+        })
+        .select('id')
+        .single();
+
+    return inserted['id'] as String;
+  }
+
   /// 기록 저장 (영상은 로컬 경로로 보관)
   static Future<ClimbingRecord> saveRecord({
     required String videoPath,
     required String grade,
     required String difficultyColor,
     required String status,
-    String? gymId,
-    String? gymName,
+    ClimbingGym? gym,
+    String? manualGymName,
     String? thumbnailPath,
     List<String> tags = const [],
   }) async {
     final userId = _supabase.auth.currentUser!.id;
 
+    // gym 객체 또는 수동 입력 이름으로 gym_id 확보
+    String? resolvedGymId;
+    if (gym != null) {
+      resolvedGymId = await _findOrCreateGym(gym);
+    } else if (manualGymName != null) {
+      resolvedGymId = await _findOrCreateGym(
+        ClimbingGym(name: manualGymName),
+      );
+    }
+
     final record = ClimbingRecord(
       userId: userId,
-      gymId: gymId,
-      gymName: gymName,
+      gymId: resolvedGymId,
       grade: grade,
       difficultyColor: difficultyColor,
       status: status,
@@ -258,7 +302,7 @@ class RecordService {
     final response = await _supabase
         .from('climbing_records')
         .insert(record.toInsertMap())
-        .select()
+        .select(_selectWithGym)
         .single();
 
     return ClimbingRecord.fromMap(response);
@@ -270,22 +314,30 @@ class RecordService {
     required String grade,
     required String difficultyColor,
     required String status,
-    String? gymId,
-    String? gymName,
+    ClimbingGym? gym,
+    String? manualGymName,
     List<String> tags = const [],
   }) async {
+    String? resolvedGymId;
+    if (gym != null) {
+      resolvedGymId = await _findOrCreateGym(gym);
+    } else if (manualGymName != null) {
+      resolvedGymId = await _findOrCreateGym(
+        ClimbingGym(name: manualGymName),
+      );
+    }
+
     final response = await _supabase
         .from('climbing_records')
         .update({
           'grade': grade,
           'difficulty_color': difficultyColor,
           'status': status,
-          'gym_id': gymId,
-          'gym_name': gymName,
+          'gym_id': resolvedGymId,
           'tags': tags,
         })
         .eq('id', recordId)
-        .select()
+        .select(_selectWithGym)
         .single();
 
     return ClimbingRecord.fromMap(response);
@@ -303,7 +355,6 @@ class RecordService {
     final record = ClimbingRecord(
       userId: userId,
       gymId: parentRecord.gymId,
-      gymName: parentRecord.gymName,
       grade: parentRecord.grade,
       difficultyColor: parentRecord.difficultyColor,
       status: parentRecord.status,
@@ -317,7 +368,7 @@ class RecordService {
     final response = await _supabase
         .from('climbing_records')
         .insert(record.toInsertMap())
-        .select()
+        .select(_selectWithGym)
         .single();
 
     return ClimbingRecord.fromMap(response);

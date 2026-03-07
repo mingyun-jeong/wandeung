@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:video_player/video_player.dart';
 import 'package:gal/gal.dart';
 import '../config/supabase_config.dart';
+import '../models/climbing_gym.dart';
 import '../models/climbing_record.dart';
 import '../providers/camera_settings_provider.dart';
 import '../providers/record_provider.dart';
@@ -40,6 +41,12 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
   List<String> _tags = [];
   bool _isSaving = false;
 
+  // 편집 모드 전용 로컬 gym 상태 (카메라 탭의 자동 선택과 분리)
+  ClimbingGym? _editGym;
+  String? _editManualGymName;
+  DifficultyColor? _editColor;
+  ClimbingGrade? _editGrade;
+
   bool get _isEditMode => widget.existingRecord != null;
 
   @override
@@ -52,26 +59,33 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
           ? ClimbingStatus.completed
           : ClimbingStatus.inProgress;
       _tags = List<String>.from(record.tags);
-
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        final notifier = ref.read(cameraSettingsProvider.notifier);
-        final grade = ClimbingGrade.values.firstWhere(
-          (g) => g.name == record.grade,
-          orElse: () => ClimbingGrade.v1,
-        );
-        final color = DifficultyColor.values.firstWhere(
-          (c) => c.name == record.difficultyColor,
-          orElse: () => DifficultyColor.white,
-        );
-        notifier.setGrade(grade);
-        notifier.setColor(color);
-        if (record.gymName != null) {
-          notifier.setManualGymName(record.gymName!);
-        }
-      });
+      _editGrade = ClimbingGrade.values.firstWhere(
+        (g) => g.name == record.grade,
+        orElse: () => ClimbingGrade.v1,
+      );
+      _editColor = DifficultyColor.values.firstWhere(
+        (c) => c.name == record.difficultyColor,
+        orElse: () => DifficultyColor.white,
+      );
+      if (record.gymId != null) {
+        _loadGymFromRecord(record.gymId!);
+      }
     }
 
     _initVideo();
+  }
+
+  Future<void> _loadGymFromRecord(String gymId) async {
+    try {
+      final response = await SupabaseConfig.client
+          .from('climbing_gyms')
+          .select()
+          .eq('id', gymId)
+          .maybeSingle();
+      if (response != null && mounted) {
+        setState(() => _editGym = ClimbingGym.fromMap(response));
+      }
+    } catch (_) {}
   }
 
   Future<void> _initVideo() async {
@@ -205,9 +219,10 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
   }
 
   Future<void> _saveRecord() async {
-    final settings = ref.read(cameraSettingsProvider);
+    final color = _isEditMode ? _editColor : ref.read(cameraSettingsProvider).color;
+    final grade = _isEditMode ? _editGrade : ref.read(cameraSettingsProvider).grade;
 
-    if (settings.color == null) {
+    if (color == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('난이도 색상을 선택해주세요')),
       );
@@ -220,16 +235,17 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
       if (_isEditMode) {
         await RecordService.updateRecord(
           recordId: widget.existingRecord!.id!,
-          grade: settings.grade!.name,
-          difficultyColor: settings.color!.name,
+          grade: grade!.name,
+          difficultyColor: color.name,
           status: _status == ClimbingStatus.completed
               ? 'completed'
               : 'in_progress',
-          gymId: settings.selectedGym?.id,
-          gymName: settings.selectedGym?.name ?? settings.manualGymName,
+          gym: _editGym,
+          manualGymName: _editGym == null ? _editManualGymName : null,
           tags: _tags,
         );
       } else {
+        final settings = ref.read(cameraSettingsProvider);
         await _saveToGallery();
         final thumbnailPath = await generateThumbnail(widget.videoPath!);
         await RecordService.saveRecord(
@@ -239,8 +255,8 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
           status: _status == ClimbingStatus.completed
               ? 'completed'
               : 'in_progress',
-          gymId: settings.selectedGym?.id,
-          gymName: settings.selectedGym?.name ?? settings.manualGymName,
+          gym: settings.selectedGym,
+          manualGymName: settings.selectedGym == null ? settings.manualGymName : null,
           thumbnailPath: thumbnailPath,
           tags: _tags,
         );
@@ -268,18 +284,38 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
   }
 
   void _showGymSelection(BuildContext context, WidgetRef ref) {
-    final settings = ref.read(cameraSettingsProvider);
-    GymSelectionSheet.show(
-      context,
-      currentGym: settings.selectedGym,
-      currentManualName: settings.manualGymName,
-      onGymSelected: (gym) {
-        ref.read(cameraSettingsProvider.notifier).setGym(gym);
-      },
-      onManualInput: (name) {
-        ref.read(cameraSettingsProvider.notifier).setManualGymName(name);
-      },
-    );
+    if (_isEditMode) {
+      GymSelectionSheet.show(
+        context,
+        currentGym: _editGym,
+        currentManualName: _editManualGymName,
+        onGymSelected: (gym) {
+          setState(() {
+            _editGym = gym;
+            _editManualGymName = null;
+          });
+        },
+        onManualInput: (name) {
+          setState(() {
+            _editManualGymName = name;
+            _editGym = null;
+          });
+        },
+      );
+    } else {
+      final settings = ref.read(cameraSettingsProvider);
+      GymSelectionSheet.show(
+        context,
+        currentGym: settings.selectedGym,
+        currentManualName: settings.manualGymName,
+        onGymSelected: (gym) {
+          ref.read(cameraSettingsProvider.notifier).setGym(gym);
+        },
+        onManualInput: (name) {
+          ref.read(cameraSettingsProvider.notifier).setManualGymName(name);
+        },
+      );
+    }
   }
 
   Future<void> _saveToGallery() async {
@@ -291,6 +327,11 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
   @override
   Widget build(BuildContext context) {
     final settings = ref.watch(cameraSettingsProvider);
+
+    // 편집 모드에서는 로컬 상태, 신규 저장에서는 cameraSettingsProvider 사용
+    final displayGym = _isEditMode ? _editGym : settings.selectedGym;
+    final displayManualGymName = _isEditMode ? _editManualGymName : settings.manualGymName;
+    final displayColor = _isEditMode ? _editColor : settings.color;
 
     return Scaffold(
       appBar: WandeungAppBar(
@@ -398,9 +439,14 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
 
             // 난이도 선택
             DifficultySelector(
-              selectedColor: settings.color,
-              onColorChanged: (c) =>
-                  ref.read(cameraSettingsProvider.notifier).setColor(c),
+              selectedColor: displayColor,
+              onColorChanged: (c) {
+                if (_isEditMode) {
+                  setState(() => _editColor = c);
+                } else {
+                  ref.read(cameraSettingsProvider.notifier).setColor(c);
+                }
+              },
             ),
             const SizedBox(height: 16),
 
@@ -411,7 +457,7 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
                   color: Theme.of(context).colorScheme.onSurface,
                 )),
             const SizedBox(height: 8),
-            if (settings.selectedGym != null || settings.manualGymName != null)
+            if (displayGym != null || displayManualGymName != null)
               Container(
                 width: double.infinity,
                 padding:
@@ -438,8 +484,8 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              settings.selectedGym?.name ??
-                                  settings.manualGymName ??
+                              displayGym?.name ??
+                                  displayManualGymName ??
                                   '',
                               style: TextStyle(
                                 fontSize: 16,
@@ -449,11 +495,11 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
                                     .onSurface,
                               ),
                             ),
-                            if (settings.selectedGym?.address != null)
+                            if (displayGym?.address != null)
                               Padding(
                                 padding: const EdgeInsets.only(top: 2),
                                 child: Text(
-                                  settings.selectedGym!.address!,
+                                  displayGym!.address!,
                                   style: TextStyle(
                                     fontSize: 12,
                                     color: Theme.of(context)
@@ -469,12 +515,12 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
                         ),
                       ),
                     ),
-                    if (settings.selectedGym?.latitude != null &&
-                        settings.selectedGym?.longitude != null)
+                    if (displayGym?.latitude != null &&
+                        displayGym?.longitude != null)
                       GestureDetector(
                         onTap: () => GymMapSheet.show(
                           context,
-                          selectedGym: settings.selectedGym!,
+                          selectedGym: displayGym!,
                         ),
                         child: Padding(
                           padding: const EdgeInsets.only(left: 8),
@@ -487,9 +533,16 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
                         ),
                       ),
                     GestureDetector(
-                      onTap: () => ref
-                          .read(cameraSettingsProvider.notifier)
-                          .clearGym(),
+                      onTap: () {
+                        if (_isEditMode) {
+                          setState(() {
+                            _editGym = null;
+                            _editManualGymName = null;
+                          });
+                        } else {
+                          ref.read(cameraSettingsProvider.notifier).clearGym();
+                        }
+                      },
                       child: Padding(
                         padding: const EdgeInsets.only(left: 8),
                         child: Icon(Icons.close_rounded,

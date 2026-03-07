@@ -104,16 +104,24 @@ class _GymMapSheetState extends ConsumerState<GymMapSheet> {
     }
   }
 
+  bool _isSameGym(ClimbingGym? a, ClimbingGym? b) {
+    if (a == null || b == null) return false;
+    if (a.googlePlaceId != null && b.googlePlaceId != null) {
+      return a.googlePlaceId == b.googlePlaceId;
+    }
+    return a.name == b.name;
+  }
+
   Set<Marker> _buildMarkers() {
     return _gyms
         .where((gym) => gym.latitude != null && gym.longitude != null)
         .map((gym) {
-          final isTapped = _tappedGym?.name == gym.name;
-          final isPreSelected = widget.selectedGym?.name == gym.name;
+          final isTapped = _isSameGym(_tappedGym, gym);
+          final isPreSelected = _isSameGym(widget.selectedGym, gym);
           final isHighlighted = isTapped || isPreSelected;
 
           return Marker(
-            markerId: MarkerId(gym.name),
+            markerId: MarkerId(gym.googlePlaceId ?? gym.name),
             position: LatLng(gym.latitude!, gym.longitude!),
             icon: BitmapDescriptor.defaultMarkerWithHue(
               isHighlighted
@@ -137,7 +145,7 @@ class _GymMapSheetState extends ConsumerState<GymMapSheet> {
     if (_isPickMode) {
       ref.read(_mapPickerQueryProvider.notifier).state = query.trim();
       ref.read(searchQueryProvider.notifier).state = query.trim();
-      setState(() => _showSearchResults = query.trim().isNotEmpty);
+      setState(() => _showSearchResults = true);
     }
   }
 
@@ -146,7 +154,7 @@ class _GymMapSheetState extends ConsumerState<GymMapSheet> {
     if (_isPickMode) {
       ref.read(_mapPickerQueryProvider.notifier).state = '';
       ref.read(searchQueryProvider.notifier).state = '';
-      setState(() => _showSearchResults = false);
+      setState(() => _showSearchResults = true);
     }
   }
 
@@ -186,7 +194,20 @@ class _GymMapSheetState extends ConsumerState<GymMapSheet> {
       _isPickMode ? gymsProvider : nearbyGymsProvider,
       (_, next) {
         next.whenData((gyms) {
-          setState(() => _gyms = gyms);
+          setState(() {
+            _gyms = gyms;
+            if (_isPickMode && _tappedGym == null && gyms.isNotEmpty) {
+              _tappedGym = gyms.first;
+              _showSearchResults = false;
+              if (_tappedGym!.latitude != null && _tappedGym!.longitude != null) {
+                _controller?.animateCamera(
+                  CameraUpdate.newLatLngZoom(
+                    LatLng(_tappedGym!.latitude!, _tappedGym!.longitude!), 15,
+                  ),
+                );
+              }
+            }
+          });
         });
       },
     );
@@ -194,6 +215,10 @@ class _GymMapSheetState extends ConsumerState<GymMapSheet> {
     gymsAsync.whenData((gyms) {
       if (_gyms.isEmpty) {
         _gyms = gyms;
+        if (_isPickMode && _tappedGym == null && gyms.isNotEmpty) {
+          _tappedGym = gyms.first;
+          _showSearchResults = false;
+        }
       }
     });
 
@@ -287,7 +312,6 @@ class _GymMapSheetState extends ConsumerState<GymMapSheet> {
                   if (_isPickMode) {
                     setState(() {
                       _tappedGym = null;
-                      _showSearchResults = false;
                     });
                   }
                 },

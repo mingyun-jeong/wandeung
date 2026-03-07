@@ -177,8 +177,11 @@ class _GymSelectionSheetState extends ConsumerState<GymSelectionSheet> {
                     itemCount: gyms.length,
                     itemBuilder: (_, i) {
                       final gym = gyms[i];
-                      final isSelected =
-                          gym.name == widget.currentGym?.name;
+                      final isSelected = (gym.googlePlaceId != null &&
+                              widget.currentGym?.googlePlaceId != null)
+                          ? gym.googlePlaceId ==
+                              widget.currentGym!.googlePlaceId
+                          : gym.name == widget.currentGym?.name;
                       String? distText;
                       if (pos != null &&
                           gym.latitude != null &&

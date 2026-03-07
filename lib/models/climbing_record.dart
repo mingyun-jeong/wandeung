@@ -34,7 +34,6 @@ class ClimbingRecord {
   Map<String, dynamic> toInsertMap() => {
         'user_id': userId,
         'gym_id': gymId,
-        'gym_name': gymName,
         'grade': grade,
         'difficulty_color': difficultyColor,
         'status': status,
@@ -50,7 +49,7 @@ class ClimbingRecord {
         id: map['id'],
         userId: map['user_id'],
         gymId: map['gym_id'],
-        gymName: map['gym_name'],
+        gymName: (map['climbing_gyms'] as Map?)?['name'] as String?,
         grade: map['grade'],
         difficultyColor: map['difficulty_color'],
         status: map['status'],

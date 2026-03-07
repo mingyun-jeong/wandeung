@@ -4,6 +4,7 @@ class ClimbingGym {
   final String? address;
   final double? latitude;
   final double? longitude;
+  final String? googlePlaceId;
 
   ClimbingGym({
     this.id,
@@ -11,6 +12,7 @@ class ClimbingGym {
     this.address,
     this.latitude,
     this.longitude,
+    this.googlePlaceId,
   });
 
   factory ClimbingGym.fromMap(Map<String, dynamic> map) => ClimbingGym(
@@ -23,5 +25,14 @@ class ClimbingGym {
         longitude: map['longitude'] != null
             ? (map['longitude'] as num).toDouble()
             : null,
+        googlePlaceId: map['google_place_id'],
       );
+
+  Map<String, dynamic> toInsertMap() => {
+        'name': name,
+        if (address != null) 'address': address,
+        if (latitude != null) 'latitude': latitude,
+        if (longitude != null) 'longitude': longitude,
+        if (googlePlaceId != null) 'google_place_id': googlePlaceId,
+      };
 }

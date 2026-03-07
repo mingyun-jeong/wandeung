@@ -45,10 +45,14 @@ Future<List<ClimbingGym>> _searchGooglePlaces({
     queryParams,
   );
 
+  print('[GymProvider] Places API request: $uri');
   final response = await http.get(uri);
+  print('[GymProvider] Places API statusCode: ${response.statusCode}');
+  print('[GymProvider] Places API response body: ${response.body.substring(0, response.body.length.clamp(0, 500))}');
   if (response.statusCode != 200) return [];
 
   final body = jsonDecode(response.body);
+  print('[GymProvider] Places API status: ${body['status']}, results count: ${(body['results'] as List?)?.length ?? 0}');
   if (body['status'] != 'OK' && body['status'] != 'ZERO_RESULTS') return [];
 
   final results = (body['results'] as List?) ?? [];
@@ -64,6 +68,7 @@ Future<List<ClimbingGym>> _searchGooglePlaces({
           address: item['formatted_address'],
           latitude: lat,
           longitude: lng,
+          googlePlaceId: item['place_id'],
         );
       })
       .where((gym) =>
@@ -94,8 +99,10 @@ Future<List<ClimbingGym>> _searchGooglePlaces({
 final nearbyGymsProvider = FutureProvider<List<ClimbingGym>>((ref) async {
   final positionFuture = ref.watch(userPositionProvider.future);
   final position = await positionFuture;
+  print('[GymProvider] nearbyGymsProvider: position=$position');
 
   final apiKey = dotenv.env['GOOGLE_MAPS_API_KEY'] ?? '';
+  print('[GymProvider] API key: ${apiKey.isEmpty ? "EMPTY!" : "${apiKey.substring(0, 8)}..."}');
   if (apiKey.isEmpty) return [];
 
   return _searchGooglePlaces(
@@ -109,9 +116,13 @@ final nearbyGymsProvider = FutureProvider<List<ClimbingGym>>((ref) async {
 // 지도 화면용: 검색어 없으면 주변, 있으면 텍스트 검색
 final gymsProvider = FutureProvider<List<ClimbingGym>>((ref) async {
   final query = ref.watch(searchQueryProvider);
+  print('[GymProvider] gymsProvider called, query="$query"');
 
   if (query.isEmpty) {
-    return await ref.watch(nearbyGymsProvider.future);
+    print('[GymProvider] query empty, delegating to nearbyGymsProvider');
+    final results = await ref.watch(nearbyGymsProvider.future);
+    print('[GymProvider] nearbyGymsProvider returned ${results.length} results');
+    return results;
   }
 
   final positionFuture = ref.watch(userPositionProvider.future);

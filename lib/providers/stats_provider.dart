@@ -157,7 +157,7 @@ final periodStatsProvider = FutureProvider<PeriodStatsData>((ref) async {
 
   final response = await SupabaseConfig.client
       .from('climbing_records')
-      .select()
+      .select('*, climbing_gyms(name)')
       .eq('user_id', userId)
       .isFilter('parent_record_id', null)
       .order('recorded_at', ascending: false);

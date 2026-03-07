@@ -40,6 +40,13 @@ class ColorTimePoint {
   const ColorTimePoint({required this.label, required this.colorCounts});
 }
 
+class DailyClimbPoint {
+  final DateTime date;
+  final String label;
+  final int count;
+  const DailyClimbPoint({required this.date, required this.label, required this.count});
+}
+
 class PeriodStatsData {
   final List<ClimbingRecord> current;
   final List<ClimbingRecord> previous;
@@ -117,6 +124,33 @@ class PeriodStatsData {
           c: inRange.where((r) => r.difficultyColor == c).length
       },
     );
+  }
+
+  /// 일별 등반 횟수 시계열 데이터
+  List<DailyClimbPoint> getDailyClimbSeries(StatsPeriod period) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final result = <DailyClimbPoint>[];
+
+    for (int i = 0; i < period.days; i++) {
+      final date = today.subtract(Duration(days: period.days - 1 - i));
+      final nextDate = date.add(const Duration(days: 1));
+      final count = current.where((r) {
+        final d = DateTime(r.recordedAt.year, r.recordedAt.month, r.recordedAt.day);
+        return !d.isBefore(date) && d.isBefore(nextDate);
+      }).length;
+
+      String label;
+      if (period == StatsPeriod.week) {
+        label = '${date.month}/${date.day}';
+      } else if (period == StatsPeriod.month) {
+        label = '${date.month}/${date.day}';
+      } else {
+        label = '${date.month}/${date.day}';
+      }
+      result.add(DailyClimbPoint(date: date, label: label, count: count));
+    }
+    return result;
   }
 
   List<GymStat> get gymBreakdown {

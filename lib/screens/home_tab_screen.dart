@@ -4,7 +4,6 @@ import '../models/user_climbing_stats.dart';
 import '../providers/camera_settings_provider.dart';
 import '../providers/record_provider.dart';
 import '../widgets/record_card.dart';
-import '../widgets/stat_card.dart';
 import '../widgets/wandeung_app_bar.dart';
 
 class HomeTabScreen extends ConsumerWidget {
@@ -396,36 +395,6 @@ class _StatsSection extends StatelessWidget {
                 ),
               ],
             ),
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: StatCard(
-                  icon: Icons.fitness_center_rounded,
-                  label: '30일 등반',
-                  value: '${stats.totalClimbs}',
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: StatCard(
-                  icon: Icons.local_fire_department_rounded,
-                  label: '연속 등반',
-                  value: '${stats.currentStreak}일',
-                  accentColor: const Color(0xFFFF6B35),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: StatCard(
-                  icon: Icons.calendar_today_rounded,
-                  label: '이번 달',
-                  value: '${stats.monthlyClimbs}',
-                  accentColor: const Color(0xFF3B82F6),
-                ),
-              ),
-            ],
           ),
         ],
       ),

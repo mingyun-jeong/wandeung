@@ -106,6 +106,7 @@ class StatsTabScreen extends ConsumerWidget {
                 return SliverList(
                   delegate: SliverChildListDelegate([
                     _SummarySection(stats: stats, period: period),
+                    _DailyClimbChartSection(stats: stats, period: period),
                     _ColorTrendSection(stats: stats, period: period),
                     if (stats.gymBreakdown
                         .where((g) => g.total > 0)
@@ -432,6 +433,197 @@ class _DiffChip extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _DailyClimbChartSection extends StatelessWidget {
+  final PeriodStatsData stats;
+  final StatsPeriod period;
+  const _DailyClimbChartSection({required this.stats, required this.period});
+
+  @override
+  Widget build(BuildContext context) {
+    final series = stats.getDailyClimbSeries(period);
+    if (series.isEmpty) return const SizedBox.shrink();
+
+    final colorScheme = Theme.of(context).colorScheme;
+
+    double maxY = 1;
+    for (final p in series) {
+      if (p.count > maxY) maxY = p.count.toDouble();
+    }
+    final interval = max(1.0, (maxY / 4).ceilToDouble());
+    maxY = interval * 4;
+
+    // x축 라벨 간격: 데이터가 많으면 간격 넓히기
+    int labelInterval;
+    if (series.length <= 7) {
+      labelInterval = 1;
+    } else if (series.length <= 14) {
+      labelInterval = 2;
+    } else if (series.length <= 31) {
+      labelInterval = 5;
+    } else {
+      labelInterval = 10;
+    }
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFFE8ECF0)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '일별 등반 횟수',
+              style: TextStyle(
+                fontSize: 17,
+                fontWeight: FontWeight.w700,
+                color: colorScheme.onSurface,
+              ),
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              height: 200,
+              child: LineChart(
+                LineChartData(
+                  gridData: FlGridData(
+                    show: true,
+                    drawVerticalLine: false,
+                    horizontalInterval: interval,
+                    getDrawingHorizontalLine: (value) => const FlLine(
+                      color: Color(0xFFE8ECF0),
+                      strokeWidth: 1,
+                    ),
+                  ),
+                  titlesData: FlTitlesData(
+                    topTitles: const AxisTitles(
+                        sideTitles: SideTitles(showTitles: false)),
+                    rightTitles: const AxisTitles(
+                        sideTitles: SideTitles(showTitles: false)),
+                    leftTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        reservedSize: 32,
+                        interval: interval,
+                        getTitlesWidget: (value, meta) {
+                          if (value == meta.max || value < 0) {
+                            return const SizedBox.shrink();
+                          }
+                          return Padding(
+                            padding: const EdgeInsets.only(right: 4),
+                            child: Text(
+                              value.toInt().toString(),
+                              style: TextStyle(
+                                fontSize: 11,
+                                color:
+                                    colorScheme.onSurface.withOpacity(0.4),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                    bottomTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        reservedSize: 24,
+                        interval: 1,
+                        getTitlesWidget: (value, meta) {
+                          final idx = value.toInt();
+                          if (idx < 0 || idx >= series.length) {
+                            return const SizedBox.shrink();
+                          }
+                          if (value != idx.toDouble()) {
+                            return const SizedBox.shrink();
+                          }
+                          if (idx % labelInterval != 0 &&
+                              idx != series.length - 1) {
+                            return const SizedBox.shrink();
+                          }
+                          return Padding(
+                            padding: const EdgeInsets.only(top: 6),
+                            child: Text(
+                              series[idx].label,
+                              style: TextStyle(
+                                fontSize: 10,
+                                color:
+                                    colorScheme.onSurface.withOpacity(0.4),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                  borderData: FlBorderData(show: false),
+                  minX: 0,
+                  maxX: (series.length - 1).toDouble(),
+                  minY: 0,
+                  maxY: maxY,
+                  lineBarsData: [
+                    LineChartBarData(
+                      spots: List.generate(series.length, (i) {
+                        return FlSpot(
+                            i.toDouble(), series[i].count.toDouble());
+                      }),
+                      isCurved: true,
+                      curveSmoothness: 0.3,
+                      preventCurveOverShooting: true,
+                      color: colorScheme.primary,
+                      barWidth: 2.5,
+                      dotData: FlDotData(
+                        show: series.length <= 7,
+                      ),
+                      belowBarData: BarAreaData(
+                        show: true,
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            colorScheme.primary.withOpacity(0.15),
+                            colorScheme.primary.withOpacity(0.02),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                  lineTouchData: LineTouchData(
+                    touchTooltipData: LineTouchTooltipData(
+                      getTooltipColor: (_) => Colors.white,
+                      tooltipBorder:
+                          const BorderSide(color: Color(0xFFE8ECF0)),
+                      tooltipRoundedRadius: 8,
+                      fitInsideHorizontally: true,
+                      getTooltipItems: (spots) {
+                        return spots.map((spot) {
+                          final idx = spot.x.toInt();
+                          final label =
+                              idx < series.length ? series[idx].label : '';
+                          return LineTooltipItem(
+                            '$label: ${spot.y.toInt()}건',
+                            TextStyle(
+                              color: colorScheme.primary,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 12,
+                            ),
+                          );
+                        }).toList();
+                      },
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

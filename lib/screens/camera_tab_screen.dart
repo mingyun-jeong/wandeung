@@ -26,6 +26,7 @@ class _CameraTabScreenState extends ConsumerState<CameraTabScreen>
   List<CameraDescription> _cameras = [];
   bool _isRecording = false;
   bool _isInitializing = false;
+  bool _hasEverInitialized = false;
   int _recordingSeconds = 0;
   Timer? _timer;
   int _selectedCameraIndex = 0;
@@ -38,18 +39,22 @@ class _CameraTabScreenState extends ConsumerState<CameraTabScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _initCamera();
+  }
+
+  void _ensureCameraInitialized() {
+    if (!_hasEverInitialized && !_isInitializing) {
+      _hasEverInitialized = true;
+      _initCamera();
+    }
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.inactive) {
-      if (_controller != null && _controller!.value.isInitialized) {
-        _controller?.dispose();
-        _controller = null;
-      }
+      _controller?.dispose();
+      _controller = null;
     } else if (state == AppLifecycleState.resumed) {
-      if (_controller == null) {
+      if (_controller == null && !_isInitializing && _hasEverInitialized) {
         _initCamera();
       }
     }
@@ -58,6 +63,7 @@ class _CameraTabScreenState extends ConsumerState<CameraTabScreen>
   Future<void> _initCamera() async {
     if (_isInitializing) return;
     _isInitializing = true;
+    if (mounted) setState(() => _errorMessage = null);
 
     try {
       final cameraStatus = await Permission.camera.request();
@@ -215,7 +221,11 @@ class _CameraTabScreenState extends ConsumerState<CameraTabScreen>
 
   @override
   Widget build(BuildContext context) {
-    // 가장 가까운 암장 자동 선택 (미선택 상태일 때만)
+    final currentTab = ref.watch(bottomNavIndexProvider);
+    if (currentTab == 1) {
+      _ensureCameraInitialized();
+    }
+
     ref.listen(nearbyGymsProvider, (_, next) {
       next.whenData((gyms) {
         if (gyms.isNotEmpty) {
@@ -244,12 +254,29 @@ class _CameraTabScreenState extends ConsumerState<CameraTabScreen>
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 24),
-                ElevatedButton(
-                  onPressed: () async {
-                    setState(() => _errorMessage = null);
-                    await openAppSettings();
-                  },
-                  child: const Text('설정 열기'),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        setState(() => _errorMessage = null);
+                        _initCamera();
+                      },
+                      icon: const Icon(Icons.refresh, size: 18),
+                      label: const Text('재시도'),
+                    ),
+                    const SizedBox(width: 12),
+                    OutlinedButton(
+                      onPressed: () async {
+                        await openAppSettings();
+                      },
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.white70,
+                        side: const BorderSide(color: Colors.white38),
+                      ),
+                      child: const Text('설정 열기'),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -259,9 +286,23 @@ class _CameraTabScreenState extends ConsumerState<CameraTabScreen>
     }
 
     if (_controller == null || !_controller!.value.isInitialized) {
-      return const Scaffold(
+      return Scaffold(
         backgroundColor: Colors.black,
-        body: Center(child: CircularProgressIndicator(color: Colors.white)),
+        body: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const CircularProgressIndicator(color: Colors.white),
+              const SizedBox(height: 24),
+              if (!_isInitializing)
+                ElevatedButton.icon(
+                  onPressed: _initCamera,
+                  icon: const Icon(Icons.refresh, size: 18),
+                  label: const Text('재시도'),
+                ),
+            ],
+          ),
+        ),
       );
     }
 

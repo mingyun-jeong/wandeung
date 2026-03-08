@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:video_player/video_player.dart';
 import 'package:gal/gal.dart';
+import 'package:ffmpeg_kit_flutter_new/ffprobe_kit.dart';
 import '../config/supabase_config.dart';
 import '../models/climbing_gym.dart';
 import '../models/climbing_record.dart';
@@ -251,10 +252,7 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
         final settings = ref.read(cameraSettingsProvider);
         await _saveToGallery();
         final thumbnailPath = await generateThumbnail(widget.videoPath!);
-        final durationSeconds =
-            _videoController?.value.isInitialized == true
-                ? _videoController!.value.duration.inSeconds
-                : null;
+        final durationSeconds = await _getVideoDuration(widget.videoPath!);
         await RecordService.saveRecord(
           videoPath: widget.videoPath!,
           grade: settings.grade!.name,
@@ -318,6 +316,27 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
     try {
       await Gal.putVideo(widget.videoPath!, album: '완등');
     } catch (_) {}
+  }
+
+  Future<int?> _getVideoDuration(String path) async {
+    try {
+      final session = await FFprobeKit.getMediaInformation(path);
+      final info = session.getMediaInformation();
+      if (info != null) {
+        final durationStr = info.getDuration();
+        if (durationStr != null) {
+          final durationMs = (double.parse(durationStr) * 1000).round();
+          return (durationMs / 1000).round();
+        }
+      }
+    } catch (e) {
+      debugPrint('FFprobe duration 조회 실패: $e');
+    }
+    // fallback to VideoPlayerController
+    if (_videoController?.value.isInitialized == true) {
+      return _videoController!.value.duration.inSeconds;
+    }
+    return null;
   }
 
   @override

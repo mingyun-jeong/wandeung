@@ -106,15 +106,13 @@ class _HomeLoadingScreenState extends ConsumerState<HomeLoadingScreen>
                       ? (1 + (v * 2 * 4)).round()
                       : (5 - ((v - 0.5) * 2 * 4)).round();
                   final dots = '.' * dotCount.clamp(1, 5);
-                  return SizedBox(
-                    width: 120,
-                    child: Text(
-                      'Loading$dots',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                        color: colorScheme.onSurface.withOpacity(0.5),
-                      ),
+                  return Text(
+                    'Loading$dots',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                      color: colorScheme.onSurface.withOpacity(0.5),
                     ),
                   );
                 },

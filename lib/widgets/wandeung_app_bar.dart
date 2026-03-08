@@ -64,6 +64,7 @@ class WandeungAppBar extends ConsumerWidget implements PreferredSizeWidget {
       actions: [
         if (extraActions != null) ...extraActions!,
         PopupMenuButton<String>(
+          offset: const Offset(0, 40),
           onSelected: (value) {
             if (value == 'profile') {
               Navigator.of(context).push(
@@ -76,11 +77,23 @@ class WandeungAppBar extends ConsumerWidget implements PreferredSizeWidget {
           itemBuilder: (_) => const [
             PopupMenuItem<String>(
               value: 'profile',
-              child: Text('프로필'),
+              child: Row(
+                children: [
+                  Icon(Icons.person, size: 20),
+                  SizedBox(width: 8),
+                  Text('프로필'),
+                ],
+              ),
             ),
             PopupMenuItem<String>(
               value: 'logout',
-              child: Text('로그아웃'),
+              child: Row(
+                children: [
+                  Icon(Icons.logout, size: 20),
+                  SizedBox(width: 8),
+                  Text('로그아웃'),
+                ],
+              ),
             ),
           ],
           child: Padding(

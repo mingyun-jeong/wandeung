@@ -357,9 +357,9 @@ class _FilterBar extends ConsumerWidget {
       boxes.add(_SelectBox(
         label: '태그',
         selectedValue: selectedTag,
-        selectedDisplay: selectedTag != null ? '#$selectedTag' : null,
+        selectedDisplay: selectedTag,
         items: availableTags
-            .map((t) => _SelectItem(value: t, child: Text('#$t')))
+            .map((t) => _SelectItem(value: t, child: Text(t)))
             .toList(),
         onChanged: (v) => ref.read(selectedTagFilterProvider.notifier).state = v,
       ));

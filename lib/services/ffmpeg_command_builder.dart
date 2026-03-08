@@ -1,5 +1,6 @@
-import 'dart:io';
 import 'dart:ui';
+
+import 'package:flutter/foundation.dart';
 
 import '../models/subtitle_item.dart';
 import '../models/video_edit_models.dart';
@@ -8,60 +9,32 @@ import '../models/video_edit_models.dart';
 class FFmpegCommandBuilder {
   FFmpegCommandBuilder._();
 
-  /// 오버레이/자막 텍스트를 임시 파일로 저장하여 FFmpeg textfile= 파라미터로 사용
-  /// (한글 등 비ASCII 문자의 깨짐 방지)
-  static Future<Map<String, String>> prepareTextFiles(
-    List<OverlayItem> overlays,
-    List<SubtitleItem> subtitles,
-  ) async {
-    final textFilePaths = <String, String>{};
-    final tempDir = await Directory.systemTemp.createTemp('ffmpeg_text_');
-
-    for (int i = 0; i < overlays.length; i++) {
-      final file = File('${tempDir.path}/overlay_$i.txt');
-      await file.writeAsString(overlays[i].text, flush: true);
-      textFilePaths['overlay_$i'] = file.path;
-    }
-
-    for (int i = 0; i < subtitles.length; i++) {
-      final file = File('${tempDir.path}/subtitle_$i.txt');
-      await file.writeAsString(subtitles[i].text, flush: true);
-      textFilePaths['subtitle_$i'] = file.path;
-    }
-
-    return textFilePaths;
-  }
 
   /// 전체 내보내기 명령을 인수 리스트로 생성
   ///
-  /// [inputPath] 입력 파일 경로
-  /// [outputPath] 출력 파일 경로
-  /// [trimStart] 트림 시작 시각
-  /// [trimEnd] 트림 끝 시각
-  /// [speedSegments] 구간별 배속 목록 (비어있으면 1x)
-  /// [overlays] 오버레이 아이템 목록
-  /// [videoResolution] 영상의 원본 해상도
-  /// [fontPath] drawtext용 폰트 파일 경로
-  /// [textFilePaths] 텍스트 임시 파일 경로 맵 (prepareTextFiles로 생성)
+  /// [fontPath] 오버레이(스티커) 텍스트용 폰트 파일 경로
+  /// [subtitleImagePaths] Flutter Canvas로 렌더링된 자막 PNG 이미지 경로 리스트
   static List<String> buildExportArgs({
     required String inputPath,
     required String outputPath,
     required Duration trimStart,
     required Duration trimEnd,
+    required Size videoResolution,
+    String? fontPath,
     List<SpeedSegment> speedSegments = const [],
     List<OverlayItem> overlays = const [],
     List<SubtitleItem> subtitles = const [],
-    Map<String, String> subtitleFontPaths = const {},
-    required Size videoResolution,
-    String? fontPath,
-    Map<String, String> textFilePaths = const {},
+    List<String> subtitleImagePaths = const [],
   }) {
     final args = <String>['-y'];
 
-    // 입력 파일
     args.addAll(['-i', inputPath]);
 
-    // 트림: -ss와 -to를 input 이후에 배치 (정확한 디코딩)
+    // 자막 PNG 이미지를 추가 입력으로 등록
+    for (final imgPath in subtitleImagePaths) {
+      args.addAll(['-i', imgPath]);
+    }
+
     args.addAll([
       '-ss',
       _formatDuration(trimStart),
@@ -69,23 +42,29 @@ class FFmpegCommandBuilder {
       _formatDuration(trimEnd),
     ]);
 
-    // 필터 체인 빌드
-    final filterComplex =
-        _buildFilterComplex(speedSegments, overlays, subtitles, subtitleFontPaths, videoResolution, fontPath, textFilePaths);
+    final filterComplex = _buildFilterComplex(
+      speedSegments: speedSegments,
+      overlays: overlays,
+      subtitles: subtitles,
+      subtitleImagePaths: subtitleImagePaths,
+      videoResolution: videoResolution,
+      fontPath: fontPath,
+    );
 
     if (filterComplex != null) {
       args.addAll(['-filter_complex', filterComplex]);
 
-      // 필터 출력 매핑
       if (filterComplex.contains('[vout]')) {
         args.addAll(['-map', '[vout]']);
       }
       if (filterComplex.contains('[aout]')) {
         args.addAll(['-map', '[aout]']);
+      } else if (filterComplex.contains('[vout]')) {
+        // 비디오 필터만 있고 오디오 필터가 없는 경우 원본 오디오 매핑
+        args.addAll(['-map', '0:a?']);
       }
     }
 
-    // 인코딩 설정
     args.addAll([
       '-c:v', 'libx264',
       '-preset', 'fast',
@@ -100,66 +79,62 @@ class FFmpegCommandBuilder {
     return args;
   }
 
-  /// filter_complex 문자열 생성 (필터가 없으면 null)
-  static String? _buildFilterComplex(
-    List<SpeedSegment> speedSegments,
-    List<OverlayItem> overlays,
-    List<SubtitleItem> subtitles,
-    Map<String, String> subtitleFontPaths,
-    Size videoResolution,
-    String? fontPath,
-    Map<String, String> textFilePaths,
-  ) {
-    // 유효한 배속 구간 (1x가 아닌 것만)
+  static String? _buildFilterComplex({
+    required List<SpeedSegment> speedSegments,
+    required List<OverlayItem> overlays,
+    required List<SubtitleItem> subtitles,
+    required List<String> subtitleImagePaths,
+    required Size videoResolution,
+    required String? fontPath,
+  }) {
     final hasSpeedChange =
         speedSegments.isNotEmpty && speedSegments.any((s) => s.speed != 1.0);
     final hasOverlays = overlays.isNotEmpty;
-    final hasSubtitles = subtitles.isNotEmpty;
+    final hasSubtitleImages =
+        subtitles.isNotEmpty && subtitleImagePaths.length == subtitles.length;
 
-    if (!hasSpeedChange && !hasOverlays && !hasSubtitles) return null;
+    if (!hasSpeedChange && !hasOverlays && !hasSubtitleImages) return null;
 
     final filters = <String>[];
 
     // --- 배속 처리 ---
     if (hasSpeedChange && speedSegments.length == 1) {
-      // 단일 구간: 전체에 균일 배속
       final speed = speedSegments.first.speed;
       final pts = (1.0 / speed).toStringAsFixed(4);
       filters.add('[0:v]setpts=$pts*PTS[vspeed]');
       filters.add('[0:a]${buildAtempoChain(speed)}[aout]');
     } else if (hasSpeedChange && speedSegments.length > 1) {
-      // 다중 구간: trim → setpts → concat
       _buildMultiSegmentSpeed(filters, speedSegments);
     }
 
-    // --- 오버레이(drawtext) 처리 ---
+    // --- 오버레이(drawtext) 처리 (스티커 등 ASCII 텍스트) ---
     if (hasOverlays) {
-      String currentLabel =
-          hasSpeedChange ? '[vspeed]' : '[0:v]';
+      String currentLabel = hasSpeedChange ? '[vspeed]' : '[0:v]';
 
       for (int i = 0; i < overlays.length; i++) {
-        final isLast = i == overlays.length - 1 && !hasSubtitles;
+        final isLast = i == overlays.length - 1 && !hasSubtitleImages;
         final outputLabel = isLast ? '[vout]' : '[vtxt$i]';
-        final textFilePath = textFilePaths['overlay_$i'];
-        final drawtext =
-            _buildDrawtext(overlays[i], videoResolution, fontPath, textFilePath);
+        final drawtext = _buildOverlayDrawtext(
+          item: overlays[i],
+          videoResolution: videoResolution,
+          fontPath: fontPath,
+        );
         filters.add('${currentLabel}drawtext=$drawtext$outputLabel');
         currentLabel = outputLabel;
       }
-    } else if (hasSpeedChange && !hasSubtitles) {
-      // 배속만 있고 오버레이/자막 없음 → vspeed를 vout으로 변경
+    } else if (hasSpeedChange && !hasSubtitleImages) {
       final lastIdx = filters.lastIndexWhere((f) => f.contains('[vspeed]'));
       if (lastIdx >= 0) {
         filters[lastIdx] = filters[lastIdx].replaceAll('[vspeed]', '[vout]');
       }
     }
 
-    // --- 자막(drawtext with enable) 처리 ---
-    if (hasSubtitles) {
-      // Determine input label for first subtitle
+    // --- 자막 (PNG 이미지 overlay) ---
+    // Flutter Canvas에서 렌더링한 PNG를 overlay 필터로 합성
+    if (hasSubtitleImages) {
       String currentLabel;
       if (hasOverlays) {
-        currentLabel = '[vtxt${overlays.length - 1}]'; // last overlay output
+        currentLabel = '[vtxt${overlays.length - 1}]';
       } else if (hasSpeedChange) {
         currentLabel = '[vspeed]';
       } else {
@@ -169,24 +144,32 @@ class FFmpegCommandBuilder {
       for (int i = 0; i < subtitles.length; i++) {
         final isLast = i == subtitles.length - 1;
         final outputLabel = isLast ? '[vout]' : '[vsub$i]';
-        final textFilePath = textFilePaths['subtitle_$i'];
-        final drawtext = _buildSubtitleDrawtext(
-          subtitles[i], videoResolution, fontPath, subtitleFontPaths, textFilePath,
-        );
-        filters.add('${currentLabel}drawtext=$drawtext$outputLabel');
+        // 입력 인덱스: 0=영상, 1~N=자막 PNG
+        final inputIdx = 1 + i;
+
+        final sub = subtitles[i];
+        final px = sub.position.dx.toStringAsFixed(4);
+        final py = sub.position.dy.toStringAsFixed(4);
+        final startSec = sub.startTime.inMilliseconds / 1000.0;
+        final endSec = sub.endTime.inMilliseconds / 1000.0;
+
+        // overlay_w(w), overlay_h(h), main_w(W), main_h(H) 자동 변수 사용
+        // 자막 위치를 중심 기준으로 배치
+        final overlayFilter =
+            "$currentLabel[$inputIdx:v]overlay="
+            "x=$px*W-w/2:y=$py*H-h/2:"
+            "enable='between(t,${startSec.toStringAsFixed(3)},${endSec.toStringAsFixed(3)})'";
+
+        filters.add('$overlayFilter$outputLabel');
         currentLabel = outputLabel;
       }
     }
 
-    // 배속 없이 오버레이만 있는 경우 오디오는 그대로
-    if (!hasSpeedChange && hasOverlays) {
-      // 오디오 스트림은 복사되므로 별도 필터 불필요
-    }
-
-    return filters.isEmpty ? null : filters.join(';');
+    final result = filters.isEmpty ? null : filters.join(';');
+    debugPrint('[FFmpeg] filter_complex: $result');
+    return result;
   }
 
-  /// 다중 구간 배속 처리: trim → setpts 각 구간 → concat
   static void _buildMultiSegmentSpeed(
       List<String> filters, List<SpeedSegment> segments) {
     final videoLabels = <String>[];
@@ -198,13 +181,11 @@ class FFmpegCommandBuilder {
       final endSec = seg.end.inMilliseconds / 1000.0;
       final pts = (1.0 / seg.speed).toStringAsFixed(4);
 
-      // 비디오: trim → setpts (PTS-STARTPTS로 타임스탬프 리셋 필수)
       filters.add(
         '[0:v]trim=start=$startSec:end=$endSec,setpts=$pts*(PTS-STARTPTS)[v$i]',
       );
       videoLabels.add('[v$i]');
 
-      // 오디오: atrim → atempo
       final atempo = buildAtempoChain(seg.speed);
       filters.add(
         '[0:a]atrim=start=$startSec:end=$endSec,asetpts=PTS-STARTPTS,$atempo[a$i]',
@@ -212,36 +193,26 @@ class FFmpegCommandBuilder {
       audioLabels.add('[a$i]');
     }
 
-    // concat
     final n = segments.length;
-    filters.add(
-      '${videoLabels.join()}concat=n=$n:v=1:a=0[vspeed]',
-    );
-    filters.add(
-      '${audioLabels.join()}concat=n=$n:v=0:a=1[aout]',
-    );
+    filters.add('${videoLabels.join()}concat=n=$n:v=1:a=0[vspeed]');
+    filters.add('${audioLabels.join()}concat=n=$n:v=0:a=1[aout]');
   }
 
-  /// drawtext 필터 파라미터 생성
-  static String _buildDrawtext(
-      OverlayItem item, Size videoResolution, String? fontPath, [String? textFilePath]) {
-    // 정규화 좌표 → 영상 픽셀 좌표
+  /// 오버레이용 drawtext 필터 파라미터 생성
+  static String _buildOverlayDrawtext({
+    required OverlayItem item,
+    required Size videoResolution,
+    required String? fontPath,
+  }) {
     final x = (item.position.dx * videoResolution.width).round();
     final y = (item.position.dy * videoResolution.height).round();
-    // 폰트 크기를 영상 해상도 비율로 스케일링
-    final fontSize =
-        (item.fontSize * (videoResolution.height / 800)).round();
+    final fontSize = (item.fontSize * (videoResolution.height / 800)).round();
 
     final parts = <String>[];
     if (fontPath != null) {
       parts.add("fontfile=${_escapePath(fontPath)}");
     }
-    // textfile= 사용으로 한글 등 비ASCII 문자 깨짐 방지
-    if (textFilePath != null) {
-      parts.add("textfile=${_escapePath(textFilePath)}");
-    } else {
-      parts.add("text=${_escapeText(item.text)}");
-    }
+    parts.add("text=${_escapeText(item.text)}");
     parts.add('x=$x');
     parts.add('y=$y');
     parts.add('fontsize=$fontSize');
@@ -251,62 +222,8 @@ class FFmpegCommandBuilder {
 
     if (item.backgroundColor != null) {
       parts.add('box=1');
-      parts.add(
-          'boxcolor=${_colorToFFmpeg(item.backgroundColor!)}@0.6');
-      parts.add('boxborderw=8');
-    }
-
-    return parts.join(':');
-  }
-
-  /// 자막용 drawtext 필터 파라미터 생성 (enable/between 포함)
-  static String _buildSubtitleDrawtext(
-    SubtitleItem item,
-    Size videoResolution,
-    String? defaultFontPath,
-    Map<String, String> subtitleFontPaths, [
-    String? textFilePath,
-  ]) {
-    final x = (item.position.dx * videoResolution.width).round();
-    final y = (item.position.dy * videoResolution.height).round();
-    final fontSize = (item.fontSize * (videoResolution.height / 800)).round();
-    final startSec = item.startTime.inMilliseconds / 1000.0;
-    final endSec = item.endTime.inMilliseconds / 1000.0;
-
-    final parts = <String>[];
-
-    final fontPath = subtitleFontPaths[item.fontFamily] ?? defaultFontPath;
-    if (fontPath != null) {
-      parts.add("fontfile=${_escapePath(fontPath)}");
-    }
-
-    // textfile= 사용으로 한글 등 비ASCII 문자 깨짐 방지
-    if (textFilePath != null) {
-      parts.add("textfile=${_escapePath(textFilePath)}");
-    } else {
-      parts.add("text=${_escapeText(item.text)}");
-    }
-    parts.add('x=$x');
-    parts.add('y=$y');
-    parts.add('fontsize=$fontSize');
-    parts.add('fontcolor=${_colorToFFmpeg(item.color)}');
-    parts.add("enable='between(t,${startSec.toStringAsFixed(3)},${endSec.toStringAsFixed(3)})'");
-
-    if (item.strokeColor != null && item.strokeWidth > 0) {
-      parts.add('borderw=${item.strokeWidth.round()}');
-      parts.add('bordercolor=${_colorToFFmpeg(item.strokeColor!)}');
-    }
-
-    if (item.backgroundColor != null) {
-      parts.add('box=1');
       parts.add('boxcolor=${_colorToFFmpeg(item.backgroundColor!)}@0.6');
       parts.add('boxborderw=8');
-    }
-
-    if (item.hasShadow) {
-      parts.add('shadowcolor=0x000000@0.5');
-      parts.add('shadowx=2');
-      parts.add('shadowy=2');
     }
 
     return parts.join(':');
@@ -331,7 +248,6 @@ class FFmpegCommandBuilder {
     return filters.join(',');
   }
 
-  /// Duration을 HH:MM:SS.mmm 형식으로 변환
   static String _formatDuration(Duration d) {
     final hours = d.inHours.toString().padLeft(2, '0');
     final minutes = (d.inMinutes % 60).toString().padLeft(2, '0');
@@ -340,7 +256,6 @@ class FFmpegCommandBuilder {
     return '$hours:$minutes:$seconds.$millis';
   }
 
-  /// drawtext용 텍스트 이스케이프 (backslash를 먼저 이스케이프해야 함)
   static String _escapeText(String text) {
     return text
         .replaceAll('\\', '\\\\')
@@ -349,7 +264,6 @@ class FFmpegCommandBuilder {
         .replaceAll(';', '\\;');
   }
 
-  /// drawtext용 파일 경로 이스케이프
   static String _escapePath(String path) {
     return path
         .replaceAll('\\', '\\\\')
@@ -357,7 +271,6 @@ class FFmpegCommandBuilder {
         .replaceAll("'", "\\'");
   }
 
-  /// Color를 FFmpeg 색상 문자열로 변환 (0xRRGGBB)
   static String _colorToFFmpeg(Color color) {
     final r = color.red.toInt().toRadixString(16).padLeft(2, '0');
     final g = color.green.toInt().toRadixString(16).padLeft(2, '0');

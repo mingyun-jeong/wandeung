@@ -6,7 +6,6 @@ class SubtitleItem {
   final Duration startTime;
   final Duration endTime;
   final Offset position;
-  final String fontFamily;
   final double fontSize;
   final Color color;
   final Color? backgroundColor;
@@ -22,7 +21,6 @@ class SubtitleItem {
     required this.startTime,
     required this.endTime,
     this.position = const Offset(0.5, 0.8),
-    this.fontFamily = 'NotoSansKR-Bold.otf',
     this.fontSize = 24.0,
     this.color = const Color(0xFFFFFFFF),
     this.backgroundColor,
@@ -43,7 +41,6 @@ class SubtitleItem {
     Duration? startTime,
     Duration? endTime,
     Offset? position,
-    String? fontFamily,
     double? fontSize,
     Color? color,
     Color? backgroundColor,
@@ -61,7 +58,6 @@ class SubtitleItem {
       startTime: startTime ?? this.startTime,
       endTime: endTime ?? this.endTime,
       position: position ?? this.position,
-      fontFamily: fontFamily ?? this.fontFamily,
       fontSize: fontSize ?? this.fontSize,
       color: color ?? this.color,
       backgroundColor: clearBackground ? null : (backgroundColor ?? this.backgroundColor),
@@ -70,22 +66,6 @@ class SubtitleItem {
       isBold: isBold ?? this.isBold,
       hasShadow: hasShadow ?? this.hasShadow,
       rotation: rotation ?? this.rotation,
-    );
-  }
-}
-
-class CustomFont {
-  final String name;
-  final String filePath;
-
-  const CustomFont({required this.name, required this.filePath});
-
-  Map<String, dynamic> toJson() => {'name': name, 'filePath': filePath};
-
-  factory CustomFont.fromJson(Map<String, dynamic> json) {
-    return CustomFont(
-      name: json['name'] as String,
-      filePath: json['filePath'] as String,
     );
   }
 }

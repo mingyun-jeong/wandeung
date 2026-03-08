@@ -14,7 +14,6 @@ void main() {
 
       expect(item.text, '핵심 무브');
       expect(item.position, const Offset(0.5, 0.8));
-      expect(item.fontFamily, 'NotoSansKR-Bold');
       expect(item.fontSize, 24.0);
       expect(item.color, const Color(0xFFFFFFFF));
       expect(item.backgroundColor, isNull);
@@ -88,19 +87,4 @@ void main() {
     });
   });
 
-  group('CustomFont', () {
-    test('creates correctly', () {
-      const font = CustomFont(name: '나의폰트', filePath: '/path/to/font.otf');
-      expect(font.name, '나의폰트');
-      expect(font.filePath, '/path/to/font.otf');
-    });
-
-    test('serializes to/from JSON', () {
-      const font = CustomFont(name: '나의폰트', filePath: '/path/to/font.otf');
-      final json = font.toJson();
-      final restored = CustomFont.fromJson(json);
-      expect(restored.name, font.name);
-      expect(restored.filePath, font.filePath);
-    });
-  });
 }

@@ -1,111 +1,48 @@
-import 'dart:convert';
 import 'dart:io';
 
-import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
-import '../models/subtitle_item.dart';
-
+/// 기본 폰트(NanumGothic-Bold.ttf)를 캐시 디렉토리에 복사하여
+/// FFmpeg drawtext에서 사용할 수 있도록 하는 서비스
 class CustomFontService {
   CustomFontService._();
 
-  static const _prefsKey = 'custom_fonts';
+  /// TTF 포맷 사용 (OTF/CFF보다 FFmpeg FreeType 호환성이 높음)
+  static const _defaultFontFile = 'NanumGothic-Bold.ttf';
 
-  /// 기본 제공 폰트 목록 (에셋 번들에 포함)
-  static const List<CustomFont> defaultFonts = [
-    CustomFont(name: 'Noto Sans KR Bold', filePath: 'NotoSansKR-Bold.otf'),
-    CustomFont(name: 'Noto Sans KR Regular', filePath: 'NotoSansKR-Regular.otf'),
-    CustomFont(name: '나눔고딕 Bold', filePath: 'NanumGothic-Bold.ttf'),
-  ];
-
-  /// 기본 폰트를 앱 문서 디렉토리에 복사 (최초 1회)
+  /// 기본 폰트를 캐시 디렉토리에 복사 (최초 1회)
+  /// 캐시 디렉토리는 FFmpeg 네이티브 코드에서 접근이 확실함
   static Future<void> ensureDefaultFonts() async {
-    final appDir = await getApplicationDocumentsDirectory();
-    for (final font in defaultFonts) {
-      final fontFile = File('${appDir.path}/${font.filePath}');
-      if (!await fontFile.exists()) {
-        try {
-          final data = await rootBundle.load('assets/fonts/${font.filePath}');
-          await fontFile.writeAsBytes(data.buffer.asUint8List());
-        } catch (_) {
-          // 폰트 파일이 에셋에 없으면 무시
-        }
+    final cacheDir = await getTemporaryDirectory();
+    final fontFile = File('${cacheDir.path}/$_defaultFontFile');
+    if (!await fontFile.exists()) {
+      try {
+        final data = await rootBundle.load('assets/fonts/$_defaultFontFile');
+        await fontFile.writeAsBytes(data.buffer.asUint8List(), flush: true);
+        debugPrint('[CustomFontService] 폰트 복사 완료: ${fontFile.path}');
+      } catch (e) {
+        debugPrint('[CustomFontService] 폰트 복사 실패: $e');
       }
     }
   }
 
-  /// 기본 폰트의 실제 파일 경로 반환
-  static Future<String> getDefaultFontPath(String fileName) async {
-    final appDir = await getApplicationDocumentsDirectory();
-    return '${appDir.path}/$fileName';
-  }
-
-  /// 커스텀 폰트 import (file_picker로 .ttf/.otf 선택)
-  static Future<CustomFont?> importFont() async {
-    final result = await FilePicker.platform.pickFiles(
-      type: FileType.custom,
-      allowedExtensions: ['ttf', 'otf'],
-    );
-
-    if (result == null || result.files.isEmpty) return null;
-
-    final pickedFile = result.files.first;
-    if (pickedFile.path == null) return null;
-
-    final appDir = await getApplicationDocumentsDirectory();
-    final fontsDir = Directory('${appDir.path}/custom_fonts');
-    if (!await fontsDir.exists()) {
-      await fontsDir.create(recursive: true);
+  /// FFmpeg에서 사용할 기본 폰트 경로 반환
+  static Future<String?> getDefaultFontPath() async {
+    final cacheDir = await getTemporaryDirectory();
+    final fontFile = File('${cacheDir.path}/$_defaultFontFile');
+    if (await fontFile.exists()) {
+      return fontFile.path;
     }
-
-    final fileName = pickedFile.name;
-    final destPath = '${fontsDir.path}/$fileName';
-    await File(pickedFile.path!).copy(destPath);
-
-    final displayName = fileName.replaceAll(RegExp(r'\.(ttf|otf)$'), '');
-    final font = CustomFont(name: displayName, filePath: destPath);
-
-    await _addToPrefs(font);
-    return font;
-  }
-
-  /// 저장된 커스텀 폰트 목록 로드
-  static Future<List<CustomFont>> loadCustomFonts() async {
-    final prefs = await SharedPreferences.getInstance();
-    final jsonStr = prefs.getString(_prefsKey);
-    if (jsonStr == null) return [];
-
-    final List<dynamic> list = jsonDecode(jsonStr);
-    return list
-        .map((e) => CustomFont.fromJson(e as Map<String, dynamic>))
-        .where((f) => File(f.filePath).existsSync())
-        .toList();
-  }
-
-  /// 커스텀 폰트 삭제
-  static Future<void> deleteFont(CustomFont font) async {
-    final file = File(font.filePath);
-    if (await file.exists()) {
-      await file.delete();
+    // 없으면 복사 시도
+    try {
+      final data = await rootBundle.load('assets/fonts/$_defaultFontFile');
+      await fontFile.writeAsBytes(data.buffer.asUint8List(), flush: true);
+      return fontFile.path;
+    } catch (e) {
+      debugPrint('[CustomFontService] 폰트 경로 가져오기 실패: $e');
+      return null;
     }
-    await _removeFromPrefs(font);
-  }
-
-  static Future<void> _addToPrefs(CustomFont font) async {
-    final fonts = await loadCustomFonts();
-    fonts.add(font);
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(
-        _prefsKey, jsonEncode(fonts.map((f) => f.toJson()).toList()));
-  }
-
-  static Future<void> _removeFromPrefs(CustomFont font) async {
-    final fonts = await loadCustomFonts();
-    fonts.removeWhere((f) => f.filePath == font.filePath);
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(
-        _prefsKey, jsonEncode(fonts.map((f) => f.toJson()).toList()));
   }
 }

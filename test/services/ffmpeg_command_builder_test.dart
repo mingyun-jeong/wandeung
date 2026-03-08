@@ -8,16 +8,14 @@ import 'package:wandeung/services/ffmpeg_command_builder.dart';
 String _joinArgs(List<String> args) => args.join(' ');
 
 void main() {
-  group('FFmpegCommandBuilder subtitle support', () {
-    test('includes subtitle drawtext with enable/between', () {
+  group('FFmpegCommandBuilder subtitle image overlay', () {
+    test('subtitle with image uses overlay filter with enable/between', () {
       const subtitle = SubtitleItem(
         id: '1',
         text: '핵심 무브',
         startTime: Duration(seconds: 2),
         endTime: Duration(seconds: 5),
         position: Offset(0.5, 0.8),
-        fontSize: 24.0,
-        color: Color(0xFFFFFFFF),
       );
 
       final args = FFmpegCommandBuilder.buildExportArgs(
@@ -26,113 +24,69 @@ void main() {
         trimStart: Duration.zero,
         trimEnd: const Duration(seconds: 10),
         subtitles: [subtitle],
+        subtitleImagePaths: ['/tmp/sub_0.png'],
         videoResolution: const Size(1920, 1080),
-        fontPath: '/fonts/NotoSansKR-Bold.otf',
+      );
+      final command = _joinArgs(args);
+
+      // PNG 이미지가 추가 입력으로 등록됨
+      expect(command, contains('-i /tmp/sub_0.png'));
+      // overlay 필터 사용 (drawtext 아님)
+      expect(command, contains('overlay='));
+      expect(command, contains("enable='between(t,2.000,5.000)'"));
+      expect(command, contains('[vout]'));
+      // drawtext는 사용하지 않음
+      expect(command, isNot(contains('drawtext=')));
+    });
+
+    test('subtitle without image falls through (no filter)', () {
+      const subtitle = SubtitleItem(
+        id: '1',
+        text: 'no image',
+        startTime: Duration.zero,
+        endTime: Duration(seconds: 3),
+      );
+
+      // subtitleImagePaths가 비어있으면 자막 필터 없음
+      final args = FFmpegCommandBuilder.buildExportArgs(
+        inputPath: '/input.mp4',
+        outputPath: '/output.mp4',
+        trimStart: Duration.zero,
+        trimEnd: const Duration(seconds: 10),
+        subtitles: [subtitle],
+        subtitleImagePaths: [],
+        videoResolution: const Size(1920, 1080),
+      );
+      final command = _joinArgs(args);
+
+      expect(command, isNot(contains('overlay=')));
+      expect(command, isNot(contains('filter_complex')));
+    });
+
+    test('overlay stickers still use drawtext', () {
+      const overlay = OverlayItem(
+        id: 'o1',
+        text: 'V3',
+        position: Offset(0.1, 0.1),
+      );
+
+      final args = FFmpegCommandBuilder.buildExportArgs(
+        inputPath: '/input.mp4',
+        outputPath: '/output.mp4',
+        trimStart: Duration.zero,
+        trimEnd: const Duration(seconds: 10),
+        overlays: [overlay],
+        videoResolution: const Size(1920, 1080),
+        fontPath: '/fonts/NanumGothic-Bold.ttf',
       );
       final command = _joinArgs(args);
 
       expect(command, contains('drawtext='));
-      expect(command, contains("enable='between(t,2.000,5.000)'"));
-      expect(command, contains('fontcolor=0xffffff'));
+      expect(command, contains('fontfile=/fonts/NanumGothic-Bold.ttf'));
+      expect(command, contains('[vout]'));
     });
 
-    test('subtitle with stroke adds borderw and bordercolor', () {
-      const subtitle = SubtitleItem(
-        id: '1',
-        text: 'stroke test',
-        startTime: Duration.zero,
-        endTime: Duration(seconds: 3),
-        strokeColor: Color(0xFF000000),
-        strokeWidth: 3.0,
-      );
-
-      final args = FFmpegCommandBuilder.buildExportArgs(
-        inputPath: '/input.mp4',
-        outputPath: '/output.mp4',
-        trimStart: Duration.zero,
-        trimEnd: const Duration(seconds: 10),
-        subtitles: [subtitle],
-        videoResolution: const Size(1920, 1080),
-      );
-      final command = _joinArgs(args);
-
-      expect(command, contains('borderw=3'));
-      expect(command, contains('bordercolor=0x000000'));
-    });
-
-    test('subtitle with shadow adds shadow params', () {
-      const subtitle = SubtitleItem(
-        id: '1',
-        text: 'shadow test',
-        startTime: Duration.zero,
-        endTime: Duration(seconds: 3),
-        hasShadow: true,
-      );
-
-      final args = FFmpegCommandBuilder.buildExportArgs(
-        inputPath: '/input.mp4',
-        outputPath: '/output.mp4',
-        trimStart: Duration.zero,
-        trimEnd: const Duration(seconds: 10),
-        subtitles: [subtitle],
-        videoResolution: const Size(1920, 1080),
-      );
-      final command = _joinArgs(args);
-
-      expect(command, contains('shadowcolor='));
-      expect(command, contains('shadowx='));
-      expect(command, contains('shadowy='));
-    });
-
-    test('subtitle with background adds box params', () {
-      const subtitle = SubtitleItem(
-        id: '1',
-        text: 'bg test',
-        startTime: Duration.zero,
-        endTime: Duration(seconds: 3),
-        backgroundColor: Color(0xFF000000),
-      );
-
-      final args = FFmpegCommandBuilder.buildExportArgs(
-        inputPath: '/input.mp4',
-        outputPath: '/output.mp4',
-        trimStart: Duration.zero,
-        trimEnd: const Duration(seconds: 10),
-        subtitles: [subtitle],
-        videoResolution: const Size(1920, 1080),
-      );
-      final command = _joinArgs(args);
-
-      expect(command, contains('box=1'));
-      expect(command, contains('boxcolor=0x000000'));
-    });
-
-    test('subtitle with custom fontPath uses it', () {
-      const subtitle = SubtitleItem(
-        id: '1',
-        text: 'font test',
-        startTime: Duration.zero,
-        endTime: Duration(seconds: 3),
-        fontFamily: 'MyCustomFont',
-      );
-
-      final args = FFmpegCommandBuilder.buildExportArgs(
-        inputPath: '/input.mp4',
-        outputPath: '/output.mp4',
-        trimStart: Duration.zero,
-        trimEnd: const Duration(seconds: 10),
-        subtitles: [subtitle],
-        videoResolution: const Size(1920, 1080),
-        subtitleFontPaths: {
-          'MyCustomFont': '/fonts/MyCustomFont.ttf',
-        },
-      );
-      final command = _joinArgs(args);
-
-      expect(command, contains('fontfile=/fonts/MyCustomFont.ttf'));
-    });
-
-    test('overlays and subtitles chain correctly', () {
+    test('overlays and subtitle images chain correctly', () {
       const overlay = OverlayItem(
         id: 'o1',
         text: 'V3',
@@ -152,12 +106,14 @@ void main() {
         trimEnd: const Duration(seconds: 10),
         overlays: [overlay],
         subtitles: [subtitle],
+        subtitleImagePaths: ['/tmp/sub_0.png'],
         videoResolution: const Size(1920, 1080),
       );
       final command = _joinArgs(args);
 
-      // Both drawtext filters present
-      expect('drawtext='.allMatches(command).length, 2);
+      // drawtext (오버레이) + overlay (자막) 모두 존재
+      expect(command, contains('drawtext='));
+      expect(command, contains('overlay='));
       expect(command, contains('[vout]'));
     });
 
@@ -196,6 +152,7 @@ void main() {
           ),
         ],
         subtitles: [subtitle],
+        subtitleImagePaths: ['/tmp/sub_0.png'],
         videoResolution: const Size(1920, 1080),
       );
       final command = _joinArgs(args);
@@ -205,7 +162,7 @@ void main() {
       expect(command, contains("enable='between(t,0.000,3.000)'"));
     });
 
-    test('filter_complex is passed as single argument (no quote splitting)', () {
+    test('filter_complex is passed as single argument', () {
       const subtitle = SubtitleItem(
         id: '1',
         text: 'test',
@@ -219,15 +176,50 @@ void main() {
         trimStart: Duration.zero,
         trimEnd: const Duration(seconds: 10),
         subtitles: [subtitle],
+        subtitleImagePaths: ['/tmp/sub_0.png'],
         videoResolution: const Size(1920, 1080),
       );
 
       final fcIndex = args.indexOf('-filter_complex');
       expect(fcIndex, isNot(-1));
-      // filter_complex 값이 하나의 인수로 전달되는지 확인
       final filterValue = args[fcIndex + 1];
       expect(filterValue, contains("enable='between(t,"));
       expect(filterValue, contains('[vout]'));
+    });
+
+    test('multiple subtitles create chained overlays', () {
+      const sub1 = SubtitleItem(
+        id: '1',
+        text: '첫번째',
+        startTime: Duration.zero,
+        endTime: Duration(seconds: 2),
+      );
+      const sub2 = SubtitleItem(
+        id: '2',
+        text: '두번째',
+        startTime: Duration(seconds: 3),
+        endTime: Duration(seconds: 5),
+      );
+
+      final args = FFmpegCommandBuilder.buildExportArgs(
+        inputPath: '/input.mp4',
+        outputPath: '/output.mp4',
+        trimStart: Duration.zero,
+        trimEnd: const Duration(seconds: 10),
+        subtitles: [sub1, sub2],
+        subtitleImagePaths: ['/tmp/sub_0.png', '/tmp/sub_1.png'],
+        videoResolution: const Size(1920, 1080),
+      );
+      final command = _joinArgs(args);
+
+      // 두 개의 PNG 입력
+      expect(command, contains('-i /tmp/sub_0.png'));
+      expect(command, contains('-i /tmp/sub_1.png'));
+      // 두 개의 overlay 필터
+      expect('overlay='.allMatches(command).length, 2);
+      // 중간 라벨과 최종 출력
+      expect(command, contains('[vsub0]'));
+      expect(command, contains('[vout]'));
     });
   });
 }

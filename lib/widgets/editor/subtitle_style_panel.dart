@@ -2,7 +2,6 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import '../../models/subtitle_item.dart';
-import '../../services/custom_font_service.dart';
 
 class SubtitleStylePanel extends StatefulWidget {
   final SubtitleItem item;
@@ -20,7 +19,6 @@ class SubtitleStylePanel extends StatefulWidget {
 
 class _SubtitleStylePanelState extends State<SubtitleStylePanel> {
   late SubtitleItem _current;
-  List<CustomFont> _customFonts = [];
 
   static const _colorOptions = [
     Color(0xFFFFFFFF), Color(0xFF000000), Color(0xFFFF0000),
@@ -32,7 +30,6 @@ class _SubtitleStylePanelState extends State<SubtitleStylePanel> {
   void initState() {
     super.initState();
     _current = widget.item;
-    _loadCustomFonts();
   }
 
   @override
@@ -41,11 +38,6 @@ class _SubtitleStylePanelState extends State<SubtitleStylePanel> {
     if (oldWidget.item != widget.item) {
       _current = widget.item;
     }
-  }
-
-  Future<void> _loadCustomFonts() async {
-    final fonts = await CustomFontService.loadCustomFonts();
-    if (mounted) setState(() => _customFonts = fonts);
   }
 
   void _update(SubtitleItem updated) {
@@ -58,41 +50,6 @@ class _SubtitleStylePanelState extends State<SubtitleStylePanel> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // 폰트 선택
-        const Text('폰트', style: TextStyle(fontWeight: FontWeight.w600)),
-        const SizedBox(height: 8),
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            children: [
-              ...CustomFontService.defaultFonts.map((f) => Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: ChoiceChip(
-                      label: Text(f.name),
-                      selected: _current.fontFamily == f.filePath,
-                      onSelected: (_) =>
-                          _update(_current.copyWith(fontFamily: f.filePath)),
-                    ),
-                  )),
-              ..._customFonts.map((f) => Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: ChoiceChip(
-                      label: Text(f.name),
-                      selected: _current.fontFamily == f.filePath,
-                      onSelected: (_) =>
-                          _update(_current.copyWith(fontFamily: f.filePath)),
-                    ),
-                  )),
-              ActionChip(
-                avatar: const Icon(Icons.add, size: 18),
-                label: const Text('추가'),
-                onPressed: _importFont,
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 16),
-
         // 사이즈
         Row(
           children: [
@@ -230,13 +187,5 @@ class _SubtitleStylePanelState extends State<SubtitleStylePanel> {
               ))
           .toList(),
     );
-  }
-
-  Future<void> _importFont() async {
-    final font = await CustomFontService.importFont();
-    if (font != null) {
-      await _loadCustomFonts();
-      _update(_current.copyWith(fontFamily: font.filePath));
-    }
   }
 }

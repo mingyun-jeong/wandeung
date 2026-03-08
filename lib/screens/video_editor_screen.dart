@@ -2,9 +2,7 @@ import 'dart:io';
 
 import 'package:cross_file/cross_file.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:video_editor_2/video_editor.dart';
 import 'package:video_player/video_player.dart';
 
@@ -137,23 +135,9 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
       final overlays = ref.read(overlaysProvider);
       final subtitles = ref.read(subtitlesProvider);
 
-      // 폰트 경로 확인
+      // 기본 폰트 준비 및 경로 확인
+      await CustomFontService.ensureDefaultFonts();
       final fontPath = await _getFontPath();
-
-      // 자막에 사용된 폰트 경로 맵 구성
-      final subtitleFontPaths = <String, String>{};
-      for (final sub in subtitles) {
-        if (!subtitleFontPaths.containsKey(sub.fontFamily)) {
-          final isDefault = CustomFontService.defaultFonts
-              .any((f) => f.filePath == sub.fontFamily);
-          if (isDefault) {
-            subtitleFontPaths[sub.fontFamily] =
-                await CustomFontService.getDefaultFontPath(sub.fontFamily);
-          } else {
-            subtitleFontPaths[sub.fontFamily] = sub.fontFamily;
-          }
-        }
-      }
 
       final result = await VideoExportService.exportVideo(
         inputPath: widget.videoPath,
@@ -162,7 +146,6 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
         speedSegments: segments,
         overlays: overlays,
         subtitles: subtitles,
-        subtitleFontPaths: subtitleFontPaths,
         videoResolution: _correctedVideoDimension,
         fontPath: fontPath,
         onProgress: (progress) {
@@ -231,18 +214,7 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
 
   /// 번들 폰트 경로 반환 (없으면 null)
   Future<String?> _getFontPath() async {
-    try {
-      final appDir = await getApplicationDocumentsDirectory();
-      final fontFile = File('${appDir.path}/NotoSansKR-Bold.otf');
-      if (await fontFile.exists()) return fontFile.path;
-
-      // 에셋에서 복사
-      final data = await rootBundle.load('assets/fonts/NotoSansKR-Bold.otf');
-      await fontFile.writeAsBytes(data.buffer.asUint8List());
-      return fontFile.path;
-    } catch (_) {
-      return null;
-    }
+    return CustomFontService.getDefaultFontPath();
   }
 
   void _showSpeedPicker() {

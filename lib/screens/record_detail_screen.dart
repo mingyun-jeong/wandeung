@@ -216,18 +216,7 @@ class _RecordDetailScreenState extends State<RecordDetailScreen> {
                             ),
                           ],
                         ),
-                        child: Center(
-                          child: Text(
-                            record.grade.toUpperCase(),
-                            style: TextStyle(
-                              fontWeight: FontWeight.w800,
-                              fontSize: 17,
-                              color: color == DifficultyColor.white
-                                  ? Colors.black87
-                                  : Colors.white,
-                            ),
-                          ),
-                        ),
+                        child: const SizedBox.shrink(),
                       ),
                       const SizedBox(width: 14),
                       Column(
@@ -239,14 +228,6 @@ class _RecordDetailScreenState extends State<RecordDetailScreen> {
                               fontSize: 17,
                               fontWeight: FontWeight.w600,
                               letterSpacing: -0.3,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            record.grade.toUpperCase(),
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: colorScheme.onSurface.withOpacity(0.4),
                             ),
                           ),
                         ],

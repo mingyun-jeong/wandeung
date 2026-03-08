@@ -52,7 +52,7 @@ class RecordCard extends StatelessWidget {
                       runSpacing: 5,
                       children: [
                         _StatusBadge(isCompleted: isCompleted),
-                        _DifficultyBadge(color: color, grade: record.grade),
+                        _DifficultyBadge(color: color),
                         ...record.tags.map((tag) => _TagBadge(
                               tag: tag,
                               colorScheme: colorScheme,
@@ -113,7 +113,6 @@ class RecordCard extends StatelessWidget {
                 height: 72,
                 fit: BoxFit.cover,
                 errorBuilder: (_, __, ___) => _GradeBadge(
-                  grade: record.grade,
                   color: color,
                 ),
               ),
@@ -129,14 +128,13 @@ class RecordCard extends StatelessWidget {
         ),
       );
     }
-    return _GradeBadge(grade: record.grade, color: color);
+    return _GradeBadge(color: color);
   }
 }
 
 class _GradeBadge extends StatelessWidget {
-  final String grade;
   final DifficultyColor color;
-  const _GradeBadge({required this.grade, required this.color});
+  const _GradeBadge({required this.color});
 
   @override
   Widget build(BuildContext context) {
@@ -162,18 +160,7 @@ class _GradeBadge extends StatelessWidget {
           ),
         ],
       ),
-      child: Center(
-        child: Text(
-          grade.toUpperCase(),
-          style: TextStyle(
-            color: color == DifficultyColor.white
-                ? Colors.black87
-                : Colors.white,
-            fontWeight: FontWeight.w800,
-            fontSize: 14,
-          ),
-        ),
-      ),
+      child: const SizedBox.shrink(),
     );
   }
 }
@@ -208,8 +195,7 @@ class _StatusBadge extends StatelessWidget {
 
 class _DifficultyBadge extends StatelessWidget {
   final DifficultyColor color;
-  final String grade;
-  const _DifficultyBadge({required this.color, required this.grade});
+  const _DifficultyBadge({required this.color});
 
   @override
   Widget build(BuildContext context) {
@@ -238,7 +224,7 @@ class _DifficultyBadge extends StatelessWidget {
           ),
           const SizedBox(width: 4),
           Text(
-            '${color.korean} ${grade.toUpperCase()}',
+            color.korean,
             style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w600,

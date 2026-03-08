@@ -33,6 +33,7 @@ class _CameraTabScreenState extends ConsumerState<CameraTabScreen>
   double _currentZoom = 1.0;
   double _minZoom = 1.0;
   double _maxZoom = 1.0;
+  double _baseZoom = 1.0;
   String? _errorMessage;
 
   @override
@@ -310,8 +311,17 @@ class _CameraTabScreenState extends ConsumerState<CameraTabScreen>
       backgroundColor: Colors.black,
       body: Stack(
         children: [
-          // 카메라 프리뷰
-          Center(child: CameraPreview(_controller!)),
+          // 카메라 프리뷰 (핀치 줌 지원)
+          GestureDetector(
+            onScaleStart: (_) {
+              _baseZoom = _currentZoom;
+            },
+            onScaleUpdate: (details) {
+              final newZoom = (_baseZoom * details.scale).clamp(_minZoom, _maxZoom);
+              _setZoom(newZoom);
+            },
+            child: Center(child: CameraPreview(_controller!)),
+          ),
 
           // 상단: 닫기 + 촬영 시간 + 카메라 전환
           SafeArea(

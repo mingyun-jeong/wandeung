@@ -329,391 +329,401 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
         title: _isEditMode ? '기록 편집' : '기록 저장',
         showBackButton: true,
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // 영상 프리뷰 (원본)
-            if (_videoController != null &&
-                _videoController!.value.isInitialized)
-              Stack(
+      body: Column(
+        children: [
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  LayoutBuilder(
-                    builder: (context, constraints) {
-                      final maxHeight =
-                          MediaQuery.of(context).size.height * 0.22;
-                      final naturalHeight =
-                          constraints.maxWidth / _displayAspectRatio;
-                      final playerHeight =
-                          naturalHeight > maxHeight ? maxHeight : naturalHeight;
+                  // 영상 프리뷰 (원본)
+                  if (_videoController != null &&
+                      _videoController!.value.isInitialized)
+                    Stack(
+                      children: [
+                        LayoutBuilder(
+                          builder: (context, constraints) {
+                            final maxHeight =
+                                MediaQuery.of(context).size.height * 0.22;
+                            final naturalHeight =
+                                constraints.maxWidth / _displayAspectRatio;
+                            final playerHeight =
+                                naturalHeight > maxHeight ? maxHeight : naturalHeight;
 
-                      return ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: SizedBox(
-                          width: double.infinity,
-                          height: playerHeight,
-                          child: Container(
-                            color: Colors.black,
-                            alignment: Alignment.center,
-                            child: AspectRatio(
-                              aspectRatio: _displayAspectRatio,
-                              child: Stack(
-                                alignment: Alignment.center,
-                                children: [
-                                  VideoPlayer(_videoController!),
-                                  IconButton(
-                                    icon: Icon(
-                                      _videoController!.value.isPlaying
-                                          ? Icons.pause_circle
-                                          : Icons.play_circle,
-                                      size: 48,
-                                      color: Colors.white,
+                            return ClipRRect(
+                              borderRadius: BorderRadius.circular(12),
+                              child: SizedBox(
+                                width: double.infinity,
+                                height: playerHeight,
+                                child: Container(
+                                  color: Colors.black,
+                                  alignment: Alignment.center,
+                                  child: AspectRatio(
+                                    aspectRatio: _displayAspectRatio,
+                                    child: Stack(
+                                      alignment: Alignment.center,
+                                      children: [
+                                        VideoPlayer(_videoController!),
+                                        IconButton(
+                                          icon: Icon(
+                                            _videoController!.value.isPlaying
+                                                ? Icons.pause_circle
+                                                : Icons.play_circle,
+                                            size: 48,
+                                            color: Colors.white,
+                                          ),
+                                          onPressed: () {
+                                            setState(() {
+                                              _videoController!.value.isPlaying
+                                                  ? _videoController!.pause()
+                                                  : _videoController!.play();
+                                            });
+                                          },
+                                        ),
+                                      ],
                                     ),
-                                    onPressed: () {
-                                      setState(() {
-                                        _videoController!.value.isPlaying
-                                            ? _videoController!.pause()
-                                            : _videoController!.play();
-                                      });
-                                    },
                                   ),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                        // 편집 버튼 (편집 모드에서만)
+                        if (_isEditMode && widget.existingRecord!.videoPath != null)
+                          Positioned(
+                            top: 8,
+                            right: 8,
+                            child: Material(
+                              color: Colors.black54,
+                              borderRadius: BorderRadius.circular(20),
+                              child: InkWell(
+                                borderRadius: BorderRadius.circular(20),
+                                onTap: _openVideoEditor,
+                                child: const Padding(
+                                  padding: EdgeInsets.symmetric(
+                                      horizontal: 12, vertical: 6),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(Icons.movie_edit,
+                                          color: Colors.white, size: 16),
+                                      SizedBox(width: 4),
+                                      Text('편집',
+                                          style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w600)),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    )
+                  else if (_videoController == null &&
+                      _isEditMode &&
+                      widget.existingRecord!.videoPath != null)
+                    const SizedBox(
+                      height: 100,
+                      child: Center(child: CircularProgressIndicator()),
+                    ),
+                  const SizedBox(height: 16),
+
+                  // 난이도 선택
+                  DifficultySelector(
+                    selectedColor: displayColor,
+                    onColorChanged: (c) {
+                      if (_isEditMode) {
+                        setState(() => _editColor = c);
+                      } else {
+                        ref.read(cameraSettingsProvider.notifier).setColor(c);
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 16),
+
+                  Text('암장',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 15,
+                        color: Theme.of(context).colorScheme.onSurface,
+                      )),
+                  const SizedBox(height: 8),
+                  if (displayGym != null)
+                    Container(
+                      width: double.infinity,
+                      padding:
+                          const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.primary.withOpacity(0.06),
+                        border: Border.all(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .primary
+                                .withOpacity(0.2)),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.location_on_rounded,
+                              size: 18,
+                              color: Theme.of(context).colorScheme.primary),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () => _showGymSelection(context, ref),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    displayGym?.name ?? '',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurface,
+                                    ),
+                                  ),
+                                  if (displayGym?.address != null)
+                                    Padding(
+                                      padding: const EdgeInsets.only(top: 2),
+                                      child: Text(
+                                        displayGym!.address!,
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .onSurface
+                                              .withOpacity(0.45),
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
                                 ],
                               ),
                             ),
                           ),
-                        ),
-                      );
-                    },
-                  ),
-                  // 편집 버튼 (편집 모드에서만)
-                  if (_isEditMode && widget.existingRecord!.videoPath != null)
-                    Positioned(
-                      top: 8,
-                      right: 8,
-                      child: Material(
-                        color: Colors.black54,
-                        borderRadius: BorderRadius.circular(20),
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(20),
-                          onTap: _openVideoEditor,
-                          child: const Padding(
-                            padding: EdgeInsets.symmetric(
-                                horizontal: 12, vertical: 6),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(Icons.movie_edit,
-                                    color: Colors.white, size: 16),
-                                SizedBox(width: 4),
-                                Text('편집',
-                                    style: TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w600)),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                ],
-              )
-            else if (_videoController == null &&
-                _isEditMode &&
-                widget.existingRecord!.videoPath != null)
-              const SizedBox(
-                height: 100,
-                child: Center(child: CircularProgressIndicator()),
-              ),
-            const SizedBox(height: 16),
-
-            // 난이도 선택
-            DifficultySelector(
-              selectedColor: displayColor,
-              onColorChanged: (c) {
-                if (_isEditMode) {
-                  setState(() => _editColor = c);
-                } else {
-                  ref.read(cameraSettingsProvider.notifier).setColor(c);
-                }
-              },
-            ),
-            const SizedBox(height: 16),
-
-            Text('암장',
-                style: TextStyle(
-                  fontWeight: FontWeight.w700,
-                  fontSize: 15,
-                  color: Theme.of(context).colorScheme.onSurface,
-                )),
-            const SizedBox(height: 8),
-            if (displayGym != null)
-              Container(
-                width: double.infinity,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primary.withOpacity(0.06),
-                  border: Border.all(
-                      color: Theme.of(context)
-                          .colorScheme
-                          .primary
-                          .withOpacity(0.2)),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.location_on_rounded,
-                        size: 18,
-                        color: Theme.of(context).colorScheme.primary),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () => _showGymSelection(context, ref),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              displayGym?.name ?? '',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .onSurface,
+                          if (displayGym?.latitude != null &&
+                              displayGym?.longitude != null)
+                            GestureDetector(
+                              onTap: () => GymMapSheet.show(
+                                context,
+                                selectedGym: displayGym!,
                               ),
-                            ),
-                            if (displayGym?.address != null)
-                              Padding(
-                                padding: const EdgeInsets.only(top: 2),
-                                child: Text(
-                                  displayGym!.address!,
-                                  style: TextStyle(
-                                    fontSize: 12,
+                              child: Padding(
+                                padding: const EdgeInsets.only(left: 8),
+                                child: Icon(Icons.map_outlined,
+                                    size: 20,
                                     color: Theme.of(context)
                                         .colorScheme
-                                        .onSurface
-                                        .withOpacity(0.45),
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
+                                        .primary
+                                        .withOpacity(0.7)),
                               ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    if (displayGym?.latitude != null &&
-                        displayGym?.longitude != null)
-                      GestureDetector(
-                        onTap: () => GymMapSheet.show(
-                          context,
-                          selectedGym: displayGym!,
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.only(left: 8),
-                          child: Icon(Icons.map_outlined,
-                              size: 20,
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .primary
-                                  .withOpacity(0.7)),
-                        ),
-                      ),
-                    GestureDetector(
-                      onTap: () {
-                        if (_isEditMode) {
-                          setState(() {
-                            _editGym = null;
-                          });
-                        } else {
-                          ref.read(cameraSettingsProvider.notifier).clearGym();
-                        }
-                      },
-                      child: Padding(
-                        padding: const EdgeInsets.only(left: 8),
-                        child: Icon(Icons.close_rounded,
-                            size: 18,
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onSurface
-                                .withOpacity(0.35)),
-                      ),
-                    ),
-                  ],
-                ),
-              )
-            else
-              GestureDetector(
-                onTap: () => _showGymSelection(context, ref),
-                child: Container(
-                  width: double.infinity,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF1F5F9),
-                    border: Border.all(color: const Color(0xFFE2E8F0)),
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.add_location_alt_outlined,
-                          size: 18,
-                          color: Theme.of(context)
-                              .colorScheme
-                              .onSurface
-                              .withOpacity(0.35)),
-                      const SizedBox(width: 10),
-                      Text(
-                        '암장을 선택해주세요',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Theme.of(context)
-                              .colorScheme
-                              .onSurface
-                              .withOpacity(0.35),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            const SizedBox(height: 16),
-
-            Text('완등 여부',
-                style: TextStyle(
-                  fontWeight: FontWeight.w700,
-                  fontSize: 15,
-                  color: Theme.of(context).colorScheme.onSurface,
-                )),
-            const SizedBox(height: 8),
-            Row(
-              children: ClimbingStatus.values.map((s) {
-                final isSelected = _status == s;
-                final isCompleted = s == ClimbingStatus.completed;
-                final activeColor = isCompleted
-                    ? const Color(0xFF0D9488)
-                    : const Color(0xFFFF6B35);
-                return Padding(
-                  padding: EdgeInsets.only(right: isCompleted ? 8 : 0),
-                  child: GestureDetector(
-                    onTap: () => setState(() => _status = s),
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 180),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 9),
-                      decoration: BoxDecoration(
-                        color: isSelected
-                            ? activeColor.withOpacity(0.1)
-                            : const Color(0xFFF1F5F9),
-                        borderRadius: BorderRadius.circular(22),
-                        border: Border.all(
-                          color: isSelected
-                              ? activeColor.withOpacity(0.4)
-                              : const Color(0xFFE2E8F0),
-                          width: isSelected ? 1.5 : 1,
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            isCompleted
-                                ? Icons.check_circle_rounded
-                                : Icons.sports_kabaddi_rounded,
-                            color: isSelected
-                                ? activeColor
-                                : Theme.of(context)
-                                    .colorScheme
-                                    .onSurface
-                                    .withOpacity(0.3),
-                            size: 18,
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            s.label,
-                            style: TextStyle(
-                              fontWeight: isSelected
-                                  ? FontWeight.w600
-                                  : FontWeight.w400,
-                              fontSize: 13,
-                              color: isSelected
-                                  ? activeColor
-                                  : Theme.of(context)
+                            ),
+                          GestureDetector(
+                            onTap: () {
+                              if (_isEditMode) {
+                                setState(() {
+                                  _editGym = null;
+                                });
+                              } else {
+                                ref.read(cameraSettingsProvider.notifier).clearGym();
+                              }
+                            },
+                            child: Padding(
+                              padding: const EdgeInsets.only(left: 8),
+                              child: Icon(Icons.close_rounded,
+                                  size: 18,
+                                  color: Theme.of(context)
                                       .colorScheme
                                       .onSurface
-                                      .withOpacity(0.4),
+                                      .withOpacity(0.35)),
                             ),
                           ),
                         ],
                       ),
-                    ),
-                  ),
-                );
-              }).toList(),
-            ),
-            const SizedBox(height: 16),
-
-            // 태그 입력
-            TagInput(
-              tags: _tags,
-              onTagsChanged: (tags) => setState(() => _tags = tags),
-            ),
-            const SizedBox(height: 24),
-
-            Row(
-              children: [
-                Expanded(
-                  flex: 1,
-                  child: OutlinedButton.icon(
-                    onPressed: _isSaving ? null : _deleteVideo,
-                    icon: const Icon(Icons.delete_outline_rounded,
-                        color: Color(0xFFEF4444)),
-                    label: const Text('삭제',
-                        style: TextStyle(color: Color(0xFFEF4444))),
-                    style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: Color(0xFFEF4444)),
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  flex: 2,
-                  child: FilledButton.icon(
-                    onPressed: _isSaving ? null : _saveRecord,
-                    icon: _isSaving
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(
-                              color: Colors.white,
-                              strokeWidth: 2,
+                    )
+                  else
+                    GestureDetector(
+                      onTap: () => _showGymSelection(context, ref),
+                      child: Container(
+                        width: double.infinity,
+                        padding:
+                            const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF1F5F9),
+                          border: Border.all(color: const Color(0xFFE2E8F0)),
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.add_location_alt_outlined,
+                                size: 18,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurface
+                                    .withOpacity(0.35)),
+                            const SizedBox(width: 10),
+                            Text(
+                              '암장을 선택해주세요',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurface
+                                    .withOpacity(0.35),
+                              ),
                             ),
-                          )
-                        : Icon(_isEditMode
-                            ? Icons.check_rounded
-                            : Icons.save_alt_rounded),
-                    label: Text(_isEditMode ? '수정하기' : '저장하기',
-                        style: const TextStyle(
-                            fontSize: 16, fontWeight: FontWeight.w600)),
-                    style: FilledButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 14),
+                          ],
+                        ),
+                      ),
+                    ),
+                  const SizedBox(height: 16),
+
+                  Text('완등 여부',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 15,
+                        color: Theme.of(context).colorScheme.onSurface,
+                      )),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: ClimbingStatus.values.map((s) {
+                      final isSelected = _status == s;
+                      final isCompleted = s == ClimbingStatus.completed;
+                      final activeColor = isCompleted
+                          ? const Color(0xFF0D9488)
+                          : const Color(0xFFFF6B35);
+                      return Padding(
+                        padding: EdgeInsets.only(right: isCompleted ? 8 : 0),
+                        child: GestureDetector(
+                          onTap: () => setState(() => _status = s),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 180),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 9),
+                            decoration: BoxDecoration(
+                              color: isSelected
+                                  ? activeColor.withOpacity(0.1)
+                                  : const Color(0xFFF1F5F9),
+                              borderRadius: BorderRadius.circular(22),
+                              border: Border.all(
+                                color: isSelected
+                                    ? activeColor.withOpacity(0.4)
+                                    : const Color(0xFFE2E8F0),
+                                width: isSelected ? 1.5 : 1,
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  isCompleted
+                                      ? Icons.check_circle_rounded
+                                      : Icons.sports_kabaddi_rounded,
+                                  color: isSelected
+                                      ? activeColor
+                                      : Theme.of(context)
+                                          .colorScheme
+                                          .onSurface
+                                          .withOpacity(0.3),
+                                  size: 18,
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  s.label,
+                                  style: TextStyle(
+                                    fontWeight: isSelected
+                                        ? FontWeight.w600
+                                        : FontWeight.w400,
+                                    fontSize: 13,
+                                    color: isSelected
+                                        ? activeColor
+                                        : Theme.of(context)
+                                            .colorScheme
+                                            .onSurface
+                                            .withOpacity(0.4),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // 태그 입력
+                  TagInput(
+                    tags: _tags,
+                    onTagsChanged: (tags) => setState(() => _tags = tags),
+                  ),
+
+                  // 내보내기 영상 목록 (편집 모드에서만)
+                  if (_isEditMode && widget.existingRecord!.id != null) ...[
+                    const SizedBox(height: 28),
+                    _ExportedVideosList(
+                        parentRecordId: widget.existingRecord!.id!),
+                  ],
+                ],
+              ),
+            ),
+          ),
+          // 하단 고정 버튼
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+              child: Row(
+                children: [
+                  Expanded(
+                    flex: 1,
+                    child: OutlinedButton.icon(
+                      onPressed: _isSaving ? null : _deleteVideo,
+                      icon: const Icon(Icons.delete_outline_rounded,
+                          color: Color(0xFFEF4444)),
+                      label: const Text('삭제',
+                          style: TextStyle(color: Color(0xFFEF4444))),
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: Color(0xFFEF4444)),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
                     ),
                   ),
-                ),
-              ],
+                  const SizedBox(width: 12),
+                  Expanded(
+                    flex: 2,
+                    child: FilledButton.icon(
+                      onPressed: _isSaving ? null : _saveRecord,
+                      icon: _isSaving
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2,
+                              ),
+                            )
+                          : Icon(_isEditMode
+                              ? Icons.check_rounded
+                              : Icons.save_alt_rounded),
+                      label: Text(_isEditMode ? '수정하기' : '저장하기',
+                          style: const TextStyle(
+                              fontSize: 16, fontWeight: FontWeight.w600)),
+                      style: FilledButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-
-            // 내보내기 영상 목록 (편집 모드에서만)
-            if (_isEditMode && widget.existingRecord!.id != null) ...[
-              const SizedBox(height: 28),
-              _ExportedVideosList(
-                  parentRecordId: widget.existingRecord!.id!),
-            ],
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

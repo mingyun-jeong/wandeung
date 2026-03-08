@@ -52,6 +52,7 @@ class RecordCard extends StatelessWidget {
                       runSpacing: 5,
                       children: [
                         _StatusBadge(isCompleted: isCompleted),
+                        _DifficultyBadge(color: color, grade: record.grade),
                         ...record.tags.map((tag) => _TagBadge(
                               tag: tag,
                               colorScheme: colorScheme,
@@ -200,6 +201,51 @@ class _StatusBadge extends StatelessWidget {
               ? const Color(0xFF0D9488)
               : const Color(0xFFE65100),
         ),
+      ),
+    );
+  }
+}
+
+class _DifficultyBadge extends StatelessWidget {
+  final DifficultyColor color;
+  final String grade;
+  const _DifficultyBadge({required this.color, required this.grade});
+
+  @override
+  Widget build(BuildContext context) {
+    final baseColor = Color(color.colorValue);
+    final isLight = color == DifficultyColor.white || color == DifficultyColor.yellow;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: baseColor.withOpacity(0.15),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: baseColor.withOpacity(0.3), width: 0.5),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(
+              color: baseColor,
+              shape: BoxShape.circle,
+              border: isLight
+                  ? Border.all(color: Colors.black.withOpacity(0.15), width: 0.5)
+                  : null,
+            ),
+          ),
+          const SizedBox(width: 4),
+          Text(
+            '${color.korean} ${grade.toUpperCase()}',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: isLight ? Colors.black87 : baseColor.withOpacity(0.9),
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -5,42 +5,32 @@ import '../models/climbing_gym.dart';
 import '../providers/gym_provider.dart';
 import 'gym_map_sheet.dart';
 
-/// Result from GymSelectionSheet: either a gym pick, manual name, or open-map request.
-enum _GymSelectionResult { gym, manual, openMap }
+/// Result from GymSelectionSheet: either a gym pick or open-map request.
+enum _GymSelectionResult { gym, openMap }
 
 class _GymSelectionData {
   final _GymSelectionResult type;
   final ClimbingGym? gym;
-  final String? manualName;
   const _GymSelectionData.gym(this.gym)
-      : type = _GymSelectionResult.gym,
-        manualName = null;
-  const _GymSelectionData.manual(this.manualName)
-      : type = _GymSelectionResult.manual,
-        gym = null;
+      : type = _GymSelectionResult.gym;
   const _GymSelectionData.openMap()
       : type = _GymSelectionResult.openMap,
-        gym = null,
-        manualName = null;
+        gym = null;
 }
 
 class GymSelectionSheet extends ConsumerStatefulWidget {
   final ClimbingGym? currentGym;
-  final String? currentManualName;
 
   const GymSelectionSheet({
     super.key,
     this.currentGym,
-    this.currentManualName,
   });
 
   /// Shows the gym selection sheet. Handles map picker flow internally.
   static Future<void> show(
     BuildContext context, {
     ClimbingGym? currentGym,
-    String? currentManualName,
     required ValueChanged<ClimbingGym> onGymSelected,
-    required ValueChanged<String> onManualInput,
   }) async {
     final result = await showModalBottomSheet<_GymSelectionData>(
       context: context,
@@ -51,7 +41,6 @@ class GymSelectionSheet extends ConsumerStatefulWidget {
       isScrollControlled: true,
       builder: (_) => GymSelectionSheet(
         currentGym: currentGym,
-        currentManualName: currentManualName,
       ),
     );
 
@@ -60,8 +49,6 @@ class GymSelectionSheet extends ConsumerStatefulWidget {
     switch (result.type) {
       case _GymSelectionResult.gym:
         if (result.gym != null) onGymSelected(result.gym!);
-      case _GymSelectionResult.manual:
-        if (result.manualName != null) onManualInput(result.manualName!);
       case _GymSelectionResult.openMap:
         if (!context.mounted) return;
         final gym = await GymMapSheet.pick(context);
@@ -74,24 +61,6 @@ class GymSelectionSheet extends ConsumerStatefulWidget {
 }
 
 class _GymSelectionSheetState extends ConsumerState<GymSelectionSheet> {
-  bool _isManualMode = false;
-  final _controller = TextEditingController();
-
-  @override
-  void initState() {
-    super.initState();
-    if (widget.currentManualName != null) {
-      _isManualMode = true;
-      _controller.text = widget.currentManualName!;
-    }
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
   String _formatDistance(double meters) {
     if (meters < 1000) return '${meters.round()}m';
     return '${(meters / 1000).toStringAsFixed(1)}km';
@@ -131,39 +100,15 @@ class _GymSelectionSheetState extends ConsumerState<GymSelectionSheet> {
                 icon: const Icon(Icons.map_outlined, size: 16),
                 label: const Text('지도에서 찾기'),
               ),
-              TextButton(
-                onPressed: () =>
-                    setState(() => _isManualMode = !_isManualMode),
-                child: Text(_isManualMode ? '목록에서 선택' : '직접 입력'),
-              ),
             ],
           ),
           const SizedBox(height: 8),
-          if (_isManualMode)
-            TextField(
-              controller: _controller,
-              autofocus: true,
-              decoration: const InputDecoration(
-                hintText: '클라이밍장 이름 입력 후 엔터',
-                border: OutlineInputBorder(),
-                isDense: true,
-              ),
-              textInputAction: TextInputAction.done,
-              onSubmitted: (value) {
-                final trimmed = value.trim();
-                if (trimmed.isNotEmpty) {
-                  Navigator.pop(
-                      context, _GymSelectionData.manual(trimmed));
-                }
-              },
-            )
-          else
-            nearbyGyms.when(
+          nearbyGyms.when(
               data: (gyms) {
                 if (gyms.isEmpty) {
                   return const Padding(
                     padding: EdgeInsets.symmetric(vertical: 12),
-                    child: Text('주변 클라이밍장을 찾을 수 없습니다. 직접 입력해주세요.',
+                    child: Text('주변 클라이밍장을 찾을 수 없습니다.',
                         style: TextStyle(color: Colors.grey)),
                   );
                 }

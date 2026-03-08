@@ -271,21 +271,15 @@ class RecordService {
     required String difficultyColor,
     required String status,
     ClimbingGym? gym,
-    String? manualGymName,
     String? thumbnailPath,
     List<String> tags = const [],
     int? videoDurationSeconds,
   }) async {
     final userId = _supabase.auth.currentUser!.id;
 
-    // gym 객체 또는 수동 입력 이름으로 gym_id 확보
     String? resolvedGymId;
     if (gym != null) {
       resolvedGymId = await _findOrCreateGym(gym);
-    } else if (manualGymName != null) {
-      resolvedGymId = await _findOrCreateGym(
-        ClimbingGym(name: manualGymName),
-      );
     }
 
     final record = ClimbingRecord(
@@ -317,16 +311,11 @@ class RecordService {
     required String difficultyColor,
     required String status,
     ClimbingGym? gym,
-    String? manualGymName,
     List<String> tags = const [],
   }) async {
     String? resolvedGymId;
     if (gym != null) {
       resolvedGymId = await _findOrCreateGym(gym);
-    } else if (manualGymName != null) {
-      resolvedGymId = await _findOrCreateGym(
-        ClimbingGym(name: manualGymName),
-      );
     }
 
     final response = await _supabase

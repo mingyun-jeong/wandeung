@@ -310,11 +310,6 @@ class _FilterBar extends ConsumerWidget {
         ? DifficultyColor.values.firstWhere((c) => c.name == selectedColor)
         : null;
 
-    final hasActiveFilters = selectedColor != null ||
-        selectedStatus != null ||
-        selectedTag != null ||
-        selectedGym != null;
-
     final boxes = <Widget>[
       if (visitedGyms.isNotEmpty)
         _SelectBox(
@@ -370,36 +365,17 @@ class _FilterBar extends ConsumerWidget {
       ));
     }
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Row(
-          children: [
-            ...boxes.expand((b) => [b, const SizedBox(width: 8)]),
-            if (hasActiveFilters)
-              SizedBox(
-                width: 32,
-                height: 32,
-                child: IconButton(
-                  onPressed: () {
-                    ref.read(selectedColorFilterProvider.notifier).state = null;
-                    ref.read(selectedStatusFilterProvider.notifier).state = null;
-                    ref.read(selectedTagFilterProvider.notifier).state = null;
-                    ref.read(selectedGymFilterProvider.notifier).state = null;
-                  },
-                  icon: Icon(
-                    Icons.refresh_rounded,
-                    size: 18,
-                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
-                  ),
-                  style: IconButton.styleFrom(
-                    backgroundColor: const Color(0xFFF1F5F9),
-                    padding: EdgeInsets.zero,
-                  ),
-                ),
-              ),
-          ],
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: [
+              ...boxes.expand((b) => [b, const SizedBox(width: 8)]),
+            ],
+          ),
         ),
       ),
     );

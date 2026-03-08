@@ -43,7 +43,6 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
 
   // 편집 모드 전용 로컬 gym 상태 (카메라 탭의 자동 선택과 분리)
   ClimbingGym? _editGym;
-  String? _editManualGymName;
   DifficultyColor? _editColor;
   ClimbingGrade? _editGrade;
 
@@ -205,6 +204,7 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
         ref.invalidate(userStatsProvider);
         ref.invalidate(recentRecordsProvider);
         ref.invalidate(recentGymsProvider);
+        ref.invalidate(userVisitedGymsProvider);
         Navigator.pop(context, true);
       }
     } catch (e) {
@@ -241,7 +241,6 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
               ? 'completed'
               : 'in_progress',
           gym: _editGym,
-          manualGymName: _editGym == null ? _editManualGymName : null,
           tags: _tags,
         );
       } else {
@@ -260,7 +259,6 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
               ? 'completed'
               : 'in_progress',
           gym: settings.selectedGym,
-          manualGymName: settings.selectedGym == null ? settings.manualGymName : null,
           thumbnailPath: thumbnailPath,
           tags: _tags,
           videoDurationSeconds: durationSeconds,
@@ -275,6 +273,7 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
         ref.invalidate(userStatsProvider);
         ref.invalidate(recentRecordsProvider);
         ref.invalidate(recentGymsProvider);
+        ref.invalidate(userVisitedGymsProvider);
         Navigator.pop(context, true);
       }
     } catch (e) {
@@ -293,17 +292,9 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
       GymSelectionSheet.show(
         context,
         currentGym: _editGym,
-        currentManualName: _editManualGymName,
         onGymSelected: (gym) {
           setState(() {
             _editGym = gym;
-            _editManualGymName = null;
-          });
-        },
-        onManualInput: (name) {
-          setState(() {
-            _editManualGymName = name;
-            _editGym = null;
           });
         },
       );
@@ -312,12 +303,8 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
       GymSelectionSheet.show(
         context,
         currentGym: settings.selectedGym,
-        currentManualName: settings.manualGymName,
         onGymSelected: (gym) {
           ref.read(cameraSettingsProvider.notifier).setGym(gym);
-        },
-        onManualInput: (name) {
-          ref.read(cameraSettingsProvider.notifier).setManualGymName(name);
         },
       );
     }
@@ -335,7 +322,6 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
 
     // 편집 모드에서는 로컬 상태, 신규 저장에서는 cameraSettingsProvider 사용
     final displayGym = _isEditMode ? _editGym : settings.selectedGym;
-    final displayManualGymName = _isEditMode ? _editManualGymName : settings.manualGymName;
     final displayColor = _isEditMode ? _editColor : settings.color;
 
     return Scaffold(
@@ -462,7 +448,7 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
                   color: Theme.of(context).colorScheme.onSurface,
                 )),
             const SizedBox(height: 8),
-            if (displayGym != null || displayManualGymName != null)
+            if (displayGym != null)
               Container(
                 width: double.infinity,
                 padding:
@@ -489,9 +475,7 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              displayGym?.name ??
-                                  displayManualGymName ??
-                                  '',
+                              displayGym?.name ?? '',
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
@@ -542,7 +526,6 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
                         if (_isEditMode) {
                           setState(() {
                             _editGym = null;
-                            _editManualGymName = null;
                           });
                         } else {
                           ref.read(cameraSettingsProvider.notifier).clearGym();

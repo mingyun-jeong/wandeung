@@ -10,8 +10,7 @@ class CameraGymOverlay extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(cameraSettingsProvider);
-    final gymName =
-        settings.selectedGym?.name ?? settings.manualGymName ?? '암장 선택';
+    final gymName = settings.selectedGym?.name ?? '암장 선택';
     final hasCoords = settings.selectedGym?.latitude != null &&
         settings.selectedGym?.longitude != null;
 
@@ -76,12 +75,8 @@ class CameraGymOverlay extends ConsumerWidget {
     GymSelectionSheet.show(
       context,
       currentGym: settings.selectedGym,
-      currentManualName: settings.manualGymName,
       onGymSelected: (gym) {
         ref.read(cameraSettingsProvider.notifier).setGym(gym);
-      },
-      onManualInput: (name) {
-        ref.read(cameraSettingsProvider.notifier).setManualGymName(name);
       },
     );
   }

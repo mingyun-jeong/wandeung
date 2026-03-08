@@ -6,29 +6,23 @@ class CameraSettings {
   final ClimbingGrade? grade;
   final DifficultyColor? color;
   final ClimbingGym? selectedGym;
-  final String? manualGymName;
 
   const CameraSettings({
     this.grade,
     this.color,
     this.selectedGym,
-    this.manualGymName,
   });
 
   CameraSettings copyWith({
     ClimbingGrade? grade,
     DifficultyColor? color,
     ClimbingGym? selectedGym,
-    String? manualGymName,
     bool clearGym = false,
-    bool clearManualGymName = false,
   }) {
     return CameraSettings(
       grade: grade ?? this.grade,
       color: color ?? this.color,
       selectedGym: clearGym ? null : (selectedGym ?? this.selectedGym),
-      manualGymName:
-          clearManualGymName ? null : (manualGymName ?? this.manualGymName),
     );
   }
 }
@@ -41,13 +35,10 @@ class CameraSettingsNotifier extends StateNotifier<CameraSettings> {
   void setColor(DifficultyColor color) => state = state.copyWith(color: color);
 
   void setGym(ClimbingGym gym) =>
-      state = state.copyWith(selectedGym: gym, clearManualGymName: true);
-
-  void setManualGymName(String name) =>
-      state = state.copyWith(manualGymName: name, clearGym: true);
+      state = state.copyWith(selectedGym: gym);
 
   void clearGym() =>
-      state = state.copyWith(clearGym: true, clearManualGymName: true);
+      state = state.copyWith(clearGym: true);
 
   void reset() => state = const CameraSettings();
 }

@@ -230,7 +230,7 @@ class _CameraTabScreenState extends ConsumerState<CameraTabScreen>
       next.whenData((gyms) {
         if (gyms.isNotEmpty) {
           final settings = ref.read(cameraSettingsProvider);
-          if (settings.selectedGym == null && settings.manualGymName == null) {
+          if (settings.selectedGym == null) {
             ref.read(cameraSettingsProvider.notifier).setGym(gyms.first);
           }
         }

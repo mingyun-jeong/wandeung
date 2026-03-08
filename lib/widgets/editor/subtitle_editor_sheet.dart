@@ -192,14 +192,16 @@ class _SubtitleEditorSheetState extends ConsumerState<SubtitleEditorSheet> {
               ),
             ),
 
-            // 하단 버튼
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-              child: SizedBox(
-                width: double.infinity,
-                child: FilledButton(
-                  onPressed: _item.text.trim().isEmpty ? null : _save,
-                  child: Text(isEditing ? '수정' : '추가'),
+            // 하단 고정 버튼
+            SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: FilledButton(
+                    onPressed: _item.text.trim().isEmpty ? null : _save,
+                    child: Text(isEditing ? '수정' : '추가'),
+                  ),
                 ),
               ),
             ),

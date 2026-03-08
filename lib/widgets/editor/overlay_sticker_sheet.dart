@@ -55,16 +55,23 @@ class _OverlayStickerSheetState extends ConsumerState<OverlayStickerSheet> {
           // 등급 선택
           const Text('등급', style: TextStyle(fontWeight: FontWeight.w600)),
           const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            children: ClimbingGrade.values.map((grade) {
-              final isSelected = grade == _selectedGrade;
-              return ChoiceChip(
-                label: Text(grade.label),
-                selected: isSelected,
-                onSelected: (_) => setState(() => _selectedGrade = grade),
+          DropdownButtonFormField<ClimbingGrade>(
+            value: _selectedGrade,
+            decoration: InputDecoration(
+              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            items: ClimbingGrade.values.map((grade) {
+              return DropdownMenuItem(
+                value: grade,
+                child: Text(grade.label),
               );
             }).toList(),
+            onChanged: (grade) {
+              if (grade != null) setState(() => _selectedGrade = grade);
+            },
           ),
           const SizedBox(height: 16),
 
@@ -125,17 +132,18 @@ class _OverlayStickerSheetState extends ConsumerState<OverlayStickerSheet> {
               ),
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 12),
 
-          // 추가 버튼
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton(
-              onPressed: _addSticker,
-              child: const Text('추가'),
+          // 하단 고정 추가 버튼
+          SafeArea(
+            child: SizedBox(
+              width: double.infinity,
+              child: FilledButton(
+                onPressed: _addSticker,
+                child: const Text('추가'),
+              ),
             ),
           ),
-          const SizedBox(height: 8),
         ],
       ),
     );

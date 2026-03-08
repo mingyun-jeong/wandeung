@@ -1,5 +1,5 @@
 /// 클라이밍 난이도 등급
-enum ClimbingGrade { v1, v2, v3, v4, v5 }
+enum ClimbingGrade { v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16 }
 
 extension ClimbingGradeExt on ClimbingGrade {
   String get label => name.toUpperCase();

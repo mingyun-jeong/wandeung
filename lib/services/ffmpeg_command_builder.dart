@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:ui';
 
 import '../models/subtitle_item.dart';
@@ -6,6 +7,30 @@ import '../models/video_edit_models.dart';
 /// FFmpeg 필터 체인을 조합하여 내보내기 명령을 생성하는 순수 함수 서비스
 class FFmpegCommandBuilder {
   FFmpegCommandBuilder._();
+
+  /// 오버레이/자막 텍스트를 임시 파일로 저장하여 FFmpeg textfile= 파라미터로 사용
+  /// (한글 등 비ASCII 문자의 깨짐 방지)
+  static Future<Map<String, String>> prepareTextFiles(
+    List<OverlayItem> overlays,
+    List<SubtitleItem> subtitles,
+  ) async {
+    final textFilePaths = <String, String>{};
+    final tempDir = await Directory.systemTemp.createTemp('ffmpeg_text_');
+
+    for (int i = 0; i < overlays.length; i++) {
+      final file = File('${tempDir.path}/overlay_$i.txt');
+      await file.writeAsString(overlays[i].text, flush: true);
+      textFilePaths['overlay_$i'] = file.path;
+    }
+
+    for (int i = 0; i < subtitles.length; i++) {
+      final file = File('${tempDir.path}/subtitle_$i.txt');
+      await file.writeAsString(subtitles[i].text, flush: true);
+      textFilePaths['subtitle_$i'] = file.path;
+    }
+
+    return textFilePaths;
+  }
 
   /// 전체 내보내기 명령을 인수 리스트로 생성
   ///
@@ -17,6 +42,7 @@ class FFmpegCommandBuilder {
   /// [overlays] 오버레이 아이템 목록
   /// [videoResolution] 영상의 원본 해상도
   /// [fontPath] drawtext용 폰트 파일 경로
+  /// [textFilePaths] 텍스트 임시 파일 경로 맵 (prepareTextFiles로 생성)
   static List<String> buildExportArgs({
     required String inputPath,
     required String outputPath,
@@ -28,6 +54,7 @@ class FFmpegCommandBuilder {
     Map<String, String> subtitleFontPaths = const {},
     required Size videoResolution,
     String? fontPath,
+    Map<String, String> textFilePaths = const {},
   }) {
     final args = <String>['-y'];
 
@@ -44,7 +71,7 @@ class FFmpegCommandBuilder {
 
     // 필터 체인 빌드
     final filterComplex =
-        _buildFilterComplex(speedSegments, overlays, subtitles, subtitleFontPaths, videoResolution, fontPath);
+        _buildFilterComplex(speedSegments, overlays, subtitles, subtitleFontPaths, videoResolution, fontPath, textFilePaths);
 
     if (filterComplex != null) {
       args.addAll(['-filter_complex', filterComplex]);
@@ -81,6 +108,7 @@ class FFmpegCommandBuilder {
     Map<String, String> subtitleFontPaths,
     Size videoResolution,
     String? fontPath,
+    Map<String, String> textFilePaths,
   ) {
     // 유효한 배속 구간 (1x가 아닌 것만)
     final hasSpeedChange =
@@ -112,8 +140,9 @@ class FFmpegCommandBuilder {
       for (int i = 0; i < overlays.length; i++) {
         final isLast = i == overlays.length - 1 && !hasSubtitles;
         final outputLabel = isLast ? '[vout]' : '[vtxt$i]';
+        final textFilePath = textFilePaths['overlay_$i'];
         final drawtext =
-            _buildDrawtext(overlays[i], videoResolution, fontPath);
+            _buildDrawtext(overlays[i], videoResolution, fontPath, textFilePath);
         filters.add('${currentLabel}drawtext=$drawtext$outputLabel');
         currentLabel = outputLabel;
       }
@@ -140,8 +169,9 @@ class FFmpegCommandBuilder {
       for (int i = 0; i < subtitles.length; i++) {
         final isLast = i == subtitles.length - 1;
         final outputLabel = isLast ? '[vout]' : '[vsub$i]';
+        final textFilePath = textFilePaths['subtitle_$i'];
         final drawtext = _buildSubtitleDrawtext(
-          subtitles[i], videoResolution, fontPath, subtitleFontPaths,
+          subtitles[i], videoResolution, fontPath, subtitleFontPaths, textFilePath,
         );
         filters.add('${currentLabel}drawtext=$drawtext$outputLabel');
         currentLabel = outputLabel;
@@ -194,7 +224,7 @@ class FFmpegCommandBuilder {
 
   /// drawtext 필터 파라미터 생성
   static String _buildDrawtext(
-      OverlayItem item, Size videoResolution, String? fontPath) {
+      OverlayItem item, Size videoResolution, String? fontPath, [String? textFilePath]) {
     // 정규화 좌표 → 영상 픽셀 좌표
     final x = (item.position.dx * videoResolution.width).round();
     final y = (item.position.dy * videoResolution.height).round();
@@ -206,7 +236,12 @@ class FFmpegCommandBuilder {
     if (fontPath != null) {
       parts.add("fontfile=${_escapePath(fontPath)}");
     }
-    parts.add("text=${_escapeText(item.text)}");
+    // textfile= 사용으로 한글 등 비ASCII 문자 깨짐 방지
+    if (textFilePath != null) {
+      parts.add("textfile=${_escapePath(textFilePath)}");
+    } else {
+      parts.add("text=${_escapeText(item.text)}");
+    }
     parts.add('x=$x');
     parts.add('y=$y');
     parts.add('fontsize=$fontSize');
@@ -229,8 +264,9 @@ class FFmpegCommandBuilder {
     SubtitleItem item,
     Size videoResolution,
     String? defaultFontPath,
-    Map<String, String> subtitleFontPaths,
-  ) {
+    Map<String, String> subtitleFontPaths, [
+    String? textFilePath,
+  ]) {
     final x = (item.position.dx * videoResolution.width).round();
     final y = (item.position.dy * videoResolution.height).round();
     final fontSize = (item.fontSize * (videoResolution.height / 800)).round();
@@ -244,7 +280,12 @@ class FFmpegCommandBuilder {
       parts.add("fontfile=${_escapePath(fontPath)}");
     }
 
-    parts.add("text=${_escapeText(item.text)}");
+    // textfile= 사용으로 한글 등 비ASCII 문자 깨짐 방지
+    if (textFilePath != null) {
+      parts.add("textfile=${_escapePath(textFilePath)}");
+    } else {
+      parts.add("text=${_escapeText(item.text)}");
+    }
     parts.add('x=$x');
     parts.add('y=$y');
     parts.add('fontsize=$fontSize');

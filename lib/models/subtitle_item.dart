@@ -22,7 +22,7 @@ class SubtitleItem {
     required this.startTime,
     required this.endTime,
     this.position = const Offset(0.5, 0.8),
-    this.fontFamily = 'NotoSansKR-Bold',
+    this.fontFamily = 'NotoSansKR-Bold.otf',
     this.fontSize = 24.0,
     this.color = const Color(0xFFFFFFFF),
     this.backgroundColor,

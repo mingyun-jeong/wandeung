@@ -32,6 +32,11 @@ class VideoExportService {
     final timestamp = DateTime.now().millisecondsSinceEpoch;
     final outputPath = '${appDir.path}/edited_$timestamp.mp4';
 
+    // 한글 텍스트 깨짐 방지를 위해 텍스트를 임시 파일로 저장
+    final textFilePaths = await FFmpegCommandBuilder.prepareTextFiles(
+      overlays, subtitles,
+    );
+
     final args = FFmpegCommandBuilder.buildExportArgs(
       inputPath: inputPath,
       outputPath: outputPath,
@@ -43,6 +48,7 @@ class VideoExportService {
       fontPath: fontPath,
       subtitles: subtitles,
       subtitleFontPaths: subtitleFontPaths,
+      textFilePaths: textFilePaths,
     );
 
     // 예상 출력 길이 계산 (진행률 추적용)
@@ -89,6 +95,11 @@ class VideoExportService {
     final timestamp = DateTime.now().millisecondsSinceEpoch;
     final outputPath = '${appDir.path}/edited_$timestamp.mp4';
 
+    // 한글 텍스트 깨짐 방지를 위해 텍스트를 임시 파일로 저장
+    final textFilePaths = await FFmpegCommandBuilder.prepareTextFiles(
+      overlays, subtitles,
+    );
+
     final args = FFmpegCommandBuilder.buildExportArgs(
       inputPath: inputPath,
       outputPath: outputPath,
@@ -100,6 +111,7 @@ class VideoExportService {
       fontPath: fontPath,
       subtitles: subtitles,
       subtitleFontPaths: subtitleFontPaths,
+      textFilePaths: textFilePaths,
     );
 
     final expectedDurationMs = _calculateExpectedDuration(

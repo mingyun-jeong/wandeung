@@ -13,7 +13,6 @@ import '../models/subtitle_item.dart';
 import '../providers/record_provider.dart';
 import '../providers/subtitle_provider.dart';
 import '../providers/video_editor_provider.dart';
-import '../services/custom_font_service.dart';
 import '../services/video_export_service.dart';
 import '../utils/thumbnail_utils.dart';
 import '../widgets/editor/export_progress_dialog.dart';
@@ -88,8 +87,6 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
             .read(speedSegmentsProvider.notifier)
             .initWithFullRange(_controller.videoDuration);
         _controller.video.addListener(_onVideoPositionChanged);
-        // 기본 폰트 에셋 복사
-        CustomFontService.ensureDefaultFonts();
       }
     });
   }
@@ -135,10 +132,6 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
       final overlays = ref.read(overlaysProvider);
       final subtitles = ref.read(subtitlesProvider);
 
-      // 기본 폰트 준비 및 경로 확인
-      await CustomFontService.ensureDefaultFonts();
-      final fontPath = await _getFontPath();
-
       final result = await VideoExportService.exportVideo(
         inputPath: widget.videoPath,
         trimStart: _controller.startTrim,
@@ -147,7 +140,6 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
         overlays: overlays,
         subtitles: subtitles,
         videoResolution: _correctedVideoDimension,
-        fontPath: fontPath,
         onProgress: (progress) {
           ref.read(exportProgressProvider.notifier).state = progress;
         },
@@ -210,11 +202,6 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
         ref.read(exportProgressProvider.notifier).state = null;
       }
     }
-  }
-
-  /// 번들 폰트 경로 반환 (없으면 null)
-  Future<String?> _getFontPath() async {
-    return CustomFontService.getDefaultFontPath();
   }
 
   void _showSpeedPicker() {

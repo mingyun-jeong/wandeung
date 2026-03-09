@@ -7,13 +7,113 @@ import 'package:flutter/painting.dart';
 import 'package:path_provider/path_provider.dart';
 
 import '../models/subtitle_item.dart';
+import '../models/video_edit_models.dart';
 
-/// 자막 텍스트를 PNG 이미지로 렌더링하는 서비스.
+/// 텍스트를 PNG 이미지로 렌더링하는 서비스.
 ///
-/// FFmpeg drawtext의 한글 advance width 버그를 우회하기 위해
-/// Flutter Canvas에서 직접 렌더링 후 overlay 필터로 합성한다.
+/// FFmpeg drawtext의 한글 advance width 버그 및 Android fontfile 미지정 이슈를
+/// 우회하기 위해 Flutter Canvas에서 직접 렌더링 후 overlay 필터로 합성한다.
 class SubtitleImageRenderer {
   SubtitleImageRenderer._();
+
+  /// 오버레이 스티커를 PNG 이미지로 렌더링하고 파일 경로 리스트를 반환
+  static Future<List<String>> renderOverlays({
+    required List<OverlayItem> overlays,
+    required ui.Size videoResolution,
+  }) async {
+    final cacheDir = await getTemporaryDirectory();
+    final outputDir = Directory('${cacheDir.path}/overlay_imgs');
+    if (await outputDir.exists()) {
+      await outputDir.delete(recursive: true);
+    }
+    await outputDir.create(recursive: true);
+
+    final paths = <String>[];
+    for (int i = 0; i < overlays.length; i++) {
+      final path = await _renderOverlay(
+        item: overlays[i],
+        videoResolution: videoResolution,
+        outputPath: '${outputDir.path}/ovl_$i.png',
+      );
+      paths.add(path);
+    }
+    return paths;
+  }
+
+  static Future<String> _renderOverlay({
+    required OverlayItem item,
+    required ui.Size videoResolution,
+    required String outputPath,
+  }) async {
+    final scale = videoResolution.height / 800;
+    final fontSize = item.fontSize * scale;
+
+    // 텍스트 측정
+    final paragraph = _buildParagraph(
+      text: item.text,
+      fontSize: fontSize,
+      color: item.color,
+      isBold: true,
+      maxWidth: videoResolution.width * 0.9,
+    );
+
+    final textW = paragraph.longestLine.ceilToDouble();
+    final textH = paragraph.height.ceilToDouble();
+
+    if (textW <= 0 || textH <= 0) {
+      return _createEmptyPng(outputPath);
+    }
+
+    // 패딩
+    final pad = item.backgroundColor != null ? 8.0 * scale : 4.0 * scale;
+    final contentW = textW + pad * 2;
+    final contentH = textH + pad * 2;
+
+    final imgWi = contentW.ceil();
+    final imgHi = contentH.ceil();
+
+    final recorder = ui.PictureRecorder();
+    final canvas = ui.Canvas(recorder);
+
+    // 배경
+    if (item.backgroundColor != null) {
+      canvas.drawRRect(
+        ui.RRect.fromRectAndRadius(
+          ui.Rect.fromLTWH(0, 0, contentW, contentH),
+          ui.Radius.circular(14 * scale),
+        ),
+        ui.Paint()..color = item.backgroundColor!.withOpacity(0.85),
+      );
+    }
+
+    // 외곽선 (텍스트 가독성)
+    final strokeParagraph = _buildStrokeParagraph(
+      text: item.text,
+      fontSize: fontSize,
+      strokeColor: const ui.Color(0x80000000),
+      strokeWidth: 2 * scale,
+      isBold: true,
+      maxWidth: videoResolution.width * 0.9,
+    );
+    canvas.drawParagraph(strokeParagraph, ui.Offset(pad, pad));
+
+    // 텍스트 본체
+    canvas.drawParagraph(paragraph, ui.Offset(pad, pad));
+
+    // PNG로 변환
+    final picture = recorder.endRecording();
+    final image = await picture.toImage(imgWi, imgHi);
+    final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+
+    await File(outputPath)
+        .writeAsBytes(byteData!.buffer.asUint8List(), flush: true);
+
+    image.dispose();
+
+    debugPrint(
+        '[OverlayRenderer] "${item.text}" → ${imgWi}x$imgHi ($outputPath)');
+    return outputPath;
+  }
 
   /// 모든 자막을 PNG 이미지로 렌더링하고 파일 경로 리스트를 반환
   static Future<List<String>> renderAll({

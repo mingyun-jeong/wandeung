@@ -12,7 +12,6 @@ class FFmpegCommandBuilder {
 
   /// 전체 내보내기 명령을 인수 리스트로 생성
   ///
-  /// [fontPath] 오버레이(스티커) 텍스트용 폰트 파일 경로
   /// [subtitleImagePaths] Flutter Canvas로 렌더링된 자막 PNG 이미지 경로 리스트
   static List<String> buildExportArgs({
     required String inputPath,
@@ -20,15 +19,21 @@ class FFmpegCommandBuilder {
     required Duration trimStart,
     required Duration trimEnd,
     required Size videoResolution,
-    String? fontPath,
     List<SpeedSegment> speedSegments = const [],
     List<OverlayItem> overlays = const [],
+    List<String> overlayImagePaths = const [],
     List<SubtitleItem> subtitles = const [],
     List<String> subtitleImagePaths = const [],
   }) {
     final args = <String>['-y'];
 
     args.addAll(['-i', inputPath]);
+
+    // 오버레이 스티커 PNG 이미지를 추가 입력으로 등록
+    // -loop 1: 단일 프레임 PNG를 무한 반복하여 영상 전체 구간에 overlay
+    for (final imgPath in overlayImagePaths) {
+      args.addAll(['-loop', '1', '-i', imgPath]);
+    }
 
     // 자막 PNG 이미지를 추가 입력으로 등록
     for (final imgPath in subtitleImagePaths) {
@@ -45,10 +50,10 @@ class FFmpegCommandBuilder {
     final filterComplex = _buildFilterComplex(
       speedSegments: speedSegments,
       overlays: overlays,
+      overlayImagePaths: overlayImagePaths,
       subtitles: subtitles,
       subtitleImagePaths: subtitleImagePaths,
       videoResolution: videoResolution,
-      fontPath: fontPath,
     );
 
     if (filterComplex != null) {
@@ -82,18 +87,19 @@ class FFmpegCommandBuilder {
   static String? _buildFilterComplex({
     required List<SpeedSegment> speedSegments,
     required List<OverlayItem> overlays,
+    required List<String> overlayImagePaths,
     required List<SubtitleItem> subtitles,
     required List<String> subtitleImagePaths,
     required Size videoResolution,
-    required String? fontPath,
   }) {
     final hasSpeedChange =
         speedSegments.isNotEmpty && speedSegments.any((s) => s.speed != 1.0);
-    final hasOverlays = overlays.isNotEmpty;
+    final hasOverlayImages =
+        overlays.isNotEmpty && overlayImagePaths.length == overlays.length;
     final hasSubtitleImages =
         subtitles.isNotEmpty && subtitleImagePaths.length == subtitles.length;
 
-    if (!hasSpeedChange && !hasOverlays && !hasSubtitleImages) return null;
+    if (!hasSpeedChange && !hasOverlayImages && !hasSubtitleImages) return null;
 
     final filters = <String>[];
 
@@ -107,19 +113,27 @@ class FFmpegCommandBuilder {
       _buildMultiSegmentSpeed(filters, speedSegments);
     }
 
-    // --- 오버레이(drawtext) 처리 (스티커 등 ASCII 텍스트) ---
-    if (hasOverlays) {
+    // --- 오버레이 스티커 (PNG 이미지 overlay) ---
+    // Flutter Canvas에서 렌더링한 PNG를 overlay 필터로 합성 (drawtext 대신)
+    if (hasOverlayImages) {
       String currentLabel = hasSpeedChange ? '[vspeed]' : '[0:v]';
 
       for (int i = 0; i < overlays.length; i++) {
         final isLast = i == overlays.length - 1 && !hasSubtitleImages;
-        final outputLabel = isLast ? '[vout]' : '[vtxt$i]';
-        final drawtext = _buildOverlayDrawtext(
-          item: overlays[i],
-          videoResolution: videoResolution,
-          fontPath: fontPath,
-        );
-        filters.add('${currentLabel}drawtext=$drawtext$outputLabel');
+        final outputLabel = isLast ? '[vout]' : '[vovl$i]';
+        // 입력 인덱스: 0=영상, 1~N=오버레이 PNG
+        final inputIdx = 1 + i;
+
+        final item = overlays[i];
+        final px = item.position.dx.toStringAsFixed(4);
+        final py = item.position.dy.toStringAsFixed(4);
+
+        // 오버레이 스티커는 항상 표시 (enable 없음)
+        final overlayFilter =
+            "$currentLabel[$inputIdx:v]overlay="
+            "x=$px*W-w/2:y=$py*H-h/2";
+
+        filters.add('$overlayFilter$outputLabel');
         currentLabel = outputLabel;
       }
     } else if (hasSpeedChange && !hasSubtitleImages) {
@@ -133,8 +147,8 @@ class FFmpegCommandBuilder {
     // Flutter Canvas에서 렌더링한 PNG를 overlay 필터로 합성
     if (hasSubtitleImages) {
       String currentLabel;
-      if (hasOverlays) {
-        currentLabel = '[vtxt${overlays.length - 1}]';
+      if (hasOverlayImages) {
+        currentLabel = '[vovl${overlays.length - 1}]';
       } else if (hasSpeedChange) {
         currentLabel = '[vspeed]';
       } else {
@@ -144,8 +158,8 @@ class FFmpegCommandBuilder {
       for (int i = 0; i < subtitles.length; i++) {
         final isLast = i == subtitles.length - 1;
         final outputLabel = isLast ? '[vout]' : '[vsub$i]';
-        // 입력 인덱스: 0=영상, 1~N=자막 PNG
-        final inputIdx = 1 + i;
+        // 입력 인덱스: 0=영상, 오버레이PNG 개수 + 1~N=자막 PNG
+        final inputIdx = 1 + overlayImagePaths.length + i;
 
         final sub = subtitles[i];
         final px = sub.position.dx.toStringAsFixed(4);
@@ -198,37 +212,6 @@ class FFmpegCommandBuilder {
     filters.add('${audioLabels.join()}concat=n=$n:v=0:a=1[aout]');
   }
 
-  /// 오버레이용 drawtext 필터 파라미터 생성
-  static String _buildOverlayDrawtext({
-    required OverlayItem item,
-    required Size videoResolution,
-    required String? fontPath,
-  }) {
-    final x = (item.position.dx * videoResolution.width).round();
-    final y = (item.position.dy * videoResolution.height).round();
-    final fontSize = (item.fontSize * (videoResolution.height / 800)).round();
-
-    final parts = <String>[];
-    if (fontPath != null) {
-      parts.add("fontfile=${_escapePath(fontPath)}");
-    }
-    parts.add("text=${_escapeText(item.text)}");
-    parts.add('x=$x');
-    parts.add('y=$y');
-    parts.add('fontsize=$fontSize');
-    parts.add('fontcolor=${_colorToFFmpeg(item.color)}');
-    parts.add('borderw=2');
-    parts.add('bordercolor=black@0.5');
-
-    if (item.backgroundColor != null) {
-      parts.add('box=1');
-      parts.add('boxcolor=${_colorToFFmpeg(item.backgroundColor!)}@0.6');
-      parts.add('boxborderw=8');
-    }
-
-    return parts.join(':');
-  }
-
   /// atempo 필터 체인 생성 (0.5~2.0 범위 제한 대응)
   static String buildAtempoChain(double speed) {
     if (speed == 1.0) return 'atempo=1.0';
@@ -256,25 +239,4 @@ class FFmpegCommandBuilder {
     return '$hours:$minutes:$seconds.$millis';
   }
 
-  static String _escapeText(String text) {
-    return text
-        .replaceAll('\\', '\\\\')
-        .replaceAll("'", "\\'")
-        .replaceAll(':', '\\:')
-        .replaceAll(';', '\\;');
-  }
-
-  static String _escapePath(String path) {
-    return path
-        .replaceAll('\\', '\\\\')
-        .replaceAll(':', '\\:')
-        .replaceAll("'", "\\'");
-  }
-
-  static String _colorToFFmpeg(Color color) {
-    final r = color.red.toInt().toRadixString(16).padLeft(2, '0');
-    final g = color.green.toInt().toRadixString(16).padLeft(2, '0');
-    final b = color.blue.toInt().toRadixString(16).padLeft(2, '0');
-    return '0x$r$g$b';
-  }
 }

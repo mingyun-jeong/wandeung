@@ -234,6 +234,25 @@ final userVisitedGymsProvider = FutureProvider<List<String>>((ref) async {
   return gyms;
 });
 
+/// 사용자의 모든 태그 (필터용)
+final userAllTagsProvider = FutureProvider<List<String>>((ref) async {
+  final userId = SupabaseConfig.client.auth.currentUser!.id;
+
+  final response = await SupabaseConfig.client
+      .from('climbing_records')
+      .select('tags')
+      .eq('user_id', userId)
+      .isFilter('parent_record_id', null);
+
+  final tags = (response as List)
+      .expand((e) => (e['tags'] as List?)?.cast<String>() ?? <String>[])
+      .toSet()
+      .toList()
+    ..sort();
+
+  return tags;
+});
+
 class RecordService {
   static final _supabase = SupabaseConfig.client;
 

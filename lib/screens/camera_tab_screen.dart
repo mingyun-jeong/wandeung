@@ -378,7 +378,7 @@ class _CameraTabScreenState extends ConsumerState<CameraTabScreen>
           if (!_isRecording)
             const Positioned(
               left: 16,
-              bottom: 160,
+              bottom: 200,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -444,7 +444,7 @@ class _CameraTabScreenState extends ConsumerState<CameraTabScreen>
           // 우측: 줌 컨트롤 (암장 선택과 같은 높이)
           Positioned(
             right: 16,
-            bottom: 160,
+            bottom: 200,
             child: ZoomControls(
               currentZoom: _currentZoom,
               minZoom: _minZoom,

@@ -17,36 +17,40 @@ class ZoomControls extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 10),
       decoration: BoxDecoration(
         color: Colors.black54,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(24),
       ),
-      child: Row(
+      child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            '${currentZoom.toStringAsFixed(1)}x',
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(width: 8),
-          _ZoomButton(
-            icon: Icons.remove,
-            onTap: currentZoom > minZoom
-                ? () => onZoomChanged(
-                    (currentZoom - 0.5).clamp(minZoom, maxZoom))
-                : null,
-          ),
-          const SizedBox(width: 4),
+          // + 버튼
           _ZoomButton(
             icon: Icons.add,
             onTap: currentZoom < maxZoom
                 ? () => onZoomChanged(
                     (currentZoom + 0.5).clamp(minZoom, maxZoom))
+                : null,
+          ),
+          // 줌 레벨 표시
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Text(
+              '${currentZoom.toStringAsFixed(1)}x',
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          // - 버튼
+          _ZoomButton(
+            icon: Icons.remove,
+            onTap: currentZoom > minZoom
+                ? () => onZoomChanged(
+                    (currentZoom - 0.5).clamp(minZoom, maxZoom))
                 : null,
           ),
         ],

@@ -298,30 +298,27 @@ class _FilterBar extends ConsumerWidget {
     final selectedTag = ref.watch(selectedTagFilterProvider);
     final selectedGym = ref.watch(selectedGymFilterProvider);
 
-    final selectedDate = ref.watch(selectedDateProvider);
-    final recordsAsync = ref.watch(recordsByDateProvider(selectedDate));
-    final records = recordsAsync.valueOrNull ?? [];
-    final availableTags = records.expand((r) => r.tags).toSet().toList()..sort();
-
     final visitedGymsAsync = ref.watch(userVisitedGymsProvider);
     final visitedGyms = visitedGymsAsync.valueOrNull ?? [];
+
+    final allTagsAsync = ref.watch(userAllTagsProvider);
+    final allTags = allTagsAsync.valueOrNull ?? [];
 
     final activeDc = selectedColor != null
         ? DifficultyColor.values.firstWhere((c) => c.name == selectedColor)
         : null;
 
     final boxes = <Widget>[
-      if (visitedGyms.isNotEmpty)
-        _SelectBox(
-          label: '암장',
-          selectedValue: selectedGym,
-          selectedDisplay: selectedGym,
-          items: visitedGyms
-              .map((g) => _SelectItem(value: g, child: Text(g)))
-              .toList(),
-          onChanged: (v) =>
-              ref.read(selectedGymFilterProvider.notifier).state = v,
-        ),
+      _SelectBox(
+        label: '암장',
+        selectedValue: selectedGym,
+        selectedDisplay: selectedGym,
+        items: visitedGyms
+            .map((g) => _SelectItem(value: g, child: Text(g)))
+            .toList(),
+        onChanged: (v) =>
+            ref.read(selectedGymFilterProvider.notifier).state = v,
+      ),
       _SelectBox(
         label: '상태',
         selectedValue: selectedStatus,
@@ -353,17 +350,15 @@ class _FilterBar extends ConsumerWidget {
       ),
     ];
 
-    if (availableTags.length >= 2) {
-      boxes.add(_SelectBox(
-        label: '태그',
-        selectedValue: selectedTag,
-        selectedDisplay: selectedTag,
-        items: availableTags
-            .map((t) => _SelectItem(value: t, child: Text(t)))
-            .toList(),
-        onChanged: (v) => ref.read(selectedTagFilterProvider.notifier).state = v,
-      ));
-    }
+    boxes.add(_SelectBox(
+      label: '태그',
+      selectedValue: selectedTag,
+      selectedDisplay: selectedTag,
+      items: allTags
+          .map((t) => _SelectItem(value: t, child: Text(t)))
+          .toList(),
+      onChanged: (v) => ref.read(selectedTagFilterProvider.notifier).state = v,
+    ));
 
     return Align(
       alignment: Alignment.centerLeft,

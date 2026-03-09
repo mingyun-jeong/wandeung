@@ -1,19 +1,24 @@
+import 'package:flutter/painting.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../config/supabase_config.dart';
+import '../utils/cache_cleanup.dart';
+import 'camera_settings_provider.dart';
+import 'record_provider.dart';
 
 final authProvider =
     StateNotifierProvider<AuthNotifier, AsyncValue<User?>>((ref) {
-  return AuthNotifier();
+  return AuthNotifier(ref);
 });
 
 class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
-  AuthNotifier() : super(const AsyncValue.loading()) {
+  AuthNotifier(this._ref) : super(const AsyncValue.loading()) {
     _init();
   }
 
+  final Ref _ref;
   final _supabase = SupabaseConfig.client;
 
   void _init() {
@@ -61,6 +66,7 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
   Future<void> signOut() async {
     await GoogleSignIn().signOut();
     await _supabase.auth.signOut();
+    await _clearAllCache();
     state = const AsyncValue.data(null);
   }
 
@@ -89,6 +95,35 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
     await _supabase.rpc('delete_own_user');
 
     await GoogleSignIn().signOut();
+    await _clearAllCache();
     state = const AsyncValue.data(null);
+  }
+
+  /// 앱 캐시 + 이미지 캐시 + Riverpod 데이터 캐시 전체 삭제
+  Future<void> _clearAllCache() async {
+    await CacheCleanup.clearAppCache();
+    PaintingBinding.instance.imageCache.clear();
+    PaintingBinding.instance.imageCache.clearLiveImages();
+    _invalidateAllProviders();
+  }
+
+  /// 모든 데이터 provider 무효화
+  void _invalidateAllProviders() {
+    _ref.invalidate(recordsByDateProvider);
+    _ref.invalidate(recordDatesProvider);
+    _ref.invalidate(recordCountsByDateProvider);
+    _ref.invalidate(exportedRecordsProvider);
+    _ref.invalidate(userStatsProvider);
+    _ref.invalidate(recentRecordsProvider);
+    _ref.invalidate(recentGymsProvider);
+    _ref.invalidate(userVisitedGymsProvider);
+    _ref.invalidate(userAllTagsProvider);
+    // 필터 상태도 초기화
+    _ref.read(selectedColorFilterProvider.notifier).state = null;
+    _ref.read(selectedStatusFilterProvider.notifier).state = null;
+    _ref.read(selectedTagFilterProvider.notifier).state = null;
+    _ref.read(selectedGymFilterProvider.notifier).state = null;
+    // 탭 인덱스를 홈(0)으로 초기화
+    _ref.read(bottomNavIndexProvider.notifier).state = 0;
   }
 }

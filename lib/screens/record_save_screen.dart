@@ -1,8 +1,11 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as p;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:video_player/video_player.dart';
 import 'package:gal/gal.dart';
+import 'package:ffmpeg_kit_flutter_new/ffmpeg_kit_config.dart';
 import 'package:ffmpeg_kit_flutter_new/ffprobe_kit.dart';
 import '../config/supabase_config.dart';
 import '../models/climbing_gym.dart';
@@ -15,6 +18,7 @@ import '../widgets/gym_selection_sheet.dart';
 import '../widgets/gym_map_sheet.dart';
 import '../widgets/tag_input.dart';
 import '../widgets/wandeung_app_bar.dart';
+import '../utils/cache_cleanup.dart';
 import '../utils/thumbnail_utils.dart';
 import 'records_tab_screen.dart';
 import 'video_editor_screen.dart';
@@ -163,7 +167,7 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
     });
   }
 
-  void _deleteVideo() {
+  Future<void> _deleteVideo() async {
     if (_isEditMode) {
       _deleteRecord();
       return;
@@ -174,7 +178,9 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
         File(widget.originalVideoPath!).deleteSync();
       } catch (_) {}
     }
-    Navigator.pop(context, false);
+    // 촬영 취소 시에도 캐시 정리
+    await CacheCleanup.clearAppCache();
+    if (mounted) Navigator.pop(context, false);
   }
 
   Future<void> _deleteRecord() async {
@@ -251,10 +257,14 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
       } else {
         final settings = ref.read(cameraSettingsProvider);
         await _saveToGallery();
-        final thumbnailPath = await generateThumbnail(widget.videoPath!);
-        final durationSeconds = await _getVideoDuration(widget.videoPath!);
+
+        // 캐시 → 영구 저장소로 이동 (저장 확정 시에만)
+        final persistentPath = await _moveToPersistentStorage(widget.videoPath!);
+
+        final thumbnailPath = await generateThumbnail(persistentPath);
+        final durationSeconds = await _getVideoDuration(persistentPath);
         await RecordService.saveRecord(
-          videoPath: widget.videoPath!,
+          videoPath: persistentPath,
           grade: settings.grade!.name,
           difficultyColor: settings.color!.name,
           status: _status == ClimbingStatus.completed
@@ -266,6 +276,19 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
           videoDurationSeconds: durationSeconds,
         );
       }
+
+      // 편집 원본 파일 정리 (편집 후 저장 시 원본은 더 이상 불필요)
+      if (widget.originalVideoPath != null) {
+        try {
+          final originalFile = File(widget.originalVideoPath!);
+          if (await originalFile.exists()) {
+            await originalFile.delete();
+          }
+        } catch (_) {}
+      }
+
+      // 캐시 정리 (camera, FFmpeg, video_player 등이 남긴 임시 파일)
+      await CacheCleanup.clearAppCache();
 
       if (mounted) {
         final selectedDate = ref.read(selectedDateProvider);
@@ -312,6 +335,24 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
     }
   }
 
+  /// 캐시의 영상 파일을 영구 저장소로 이동 (저장 확정 시에만 호출)
+  Future<String> _moveToPersistentStorage(String cachePath) async {
+    final appDir = await getApplicationDocumentsDirectory();
+    final videosDir = Directory(p.join(appDir.path, 'videos'));
+    if (!videosDir.existsSync()) {
+      videosDir.createSync(recursive: true);
+    }
+    final persistentPath = p.join(videosDir.path, p.basename(cachePath));
+    final sourceFile = File(cachePath);
+    try {
+      await sourceFile.rename(persistentPath);
+    } catch (_) {
+      await sourceFile.copy(persistentPath);
+      await sourceFile.delete();
+    }
+    return persistentPath;
+  }
+
   Future<void> _saveToGallery() async {
     try {
       await Gal.putVideo(widget.videoPath!, album: '완등');
@@ -322,6 +363,8 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
     try {
       final session = await FFprobeKit.getMediaInformation(path);
       final info = session.getMediaInformation();
+      // FFprobe 세션 캐시 즉시 정리
+      await FFmpegKitConfig.clearSessions();
       if (info != null) {
         final durationStr = info.getDuration();
         if (durationStr != null) {

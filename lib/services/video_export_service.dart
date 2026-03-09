@@ -1,6 +1,8 @@
+import 'dart:io';
 import 'dart:ui';
 
 import 'package:ffmpeg_kit_flutter_new/ffmpeg_kit.dart';
+import 'package:ffmpeg_kit_flutter_new/ffmpeg_kit_config.dart';
 import 'package:ffmpeg_kit_flutter_new/return_code.dart';
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
@@ -66,6 +68,7 @@ class VideoExportService {
     final returnCode = await session.getReturnCode();
 
     if (!ReturnCode.isSuccess(returnCode)) {
+      await _cleanupExportCache();
       final output = await session.getOutput();
       throw VideoExportException(
         '내보내기 실패 (코드: ${returnCode?.getValue()})',
@@ -73,6 +76,7 @@ class VideoExportService {
       );
     }
 
+    await _cleanupExportCache();
     onProgress(1.0);
 
     return VideoEditResult(
@@ -139,6 +143,7 @@ class VideoExportService {
     final returnCode = await session.getReturnCode();
 
     if (!ReturnCode.isSuccess(returnCode)) {
+      await _cleanupExportCache();
       final output = await session.getOutput();
       throw VideoExportException(
         '내보내기 실패 (코드: ${returnCode?.getValue()})',
@@ -146,12 +151,29 @@ class VideoExportService {
       );
     }
 
+    await _cleanupExportCache();
     onProgress(1.0);
 
     return VideoEditResult(
       outputPath: outputPath,
       duration: Duration(milliseconds: expectedDurationMs),
     );
+  }
+
+  /// 내보내기 후 캐시 정리 (자막 PNG + FFmpeg 세션)
+  static Future<void> _cleanupExportCache() async {
+    try {
+      // 자막 이미지 캐시 삭제
+      final cacheDir = await getTemporaryDirectory();
+      final subtitleDir = Directory('${cacheDir.path}/subtitle_imgs');
+      if (await subtitleDir.exists()) {
+        await subtitleDir.delete(recursive: true);
+      }
+    } catch (_) {}
+    try {
+      // FFmpeg 세션 로그 캐시 정리
+      await FFmpegKitConfig.clearSessions();
+    } catch (_) {}
   }
 
   static int _calculateExpectedDuration(

@@ -2,11 +2,11 @@ import 'dart:async';
 import 'dart:io';
 import 'package:camera/camera.dart';
 import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../providers/camera_settings_provider.dart';
+import '../utils/cache_cleanup.dart';
 import '../providers/gym_provider.dart';
 import '../widgets/camera_grade_overlay.dart';
 import '../widgets/camera_gym_overlay.dart';
@@ -103,6 +103,8 @@ class _CameraTabScreenState extends ConsumerState<CameraTabScreen>
   Future<void> _setupCamera(CameraDescription camera) async {
     _controller?.dispose();
     _controller = null;
+    // 이전 카메라 세션의 캐시 정리
+    CacheCleanup.clearAppCache();
     final controller = CameraController(
       camera,
       ResolutionPreset.high,
@@ -144,7 +146,7 @@ class _CameraTabScreenState extends ConsumerState<CameraTabScreen>
       _timer?.cancel();
       if (!mounted) return;
 
-      // .temp → .mp4로 변환
+      // .temp → .mp4로 변환 (캐시에 유지, 저장 시에만 영구 저장소로 이동)
       String videoPath = file.path;
       if (p.extension(videoPath).toLowerCase() != '.mp4') {
         final mp4Path =
@@ -152,16 +154,6 @@ class _CameraTabScreenState extends ConsumerState<CameraTabScreen>
         await File(videoPath).rename(mp4Path);
         videoPath = mp4Path;
       }
-
-      // 캐시 → 영구 저장소로 이동 (캐시는 OS가 임의로 삭제 가능)
-      final appDir = await getApplicationDocumentsDirectory();
-      final videosDir = Directory(p.join(appDir.path, 'videos'));
-      if (!videosDir.existsSync()) {
-        videosDir.createSync(recursive: true);
-      }
-      final persistentPath = p.join(videosDir.path, p.basename(videoPath));
-      await File(videoPath).rename(persistentPath);
-      videoPath = persistentPath;
 
       if (!mounted) return;
       await Navigator.push<bool>(
@@ -217,6 +209,7 @@ class _CameraTabScreenState extends ConsumerState<CameraTabScreen>
     WidgetsBinding.instance.removeObserver(this);
     _controller?.dispose();
     _timer?.cancel();
+    CacheCleanup.clearAppCache();
     super.dispose();
   }
 

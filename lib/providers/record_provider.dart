@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../config/supabase_config.dart';
 import '../models/climbing_gym.dart';
@@ -367,11 +368,52 @@ class RecordService {
     return ClimbingRecord.fromMap(response);
   }
 
-  /// 기록 삭제
+  /// 기록 삭제 (로컬 파일도 함께 정리)
   static Future<void> deleteRecord(String recordId) async {
+    // 1. 삭제 전 레코드 조회 (파일 경로 확보)
+    final record = await _supabase
+        .from('climbing_records')
+        .select('video_path, thumbnail_path')
+        .eq('id', recordId)
+        .maybeSingle();
+
+    // 2. 자식 레코드(내보내기 영상)도 파일 정리 후 삭제
+    final children = await _supabase
+        .from('climbing_records')
+        .select('id, video_path, thumbnail_path')
+        .eq('parent_record_id', recordId);
+    for (final child in children as List) {
+      await _deleteLocalFile(child['video_path'] as String?);
+      await _deleteLocalFile(child['thumbnail_path'] as String?);
+    }
+    if ((children as List).isNotEmpty) {
+      await _supabase
+          .from('climbing_records')
+          .delete()
+          .eq('parent_record_id', recordId);
+    }
+
+    // 3. 본인 레코드의 로컬 파일 삭제
+    if (record != null) {
+      await _deleteLocalFile(record['video_path'] as String?);
+      await _deleteLocalFile(record['thumbnail_path'] as String?);
+    }
+
+    // 4. DB 레코드 삭제
     await _supabase
         .from('climbing_records')
         .delete()
         .eq('id', recordId);
+  }
+
+  /// 로컬 파일 안전 삭제
+  static Future<void> _deleteLocalFile(String? path) async {
+    if (path == null) return;
+    try {
+      final file = File(path);
+      if (await file.exists()) {
+        await file.delete();
+      }
+    } catch (_) {}
   }
 }

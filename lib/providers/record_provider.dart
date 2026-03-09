@@ -4,6 +4,7 @@ import '../config/supabase_config.dart';
 import '../models/climbing_gym.dart';
 import '../models/climbing_record.dart';
 import '../models/user_climbing_stats.dart';
+import 'auth_provider.dart';
 
 // 필터 상태 (카테고리별 단일 선택)
 final selectedColorFilterProvider = StateProvider<String?>((ref) => null);
@@ -13,9 +14,14 @@ final selectedGymFilterProvider = StateProvider<String?>((ref) => null);
 
 const _selectWithGym = '*, climbing_gyms(name)';
 
+/// authProvider를 watch해서 현재 유저 ID를 가져온다.
+/// 로그인하면 자동으로 provider가 re-fetch되고, 로그아웃하면 빈 값 반환.
+String? _watchUserId(Ref ref) => ref.watch(authProvider).valueOrNull?.id;
+
 final recordsByDateProvider =
     FutureProvider.family<List<ClimbingRecord>, DateTime>((ref, date) async {
-  final userId = SupabaseConfig.client.auth.currentUser!.id;
+  final userId = _watchUserId(ref);
+  if (userId == null) return [];
   final dateStr = date.toIso8601String().split('T')[0];
 
   final response = await SupabaseConfig.client
@@ -34,7 +40,8 @@ final recordsByDateProvider =
 /// 캘린더 마커용: 월별 기록이 있는 날짜 목록
 final recordDatesProvider =
     FutureProvider.family<Set<DateTime>, DateTime>((ref, month) async {
-  final userId = SupabaseConfig.client.auth.currentUser!.id;
+  final userId = _watchUserId(ref);
+  if (userId == null) return {};
   final firstDay = DateTime(month.year, month.month, 1);
   final lastDay = DateTime(month.year, month.month + 1, 0);
 
@@ -59,7 +66,8 @@ final recordCountsByDateProvider =
   final tag = ref.watch(selectedTagFilterProvider);
   final gymName = ref.watch(selectedGymFilterProvider);
 
-  final userId = SupabaseConfig.client.auth.currentUser!.id;
+  final userId = _watchUserId(ref);
+  if (userId == null) return {};
   final firstDay = DateTime(month.year, month.month, 1);
   final lastDay = DateTime(month.year, month.month + 1, 0);
 
@@ -107,7 +115,18 @@ final exportedRecordsProvider =
 
 /// 홈 탭 요약 통계 (최근 30일 기준)
 final userStatsProvider = FutureProvider<UserClimbingStats>((ref) async {
-  final userId = SupabaseConfig.client.auth.currentUser!.id;
+  final userId = _watchUserId(ref);
+  if (userId == null) {
+    return const UserClimbingStats(
+      totalClimbs: 0,
+      totalCompleted: 0,
+      totalInProgress: 0,
+      completionRate: 0,
+      inProgressRate: 0,
+      currentStreak: 0,
+      monthlyClimbs: 0,
+    );
+  }
   final now = DateTime.now();
   final thirtyDaysAgo = now.subtract(const Duration(days: 30));
   final thirtyDaysAgoStr = thirtyDaysAgo.toIso8601String().split('T')[0];
@@ -173,7 +192,8 @@ final userStatsProvider = FutureProvider<UserClimbingStats>((ref) async {
 /// 홈 탭 최근 기록 (최신 5개)
 final recentRecordsProvider =
     FutureProvider<List<ClimbingRecord>>((ref) async {
-  final userId = SupabaseConfig.client.auth.currentUser!.id;
+  final userId = _watchUserId(ref);
+  if (userId == null) return [];
 
   final response = await SupabaseConfig.client
       .from('climbing_records')
@@ -191,7 +211,8 @@ final recentRecordsProvider =
 
 /// 홈 탭 최근 방문 암장 (최근 기록에서 추출, 중복 제거)
 final recentGymsProvider = FutureProvider<List<ClimbingGym>>((ref) async {
-  final userId = SupabaseConfig.client.auth.currentUser!.id;
+  final userId = _watchUserId(ref);
+  if (userId == null) return [];
 
   final response = await SupabaseConfig.client
       .from('climbing_records')
@@ -218,7 +239,8 @@ final recentGymsProvider = FutureProvider<List<ClimbingGym>>((ref) async {
 
 /// 사용자가 방문한 모든 암장 이름 (필터용)
 final userVisitedGymsProvider = FutureProvider<List<String>>((ref) async {
-  final userId = SupabaseConfig.client.auth.currentUser!.id;
+  final userId = _watchUserId(ref);
+  if (userId == null) return [];
 
   final response = await SupabaseConfig.client
       .from('climbing_records')
@@ -240,7 +262,8 @@ final userVisitedGymsProvider = FutureProvider<List<String>>((ref) async {
 
 /// 사용자의 모든 태그 (필터용)
 final userAllTagsProvider = FutureProvider<List<String>>((ref) async {
-  final userId = SupabaseConfig.client.auth.currentUser!.id;
+  final userId = _watchUserId(ref);
+  if (userId == null) return [];
 
   final response = await SupabaseConfig.client
       .from('climbing_records')

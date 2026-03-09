@@ -1,16 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'providers/auth_provider.dart';
-import 'screens/home_loading_screen.dart';
-import 'screens/login_screen.dart';
+import 'screens/splash_screen.dart';
 
 class WandeungApp extends ConsumerWidget {
   const WandeungApp({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final authState = ref.watch(authProvider);
-
     return MaterialApp(
       title: '완등',
       theme: ThemeData(
@@ -57,13 +53,7 @@ class WandeungApp extends ConsumerWidget {
           thickness: 1,
         ),
       ),
-      home: authState.when(
-        data: (user) =>
-            user != null ? const HomeLoadingScreen() : const LoginScreen(),
-        loading: () => const Scaffold(
-            body: Center(child: CircularProgressIndicator())),
-        error: (_, __) => const LoginScreen(),
-      ),
+      home: const SplashScreen(),
     );
   }
 }

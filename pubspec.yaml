@@ -72,6 +72,7 @@ dev_dependencies:
   # rules and activating additional ones.
   flutter_lints: ^4.0.0
   flutter_launcher_icons: ^0.14.4
+  flutter_native_splash: ^2.4.4
 
 flutter_launcher_icons:
   android: "launcher_icon"
@@ -119,3 +120,16 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+flutter_native_splash:
+  color: "#2D2D2D"
+  image: assets/images/app_icon.png
+  image_dark: assets/images/app_icon.png
+  color_dark: "#1A1A1A"
+  android_12:
+    color: "#2D2D2D"
+    image: assets/images/app_icon.png
+    icon_background_color: "#2D2D2D"
+    color_dark: "#1A1A1A"
+    image_dark: assets/images/app_icon.png
+    icon_background_color_dark: "#1A1A1A"

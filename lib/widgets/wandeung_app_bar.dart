@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/auth_provider.dart';
+import '../screens/login_screen.dart';
 import '../screens/profile_screen.dart';
 
 class WandeungAppBar extends ConsumerWidget implements PreferredSizeWidget {
@@ -65,13 +66,19 @@ class WandeungAppBar extends ConsumerWidget implements PreferredSizeWidget {
         if (extraActions != null) ...extraActions!,
         PopupMenuButton<String>(
           offset: const Offset(0, 40),
-          onSelected: (value) {
+          onSelected: (value) async {
             if (value == 'profile') {
               Navigator.of(context).push(
                 MaterialPageRoute(builder: (_) => const ProfileScreen()),
               );
             } else if (value == 'logout') {
-              ref.read(authProvider.notifier).signOut();
+              await ref.read(authProvider.notifier).signOut();
+              if (context.mounted) {
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(builder: (_) => const LoginScreen()),
+                  (route) => false,
+                );
+              }
             }
           },
           itemBuilder: (_) => const [

@@ -1,5 +1,7 @@
 import 'dart:io';
+import 'package:chewie/chewie.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -41,6 +43,7 @@ class RecordSaveScreen extends ConsumerStatefulWidget {
 
 class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
   VideoPlayerController? _videoController;
+  ChewieController? _chewieController;
   double _displayAspectRatio = 16 / 9;
   ClimbingStatus _status = ClimbingStatus.completed;
   List<String> _tags = [];
@@ -132,12 +135,32 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
     } else {
       _displayAspectRatio = _videoController!.value.aspectRatio;
     }
+
+    _chewieController = ChewieController(
+      videoPlayerController: _videoController!,
+      aspectRatio: _displayAspectRatio,
+      autoPlay: false,
+      looping: false,
+      allowFullScreen: true,
+      allowedScreenSleep: false,
+      deviceOrientationsOnEnterFullScreen: [
+        DeviceOrientation.landscapeLeft,
+        DeviceOrientation.landscapeRight,
+        DeviceOrientation.portraitUp,
+      ],
+      deviceOrientationsAfterFullScreen: [
+        DeviceOrientation.portraitUp,
+      ],
+    );
+
     if (mounted) setState(() {});
   }
 
   @override
   void dispose() {
+    _chewieController?.dispose();
     _videoController?.dispose();
+    SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
     super.dispose();
   }
 
@@ -403,15 +426,14 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // 영상 프리뷰 (원본)
-                  if (_videoController != null &&
-                      _videoController!.value.isInitialized)
+                  // 영상 플레이어
+                  if (_chewieController != null)
                     Stack(
                       children: [
                         LayoutBuilder(
                           builder: (context, constraints) {
                             final maxHeight =
-                                MediaQuery.of(context).size.height * 0.22;
+                                MediaQuery.of(context).size.height * 0.25;
                             final naturalHeight =
                                 constraints.maxWidth / _displayAspectRatio;
                             final playerHeight =
@@ -427,28 +449,7 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
                                   alignment: Alignment.center,
                                   child: AspectRatio(
                                     aspectRatio: _displayAspectRatio,
-                                    child: Stack(
-                                      alignment: Alignment.center,
-                                      children: [
-                                        VideoPlayer(_videoController!),
-                                        IconButton(
-                                          icon: Icon(
-                                            _videoController!.value.isPlaying
-                                                ? Icons.pause_circle
-                                                : Icons.play_circle,
-                                            size: 48,
-                                            color: Colors.white,
-                                          ),
-                                          onPressed: () {
-                                            setState(() {
-                                              _videoController!.value.isPlaying
-                                                  ? _videoController!.pause()
-                                                  : _videoController!.play();
-                                            });
-                                          },
-                                        ),
-                                      ],
-                                    ),
+                                    child: Chewie(controller: _chewieController!),
                                   ),
                                 ),
                               ),
@@ -1033,24 +1034,62 @@ class _FullScreenVideoPlayer extends StatefulWidget {
 }
 
 class _FullScreenVideoPlayerState extends State<_FullScreenVideoPlayer> {
-  late VideoPlayerController _controller;
+  VideoPlayerController? _videoController;
+  ChewieController? _chewieController;
   bool _initialized = false;
 
   @override
   void initState() {
     super.initState();
-    _controller = VideoPlayerController.file(File(widget.videoPath))
-      ..initialize().then((_) {
-        if (mounted) {
-          setState(() => _initialized = true);
-          _controller.play();
-        }
-      });
+    _initVideo();
+  }
+
+  Future<void> _initVideo() async {
+    _videoController = VideoPlayerController.file(File(widget.videoPath));
+    try {
+      await _videoController!.initialize();
+    } catch (e) {
+      debugPrint('편집 영상 초기화 실패: $e');
+      _videoController?.dispose();
+      _videoController = null;
+      if (mounted) setState(() => _initialized = true);
+      return;
+    }
+
+    final size = _videoController!.value.size;
+    final rotation = _videoController!.value.rotationCorrection;
+    double aspectRatio;
+    if (size.width > 0 && size.height > 0 && (rotation == 90 || rotation == 270)) {
+      aspectRatio = size.height / size.width;
+    } else {
+      aspectRatio = _videoController!.value.aspectRatio;
+    }
+
+    _chewieController = ChewieController(
+      videoPlayerController: _videoController!,
+      aspectRatio: aspectRatio,
+      autoPlay: true,
+      looping: false,
+      allowFullScreen: true,
+      allowedScreenSleep: false,
+      deviceOrientationsOnEnterFullScreen: [
+        DeviceOrientation.landscapeLeft,
+        DeviceOrientation.landscapeRight,
+        DeviceOrientation.portraitUp,
+      ],
+      deviceOrientationsAfterFullScreen: [
+        DeviceOrientation.portraitUp,
+      ],
+    );
+
+    if (mounted) setState(() => _initialized = true);
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _chewieController?.dispose();
+    _videoController?.dispose();
+    SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
     super.dispose();
   }
 
@@ -1064,29 +1103,12 @@ class _FullScreenVideoPlayerState extends State<_FullScreenVideoPlayer> {
         title: const Text('편집 영상'),
       ),
       body: Center(
-        child: _initialized
-            ? GestureDetector(
-                onTap: () {
-                  setState(() {
-                    _controller.value.isPlaying
-                        ? _controller.pause()
-                        : _controller.play();
-                  });
-                },
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    AspectRatio(
-                      aspectRatio: _controller.value.aspectRatio,
-                      child: VideoPlayer(_controller),
-                    ),
-                    if (!_controller.value.isPlaying)
-                      const Icon(Icons.play_circle,
-                          size: 64, color: Colors.white70),
-                  ],
-                ),
-              )
-            : const CircularProgressIndicator(color: Colors.white),
+        child: _chewieController != null && _initialized
+            ? Chewie(controller: _chewieController!)
+            : _initialized
+                ? const Text('영상을 재생할 수 없습니다',
+                    style: TextStyle(color: Colors.white70))
+                : const CircularProgressIndicator(color: Colors.white),
       ),
     );
   }

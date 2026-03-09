@@ -190,12 +190,12 @@ final recentRecordsProvider =
 });
 
 /// 홈 탭 최근 방문 암장 (최근 기록에서 추출, 중복 제거)
-final recentGymsProvider = FutureProvider<List<String>>((ref) async {
+final recentGymsProvider = FutureProvider<List<ClimbingGym>>((ref) async {
   final userId = SupabaseConfig.client.auth.currentUser!.id;
 
   final response = await SupabaseConfig.client
       .from('climbing_records')
-      .select('climbing_gyms(name), recorded_at')
+      .select('climbing_gyms(id, name, address, latitude, longitude, google_place_id), recorded_at')
       .eq('user_id', userId)
       .isFilter('parent_record_id', null)
       .not('gym_id', 'is', null)
@@ -203,10 +203,14 @@ final recentGymsProvider = FutureProvider<List<String>>((ref) async {
       .limit(50);
 
   final seen = <String>{};
-  final gyms = <String>[];
+  final gyms = <ClimbingGym>[];
   for (final row in response as List) {
-    final name = (row['climbing_gyms'] as Map?)?['name'] as String?;
-    if (name != null && seen.add(name)) gyms.add(name);
+    final gymMap = row['climbing_gyms'] as Map<String, dynamic>?;
+    if (gymMap == null) continue;
+    final name = gymMap['name'] as String?;
+    if (name != null && seen.add(name)) {
+      gyms.add(ClimbingGym.fromMap(gymMap));
+    }
     if (gyms.length >= 5) break;
   }
   return gyms;

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../models/climbing_gym.dart';
 import '../models/user_climbing_stats.dart';
 import '../providers/camera_settings_provider.dart';
 import '../providers/record_provider.dart';
+import '../screens/gym_detail_screen.dart';
 import '../widgets/record_card.dart';
 import '../widgets/wandeung_app_bar.dart';
 
@@ -194,7 +196,7 @@ class HomeTabScreen extends ConsumerWidget {
 }
 
 class _RecentGymsSection extends StatefulWidget {
-  final List<String> gyms;
+  final List<ClimbingGym> gyms;
   const _RecentGymsSection({required this.gyms});
 
   @override
@@ -245,32 +247,41 @@ class _RecentGymsSectionState extends State<_RecentGymsSection>
     super.dispose();
   }
 
-  Widget _buildChip(String name, ColorScheme colorScheme) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFE8ECF0)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            Icons.location_on_outlined,
-            size: 15,
-            color: colorScheme.primary,
+  Widget _buildChip(ClimbingGym gym, ColorScheme colorScheme) {
+    return GestureDetector(
+      onTap: () {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => GymDetailScreen(gym: gym),
           ),
-          const SizedBox(width: 4),
-          Text(
-            name,
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w500,
-              color: colorScheme.onSurface.withOpacity(0.7),
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: const Color(0xFFE8ECF0)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.location_on_outlined,
+              size: 15,
+              color: colorScheme.primary,
             ),
-          ),
-        ],
+            const SizedBox(width: 4),
+            Text(
+              gym.name,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+                color: colorScheme.onSurface.withOpacity(0.7),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -286,6 +297,7 @@ class _RecentGymsSectionState extends State<_RecentGymsSection>
       ],
     );
   }
+
 
   @override
   Widget build(BuildContext context) {

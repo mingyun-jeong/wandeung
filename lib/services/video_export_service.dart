@@ -1,8 +1,10 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:ui';
 
 import 'package:ffmpeg_kit_flutter_new/ffmpeg_kit.dart';
 import 'package:ffmpeg_kit_flutter_new/ffmpeg_kit_config.dart';
+import 'package:ffmpeg_kit_flutter_new/ffmpeg_session.dart';
 import 'package:ffmpeg_kit_flutter_new/return_code.dart';
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
@@ -64,12 +66,31 @@ class VideoExportService {
     debugPrint('[FFmpeg] subtitleImages: $subtitleImagePaths');
     debugPrint('[FFmpeg] args: ${args.join(' ')}');
 
-    final session = await FFmpegKit.executeWithArguments(args);
-    final returnCode = await session.getReturnCode();
+    // Completer로 세션 완료를 확실히 대기 (executeWithArguments의
+    // "session not found" PlatformException 방지)
+    final completer = Completer<FFmpegSession>();
+
+    await FFmpegKit.executeWithArgumentsAsync(
+      args,
+      (session) async {
+        if (!completer.isCompleted) completer.complete(session);
+      },
+      (log) {},
+      (statistics) {
+        final timeMs = statistics.getTime();
+        if (timeMs > 0 && expectedDurationMs > 0) {
+          final progress = timeMs / expectedDurationMs;
+          onProgress(progress.clamp(0.0, 1.0));
+        }
+      },
+    );
+
+    final completedSession = await completer.future;
+    final returnCode = await completedSession.getReturnCode();
 
     if (!ReturnCode.isSuccess(returnCode)) {
       await _cleanupExportCache();
-      final output = await session.getOutput();
+      final output = await completedSession.getOutput();
       throw VideoExportException(
         '내보내기 실패 (코드: ${returnCode?.getValue()})',
         output ?? '',
@@ -126,9 +147,13 @@ class VideoExportService {
       trimStart, trimEnd, speedSegments,
     );
 
-    final session = await FFmpegKit.executeWithArgumentsAsync(
+    final completer = Completer<FFmpegSession>();
+
+    await FFmpegKit.executeWithArgumentsAsync(
       args,
-      (session) async {},
+      (session) async {
+        if (!completer.isCompleted) completer.complete(session);
+      },
       (log) {},
       (statistics) {
         final timeMs = statistics.getTime();
@@ -139,12 +164,12 @@ class VideoExportService {
       },
     );
 
-    await session.getReturnCode();
-    final returnCode = await session.getReturnCode();
+    final completedSession = await completer.future;
+    final returnCode = await completedSession.getReturnCode();
 
     if (!ReturnCode.isSuccess(returnCode)) {
       await _cleanupExportCache();
-      final output = await session.getOutput();
+      final output = await completedSession.getOutput();
       throw VideoExportException(
         '내보내기 실패 (코드: ${returnCode?.getValue()})',
         output ?? '',

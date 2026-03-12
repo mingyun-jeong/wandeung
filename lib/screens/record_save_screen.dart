@@ -904,8 +904,9 @@ class _ExportedVideoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final hasThumbnail = record.thumbnailPath != null &&
-        File(record.thumbnailPath!).existsSync();
+    final thumbPath = record.thumbnailPath;
+    final hasThumbnail = thumbPath != null &&
+        (thumbPath.startsWith('/') ? File(thumbPath).existsSync() : true);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
@@ -917,14 +918,17 @@ class _ExportedVideoCard extends StatelessWidget {
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
         onTap: () {
-          if (record.videoPath != null &&
-              record.videoPath!.startsWith('/') &&
-              File(record.videoPath!).existsSync()) {
+          final vPath = record.videoPath;
+          if (vPath == null) return;
+          final canPlay = vPath.startsWith('/')
+              ? File(vPath).existsSync()
+              : true;
+          if (canPlay) {
             Navigator.push(
               context,
               MaterialPageRoute(
                 builder: (_) =>
-                    _FullScreenVideoPlayer(videoPath: record.videoPath!),
+                    _FullScreenVideoPlayer(videoPath: vPath),
               ),
             );
           }
@@ -943,15 +947,25 @@ class _ExportedVideoCard extends StatelessWidget {
                     fit: StackFit.expand,
                     children: [
                       hasThumbnail
-                          ? Image.file(
-                              File(record.thumbnailPath!),
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => Container(
-                                color: const Color(0xFFE2E8F0),
-                                child: const Icon(Icons.movie_rounded,
-                                    color: Colors.white, size: 20),
-                              ),
-                            )
+                          ? (thumbPath!.startsWith('/')
+                              ? Image.file(
+                                  File(thumbPath),
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) => Container(
+                                    color: const Color(0xFFE2E8F0),
+                                    child: const Icon(Icons.movie_rounded,
+                                        color: Colors.white, size: 20),
+                                  ),
+                                )
+                              : Image.network(
+                                  R2Config.getPresignedUrl(thumbPath),
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) => Container(
+                                    color: const Color(0xFFE2E8F0),
+                                    child: const Icon(Icons.movie_rounded,
+                                        color: Colors.white, size: 20),
+                                  ),
+                                ))
                           : Container(
                               color: const Color(0xFFE2E8F0),
                               child: const Icon(Icons.movie_rounded,
@@ -1065,7 +1079,10 @@ class _FullScreenVideoPlayerState extends State<_FullScreenVideoPlayer> {
   }
 
   Future<void> _initVideo() async {
-    _videoController = VideoPlayerController.file(File(widget.videoPath));
+    _videoController = widget.videoPath.startsWith('/')
+        ? VideoPlayerController.file(File(widget.videoPath))
+        : VideoPlayerController.networkUrl(
+            Uri.parse(R2Config.getPresignedUrl(widget.videoPath)));
     try {
       await _videoController!.initialize();
     } catch (e) {

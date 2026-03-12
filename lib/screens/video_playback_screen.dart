@@ -35,6 +35,7 @@ class _VideoPlaybackScreenState extends State<VideoPlaybackScreen> {
       }
       _videoController = VideoPlayerController.file(File(path));
     } else {
+      debugPrint('[R2] video_path from DB: "$path"');
       final url = R2Config.getPresignedUrl(path);
       _videoController = VideoPlayerController.networkUrl(Uri.parse(url));
     }
@@ -44,7 +45,7 @@ class _VideoPlaybackScreenState extends State<VideoPlaybackScreen> {
         const Duration(seconds: 10),
       );
     } catch (e) {
-      debugPrint('영상 초기화 실패: $e');
+      debugPrint('[R2] 영상 초기화 실패: $e (path=$path)');
       _videoController?.dispose();
       _videoController = null;
       if (mounted) setState(() => _errorMessage = '영상을 재생할 수 없습니다');

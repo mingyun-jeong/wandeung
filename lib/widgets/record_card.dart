@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import '../config/r2_config.dart';
 import '../models/climbing_record.dart';
 import '../screens/record_save_screen.dart';
 import '../screens/video_playback_screen.dart';
@@ -106,8 +107,30 @@ class RecordCard extends StatelessWidget {
   }
 
   Widget _buildThumbnailOrBadge(DifficultyColor color) {
-    if (record.thumbnailPath != null &&
-        File(record.thumbnailPath!).existsSync()) {
+    final path = record.thumbnailPath;
+    if (path == null) return _GradeBadge(color: color);
+
+    final isLocal = path.startsWith('/');
+    final hasLocal = isLocal && File(path).existsSync();
+    final isRemote = !isLocal;
+
+    if (hasLocal || isRemote) {
+      final imageWidget = isLocal
+          ? Image.file(
+              File(path),
+              width: 72,
+              height: 72,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => _GradeBadge(color: color),
+            )
+          : Image.network(
+              R2Config.getPresignedUrl(path),
+              width: 72,
+              height: 72,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => _GradeBadge(color: color),
+            );
+
       return ClipRRect(
         borderRadius: BorderRadius.circular(12),
         child: SizedBox(
@@ -116,15 +139,7 @@ class RecordCard extends StatelessWidget {
           child: Stack(
             fit: StackFit.expand,
             children: [
-              Image.file(
-                File(record.thumbnailPath!),
-                width: 72,
-                height: 72,
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => _GradeBadge(
-                  color: color,
-                ),
-              ),
+              imageWidget,
               if (record.videoDurationSeconds != null)
                 Positioned(
                   right: 4,

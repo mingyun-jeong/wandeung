@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 
@@ -16,12 +17,12 @@ class R2Config {
 
   static void initialize() {
     _endpoint = dotenv.env['R2_ENDPOINT']!;
-    _accessKey = dotenv.env['R2_ACCESS_KEY']!;
-    _secretKey = dotenv.env['R2_SECRET_KEY']!;
-    _bucket = dotenv.env['R2_BUCKET']!;
+    _accessKey = dotenv.env['R2_ACCESS_KEY_ID']!;
+    _secretKey = dotenv.env['R2_SECRET_ACCESS_KEY']!;
+    _bucket = dotenv.env['R2_BUCKET_NAME']!;
 
     final uri = Uri.parse(_endpoint);
-    _host = '$_bucket.${uri.host}';
+    _host = uri.host;
     _region = 'auto';
   }
 
@@ -33,7 +34,7 @@ class R2Config {
   }) async {
     final bytes = await file.readAsBytes();
     final now = DateTime.now().toUtc();
-    final uri = Uri.https(_host, '/$objectKey');
+    final uri = Uri.https(_host, '/$_bucket/$objectKey');
 
     final headers = _signRequest(
       method: 'PUT',
@@ -48,8 +49,14 @@ class R2Config {
       dateTime: now,
     );
 
+    debugPrint('[R2] PUT $uri');
+    debugPrint('[R2] Headers: ${headers.keys.join(', ')}');
+    debugPrint('[R2] Body size: ${bytes.length} bytes');
+
     final response = await http.put(uri, headers: headers, body: bytes);
+    debugPrint('[R2] Response: ${response.statusCode}');
     if (response.statusCode != 200) {
+      debugPrint('[R2] Response body: ${response.body}');
       throw Exception('R2 업로드 실패 (${response.statusCode}): ${response.body}');
     }
   }
@@ -57,7 +64,7 @@ class R2Config {
   /// S3 DELETE
   static Future<void> deleteFile(String objectKey) async {
     final now = DateTime.now().toUtc();
-    final uri = Uri.https(_host, '/$objectKey');
+    final uri = Uri.https(_host, '/$_bucket/$objectKey');
     final emptyHash = sha256.convert([]).toString();
 
     final headers = _signRequest(
@@ -81,7 +88,7 @@ class R2Config {
   /// S3 LIST (특정 prefix 아래 오브젝트 목록)
   static Future<List<String>> listObjects(String prefix) async {
     final now = DateTime.now().toUtc();
-    final uri = Uri.https(_host, '/', {'prefix': prefix, 'list-type': '2'});
+    final uri = Uri.https(_host, '/$_bucket/', {'prefix': prefix, 'list-type': '2'});
     final emptyHash = sha256.convert([]).toString();
 
     final headers = _signRequest(
@@ -117,7 +124,7 @@ class R2Config {
     final amzDate = _amzDateFormat(now);
     final credential = '$_accessKey/$dateStamp/$_region/s3/aws4_request';
 
-    final uri = Uri.https(_host, '/$objectKey');
+    final uri = Uri.https(_host, '/$_bucket/$objectKey');
 
     final queryParams = <String, String>{
       'X-Amz-Algorithm': 'AWS4-HMAC-SHA256',
@@ -134,7 +141,7 @@ class R2Config {
 
     final canonicalRequest = [
       'GET',
-      '/${objectKey.split('/').map(Uri.encodeComponent).join('/')}',
+      '/$_bucket/${objectKey.split('/').map(Uri.encodeComponent).join('/')}',
       sortedQuery,
       'host:$_host',
       '',
@@ -154,7 +161,9 @@ class R2Config {
         .convert(utf8.encode(stringToSign))
         .toString();
 
-    return '${uri.toString()}?$sortedQuery&X-Amz-Signature=$signature';
+    final presignedUrl = '${uri.toString()}?$sortedQuery&X-Amz-Signature=$signature';
+    debugPrint('[R2] Presigned URL for "$objectKey": $presignedUrl');
+    return presignedUrl;
   }
 
   // --- S3v4 서명 ---

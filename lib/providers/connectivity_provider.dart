@@ -8,12 +8,14 @@ final connectivityProvider = StreamProvider<List<ConnectivityResult>>((ref) {
 });
 
 /// 현재 Wi-Fi 연결 여부
+/// 플러그인 에러/로딩 시 true 반환 (업로드 차단 방지)
 final isWifiProvider = Provider<bool>((ref) {
   final connectivity = ref.watch(connectivityProvider);
-  return connectivity.whenOrNull(
-        data: (results) => results.contains(ConnectivityResult.wifi),
-      ) ??
-      false;
+  return connectivity.when(
+    data: (results) => results.contains(ConnectivityResult.wifi),
+    loading: () => true,
+    error: (_, __) => true,
+  );
 });
 
 /// Wi-Fi 전용 업로드 설정

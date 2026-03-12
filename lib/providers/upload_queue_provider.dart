@@ -160,14 +160,25 @@ class UploadQueueNotifier extends StateNotifier<List<UploadTask>> {
       final wifiOnly = _ref.read(wifiOnlyUploadProvider);
       final isWifi = _ref.read(isWifiProvider);
 
+      debugPrint('[UploadQueue] processQueue: ${state.length} tasks, wifiOnly=$wifiOnly, isWifi=$isWifi');
+
       // Wi-Fi 전용 모드인데 Wi-Fi가 아니면 중단
-      if (wifiOnly && !isWifi) return;
+      if (wifiOnly && !isWifi) {
+        debugPrint('[UploadQueue] 스킵: Wi-Fi 아님');
+        return;
+      }
 
       final userId = Supabase.instance.client.auth.currentUser?.id;
-      if (userId == null) return;
+      if (userId == null) {
+        debugPrint('[UploadQueue] 스킵: userId null');
+        return;
+      }
 
       for (final task in state) {
-        if (task.status != UploadStatus.pending) continue;
+        if (task.status != UploadStatus.pending) {
+          debugPrint('[UploadQueue] 스킵 task ${task.recordId}: status=${task.status.name}');
+          continue;
+        }
 
         // Wi-Fi 상태 재확인
         if (wifiOnly && !_ref.read(isWifiProvider)) break;
@@ -181,6 +192,7 @@ class UploadQueueNotifier extends StateNotifier<List<UploadTask>> {
           continue;
         }
 
+        debugPrint('[UploadQueue] 업로드 시작: ${task.recordId} (${task.localVideoPath})');
         task.status = UploadStatus.uploading;
         state = [...state];
         await _persist();
@@ -192,6 +204,7 @@ class UploadQueueNotifier extends StateNotifier<List<UploadTask>> {
             userId: userId,
           ).timeout(const Duration(minutes: 5));
 
+          debugPrint('[UploadQueue] 업로드 성공: ${task.recordId}');
           task.status = UploadStatus.uploaded;
         } catch (e) {
           task.retryCount++;

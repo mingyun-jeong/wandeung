@@ -4,9 +4,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../config/supabase_config.dart';
+import '../services/video_upload_service.dart';
 import '../utils/cache_cleanup.dart';
 import 'camera_settings_provider.dart';
 import 'record_provider.dart';
+import 'upload_queue_provider.dart';
 
 final authProvider =
     StateNotifierProvider<AuthNotifier, AsyncValue<User?>>((ref) {
@@ -64,6 +66,7 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
   }
 
   Future<void> signOut() async {
+    await _ref.read(uploadQueueProvider.notifier).clearAll();
     await GoogleSignIn().signOut();
     await _supabase.auth.signOut();
     await _clearAllCache();
@@ -73,17 +76,9 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
   Future<void> deleteAccount() async {
     final userId = _supabase.auth.currentUser!.id;
 
-    // 스토리지 영상 삭제
-    try {
-      final files =
-          await _supabase.storage.from('climbing-videos').list(path: userId);
-      if (files.isNotEmpty) {
-        final paths = files.map((f) => '$userId/${f.name}').toList();
-        await _supabase.storage.from('climbing-videos').remove(paths);
-      }
-    } catch (_) {
-      // 스토리지 삭제 실패해도 계속 진행
-    }
+    // R2 스토리지 영상/썸네일 삭제
+    await VideoUploadService.deleteAllUserFiles(userId);
+    await _ref.read(uploadQueueProvider.notifier).clearAll();
 
     // 등반 기록 삭제
     await _supabase.from('climbing_records').delete().eq('user_id', userId);

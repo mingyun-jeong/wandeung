@@ -9,7 +9,10 @@ import 'package:video_player/video_player.dart';
 import 'package:gal/gal.dart';
 import 'package:ffmpeg_kit_flutter_new/ffmpeg_kit_config.dart';
 import 'package:ffmpeg_kit_flutter_new/ffprobe_kit.dart';
+import '../config/r2_config.dart';
 import '../config/supabase_config.dart';
+import '../providers/upload_queue_provider.dart';
+import '../services/video_upload_service.dart';
 import '../models/climbing_gym.dart';
 import '../models/climbing_record.dart';
 import '../providers/camera_settings_provider.dart';
@@ -109,9 +112,7 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
       }
       _videoController = VideoPlayerController.file(File(path));
     } else {
-      final url = await SupabaseConfig.client.storage
-          .from('climbing-videos')
-          .createSignedUrl(path, 3600);
+      final url = R2Config.getPresignedUrl(path);
       _videoController = VideoPlayerController.networkUrl(Uri.parse(url));
     }
 
@@ -286,7 +287,7 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
 
         final thumbnailPath = await generateThumbnail(persistentPath);
         final durationSeconds = await _getVideoDuration(persistentPath);
-        await RecordService.saveRecord(
+        final savedRecord = await RecordService.saveRecord(
           videoPath: persistentPath,
           grade: settings.grade!.name,
           difficultyColor: settings.color!.name,
@@ -297,6 +298,25 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
           thumbnailPath: thumbnailPath,
           tags: _tags,
           videoDurationSeconds: durationSeconds,
+        );
+
+        // 썸네일 즉시 R2 업로드 (작은 파일이므로 네트워크 종류 무관)
+        if (thumbnailPath != null) {
+          try {
+            await VideoUploadService.uploadThumbnailAndUpdateRecord(
+              recordId: savedRecord.id!,
+              localThumbnailPath: thumbnailPath,
+              userId: savedRecord.userId,
+            );
+          } catch (e) {
+            debugPrint('썸네일 업로드 실패: $e');
+          }
+        }
+
+        // 영상은 큐에 등록 (Wi-Fi 설정에 따라 처리)
+        ref.read(uploadQueueProvider.notifier).enqueue(
+          recordId: savedRecord.id!,
+          localVideoPath: persistentPath,
         );
       }
 

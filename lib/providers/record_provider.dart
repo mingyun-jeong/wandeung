@@ -1,9 +1,11 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../config/supabase_config.dart';
 import '../models/climbing_gym.dart';
 import '../models/climbing_record.dart';
 import '../models/user_climbing_stats.dart';
+import '../services/video_upload_service.dart';
 import 'auth_provider.dart';
 
 // 필터 상태 (카테고리별 단일 선택)
@@ -414,8 +416,10 @@ class RecordService {
     return ClimbingRecord.fromMap(response);
   }
 
-  /// 기록 삭제 (로컬 파일도 함께 정리)
+  /// 기록 삭제 (로컬 파일 + R2 리모트 파일도 함께 정리)
   static Future<void> deleteRecord(String recordId) async {
+    final userId = _supabase.auth.currentUser?.id;
+
     // 1. 삭제 전 레코드 조회 (파일 경로 확보)
     final record = await _supabase
         .from('climbing_records')
@@ -431,6 +435,17 @@ class RecordService {
     for (final child in children as List) {
       await _deleteLocalFile(child['video_path'] as String?);
       await _deleteLocalFile(child['thumbnail_path'] as String?);
+      // 자식 레코드의 R2 파일도 삭제
+      if (userId != null) {
+        try {
+          await VideoUploadService.deleteRemoteFiles(
+            userId: userId,
+            recordId: child['id'] as String,
+          );
+        } catch (e) {
+          debugPrint('자식 레코드 R2 삭제 실패: $e');
+        }
+      }
     }
     if ((children as List).isNotEmpty) {
       await _supabase
@@ -445,7 +460,19 @@ class RecordService {
       await _deleteLocalFile(record['thumbnail_path'] as String?);
     }
 
-    // 4. DB 레코드 삭제
+    // 4. R2 리모트 파일 삭제
+    if (userId != null) {
+      try {
+        await VideoUploadService.deleteRemoteFiles(
+          userId: userId,
+          recordId: recordId,
+        );
+      } catch (e) {
+        debugPrint('R2 삭제 실패: $e');
+      }
+    }
+
+    // 5. DB 레코드 삭제
     await _supabase
         .from('climbing_records')
         .delete()

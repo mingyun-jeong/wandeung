@@ -3,7 +3,7 @@ import 'package:chewie/chewie.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:video_player/video_player.dart';
-import '../config/supabase_config.dart';
+import '../config/r2_config.dart';
 import '../models/climbing_record.dart';
 import '../utils/constants.dart';
 import '../widgets/wandeung_app_bar.dart';
@@ -54,9 +54,7 @@ class _RecordDetailScreenState extends State<RecordDetailScreen> {
       }
       _videoController = VideoPlayerController.file(File(path));
     } else {
-      final url = await SupabaseConfig.client.storage
-          .from('climbing-videos')
-          .createSignedUrl(path, 3600);
+      final url = R2Config.getPresignedUrl(path);
       _videoController = VideoPlayerController.networkUrl(Uri.parse(url));
     }
 

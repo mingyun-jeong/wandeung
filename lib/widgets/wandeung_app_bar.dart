@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/auth_provider.dart';
 import '../screens/login_screen.dart';
 import '../screens/profile_screen.dart';
+import '../screens/settings_screen.dart';
 
 class WandeungAppBar extends ConsumerWidget implements PreferredSizeWidget {
   final String? title;
@@ -71,6 +72,10 @@ class WandeungAppBar extends ConsumerWidget implements PreferredSizeWidget {
               Navigator.of(context).push(
                 MaterialPageRoute(builder: (_) => const ProfileScreen()),
               );
+            } else if (value == 'settings') {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const SettingsScreen()),
+              );
             } else if (value == 'logout') {
               await ref.read(authProvider.notifier).signOut();
               if (context.mounted) {
@@ -89,6 +94,16 @@ class WandeungAppBar extends ConsumerWidget implements PreferredSizeWidget {
                   Icon(Icons.person, size: 20),
                   SizedBox(width: 8),
                   Text('프로필'),
+                ],
+              ),
+            ),
+            PopupMenuItem<String>(
+              value: 'settings',
+              child: Row(
+                children: [
+                  Icon(Icons.settings, size: 20),
+                  SizedBox(width: 8),
+                  Text('환경설정'),
                 ],
               ),
             ),

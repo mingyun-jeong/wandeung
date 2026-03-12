@@ -5,6 +5,7 @@ import '../models/climbing_record.dart';
 import '../screens/record_save_screen.dart';
 import '../screens/video_playback_screen.dart';
 import '../utils/constants.dart';
+import 'upload_status_indicator.dart';
 
 class RecordCard extends StatelessWidget {
   final ClimbingRecord record;
@@ -140,6 +141,15 @@ class RecordCard extends StatelessWidget {
             fit: StackFit.expand,
             children: [
               imageWidget,
+              if (record.id != null)
+                Positioned(
+                  left: 2,
+                  top: 2,
+                  child: UploadStatusIndicator(
+                    recordId: record.id!,
+                    isLocalVideo: record.isLocalVideo,
+                  ),
+                ),
               if (record.videoDurationSeconds != null)
                 Positioned(
                   right: 4,

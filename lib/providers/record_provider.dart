@@ -282,6 +282,25 @@ final userAllTagsProvider = FutureProvider<List<String>>((ref) async {
   return tags;
 });
 
+/// 서버에 업로드되지 않은 로컬 전용 영상 레코드 조회
+final localOnlyRecordsProvider =
+    FutureProvider<List<ClimbingRecord>>((ref) async {
+  final userId = _watchUserId(ref);
+  if (userId == null) return [];
+
+  final response = await SupabaseConfig.client
+      .from('climbing_records')
+      .select(_selectWithGym)
+      .eq('user_id', userId)
+      .like('video_path', '/%')
+      .isFilter('parent_record_id', null)
+      .order('recorded_at', ascending: false);
+
+  return (response as List)
+      .map((e) => ClimbingRecord.fromMap(e))
+      .toList();
+});
+
 class RecordService {
   static final _supabase = SupabaseConfig.client;
 

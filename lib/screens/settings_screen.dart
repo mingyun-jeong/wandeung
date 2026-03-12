@@ -1,6 +1,8 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/connectivity_provider.dart';
+import '../providers/record_provider.dart';
 import '../providers/upload_queue_provider.dart';
 
 class SettingsScreen extends ConsumerWidget {
@@ -89,8 +91,135 @@ class SettingsScreen extends ConsumerWidget {
                 ],
               ),
             ),
+
+          const SizedBox(height: 24),
+
+          // --- 로컬 영상 관리 ---
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Text(
+              '로컬 영상',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: colorScheme.onSurface.withOpacity(0.4),
+                letterSpacing: 0.5,
+              ),
+            ),
+          ),
+          _LocalVideoSection(),
         ],
       ),
+    );
+  }
+}
+
+class _LocalVideoSection extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final localRecordsAsync = ref.watch(localOnlyRecordsProvider);
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return localRecordsAsync.when(
+      loading: () => const Padding(
+        padding: EdgeInsets.all(20),
+        child: Center(child: CircularProgressIndicator()),
+      ),
+      error: (e, _) => Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+        child: Text('오류: $e',
+            style: TextStyle(color: colorScheme.error, fontSize: 13)),
+      ),
+      data: (records) {
+        final queue = ref.watch(uploadQueueProvider);
+        final queuedIds = queue.map((t) => t.recordId).toSet();
+        final orphaned =
+            records.where((r) => !queuedIds.contains(r.id)).toList();
+        final uploadable = orphaned
+            .where((r) =>
+                r.videoPath != null && File(r.videoPath!).existsSync())
+            .toList();
+        final missingCount = orphaned.length - uploadable.length;
+
+        if (orphaned.isEmpty) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+            child: Row(
+              children: [
+                const Icon(Icons.cloud_done, size: 16, color: Colors.green),
+                const SizedBox(width: 8),
+                Text(
+                  '모든 영상이 서버에 업로드되었습니다',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: colorScheme.onSurface.withOpacity(0.6),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.cloud_off_outlined,
+                      size: 16, color: Colors.amber),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      '서버에 업로드되지 않은 영상: ${orphaned.length}건',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: colorScheme.onSurface.withOpacity(0.6),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              if (missingCount > 0)
+                Padding(
+                  padding: const EdgeInsets.only(left: 24, top: 2),
+                  child: Text(
+                    '${uploadable.length}건 업로드 가능 · ${missingCount}건 파일 없음',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: colorScheme.onSurface.withOpacity(0.4),
+                    ),
+                  ),
+                ),
+              if (uploadable.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 10),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: FilledButton.icon(
+                      onPressed: () async {
+                        final count = await ref
+                            .read(uploadQueueProvider.notifier)
+                            .enqueueLocalRecords(uploadable);
+                        ref.invalidate(localOnlyRecordsProvider);
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                                content:
+                                    Text('$count건 업로드 대기열에 추가됨')),
+                          );
+                        }
+                      },
+                      icon: const Icon(Icons.cloud_upload, size: 18),
+                      label: Text('모두 업로드 (${uploadable.length}건)'),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

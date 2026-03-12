@@ -15,6 +15,8 @@ class ClimbingRecord {
   final String? parentRecordId;
   final int? videoDurationSeconds;
 
+  bool get isLocalVideo => videoPath != null && videoPath!.startsWith('/');
+
   ClimbingRecord({
     this.id,
     required this.userId,

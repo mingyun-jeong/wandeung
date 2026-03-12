@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../models/climbing_record.dart';
 import '../services/video_upload_service.dart';
 import 'connectivity_provider.dart';
 
@@ -102,6 +103,43 @@ class UploadQueueNotifier extends StateNotifier<List<UploadTask>> {
       });
     });
     processQueue();
+
+    // DB에서 로컬 전용 레코드를 발견하여 자동으로 큐에 등록
+    _autoEnqueueOrphanedRecords();
+  }
+
+  /// DB에서 로컬 전용(video_path가 '/'로 시작) 레코드를 조회하여
+  /// 큐에 없는 건을 자동 등록
+  Future<void> _autoEnqueueOrphanedRecords() async {
+    try {
+      final userId = Supabase.instance.client.auth.currentUser?.id;
+      if (userId == null) return;
+
+      final response = await Supabase.instance.client
+          .from('climbing_records')
+          .select('id, video_path')
+          .eq('user_id', userId)
+          .like('video_path', '/%')
+          .isFilter('parent_record_id', null);
+
+      int enqueued = 0;
+      for (final row in response as List) {
+        final recordId = row['id'] as String;
+        final videoPath = row['video_path'] as String;
+        if (state.any((t) => t.recordId == recordId)) continue;
+        if (!File(videoPath).existsSync()) continue;
+
+        state = [...state, UploadTask(recordId: recordId, localVideoPath: videoPath)];
+        enqueued++;
+      }
+      if (enqueued > 0) {
+        debugPrint('[UploadQueue] 고아 레코드 $enqueued건 자동 큐 등록');
+        await _persist();
+        processQueue();
+      }
+    } catch (e) {
+      debugPrint('[UploadQueue] 고아 레코드 자동 등록 실패: $e');
+    }
   }
 
   /// 업로드 태스크 추가
@@ -131,6 +169,29 @@ class UploadQueueNotifier extends StateNotifier<List<UploadTask>> {
   Future<void> clearAll() async {
     state = [];
     await _persist();
+  }
+
+  /// 로컬 전용 레코드 일괄 업로드 큐 등록
+  Future<int> enqueueLocalRecords(List<ClimbingRecord> records) async {
+    int enqueued = 0;
+    for (final record in records) {
+      if (record.id == null || record.videoPath == null) continue;
+      if (!record.videoPath!.startsWith('/')) continue;
+      if (state.any((t) => t.recordId == record.id)) continue;
+      if (!File(record.videoPath!).existsSync()) continue;
+
+      final task = UploadTask(
+        recordId: record.id!,
+        localVideoPath: record.videoPath!,
+      );
+      state = [...state, task];
+      enqueued++;
+    }
+    if (enqueued > 0) {
+      await _persist();
+      processQueue();
+    }
+    return enqueued;
   }
 
   /// 실패 태스크 재시도

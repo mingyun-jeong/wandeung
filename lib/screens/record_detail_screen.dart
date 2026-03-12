@@ -2,23 +2,25 @@ import 'dart:io';
 import 'package:chewie/chewie.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:video_player/video_player.dart';
 import '../config/r2_config.dart';
 import '../models/climbing_record.dart';
+import '../providers/upload_queue_provider.dart';
 import '../utils/constants.dart';
 import '../widgets/wandeung_app_bar.dart';
 import 'video_editor_screen.dart';
 
-class RecordDetailScreen extends StatefulWidget {
+class RecordDetailScreen extends ConsumerStatefulWidget {
   final ClimbingRecord record;
   final bool autoPlay;
   const RecordDetailScreen({super.key, required this.record, this.autoPlay = false});
 
   @override
-  State<RecordDetailScreen> createState() => _RecordDetailScreenState();
+  ConsumerState<RecordDetailScreen> createState() => _RecordDetailScreenState();
 }
 
-class _RecordDetailScreenState extends State<RecordDetailScreen> {
+class _RecordDetailScreenState extends ConsumerState<RecordDetailScreen> {
   VideoPlayerController? _videoController;
   ChewieController? _chewieController;
   double? _displayAspectRatio;
@@ -59,9 +61,7 @@ class _RecordDetailScreenState extends State<RecordDetailScreen> {
     }
 
     try {
-      await _videoController!.initialize().timeout(
-        const Duration(seconds: 10),
-      );
+      await _videoController!.initialize();
     } catch (e) {
       debugPrint('영상 초기화 실패: $e');
       _videoController?.dispose();
@@ -145,7 +145,26 @@ class _RecordDetailScreenState extends State<RecordDetailScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // 영상 플레이어
-            if (_chewieController != null)
+            if (record.videoPath != null && _videoFileMissing)
+              Container(
+                height: 240,
+                color: const Color(0xFFE8ECF0),
+                child: Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.videocam_off_rounded, size: 48,
+                          color: colorScheme.onSurface.withOpacity(0.25)),
+                      const SizedBox(height: 8),
+                      Text('영상 파일을 찾을 수 없습니다.\n촬영 영상은 기기에만 저장되므로,\n파일 삭제·이동 또는 다른 기기에서\n로그인한 경우 재생할 수 없습니다.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                              color: colorScheme.onSurface.withOpacity(0.4))),
+                    ],
+                  ),
+                ),
+              )
+            else if (record.videoPath != null && _chewieController != null)
               LayoutBuilder(
                 builder: (context, constraints) {
                   final maxHeight =
@@ -169,30 +188,52 @@ class _RecordDetailScreenState extends State<RecordDetailScreen> {
                   );
                 },
               )
-            else if (_videoFileMissing)
-              Container(
-                height: 240,
-                color: const Color(0xFFE8ECF0),
-                child: Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.videocam_off_rounded, size: 48,
-                          color: colorScheme.onSurface.withOpacity(0.25)),
-                      const SizedBox(height: 8),
-                      Text('영상 파일을 찾을 수 없습니다.\n촬영 영상은 기기에만 저장되므로,\n파일 삭제·이동 또는 다른 기기에서\n로그인한 경우 재생할 수 없습니다.',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                              color: colorScheme.onSurface.withOpacity(0.4))),
-                    ],
-                  ),
-                ),
-              )
             else if (record.videoPath != null && !_videoInitDone)
               const SizedBox(
-                height: 200,
-                child: Center(child: CircularProgressIndicator()),
+                width: double.infinity,
+                child: ColoredBox(
+                  color: Colors.black,
+                  child: AspectRatio(
+                    aspectRatio: 9 / 16,
+                    child: Center(
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
               ),
+
+            // 로컬 영상 업로드 버튼
+            if (record.isLocalVideo &&
+                record.id != null &&
+                !_videoFileMissing)
+              Builder(builder: (context) {
+                final uploadStatus =
+                    ref.watch(uploadStatusProvider(record.id!));
+                if (uploadStatus != null) return const SizedBox.shrink();
+                return Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        ref.read(uploadQueueProvider.notifier).enqueue(
+                              recordId: record.id!,
+                              localVideoPath: record.videoPath!,
+                            );
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                              content: Text('업로드 대기열에 추가됨')),
+                        );
+                      },
+                      icon: const Icon(Icons.cloud_upload, size: 18),
+                      label: const Text('서버에 업로드'),
+                    ),
+                  ),
+                );
+              }),
 
             Padding(
               padding: const EdgeInsets.all(20),

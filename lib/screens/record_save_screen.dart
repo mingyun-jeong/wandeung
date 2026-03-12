@@ -60,6 +60,12 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
 
   bool get _isEditMode => widget.existingRecord != null;
 
+  String _formatDateTime(DateTime dt) {
+    final local = dt.toLocal();
+    return '${local.year}.${local.month.toString().padLeft(2, '0')}.${local.day.toString().padLeft(2, '0')} '
+        '${local.hour.toString().padLeft(2, '0')}:${local.minute.toString().padLeft(2, '0')}:${local.second.toString().padLeft(2, '0')}';
+  }
+
   @override
   void initState() {
     super.initState();
@@ -446,6 +452,33 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // 기록일시 (편집 모드에서만, 영상 위)
+                  if (_isEditMode && widget.existingRecord!.createdAt != null) ...[
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        Icon(Icons.access_time_rounded,
+                            size: 14,
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withOpacity(0.4)),
+                        const SizedBox(width: 4),
+                        Text(
+                          '기록일시 ${_formatDateTime(widget.existingRecord!.createdAt!)}',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withOpacity(0.45),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                  ],
+
                   // 영상 플레이어
                   if (_chewieController != null)
                     Stack(
@@ -453,24 +486,21 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
                         LayoutBuilder(
                           builder: (context, constraints) {
                             final maxHeight =
-                                MediaQuery.of(context).size.height * 0.25;
+                                MediaQuery.of(context).size.height * 0.4;
                             final naturalHeight =
                                 constraints.maxWidth / _displayAspectRatio;
                             final playerHeight =
                                 naturalHeight > maxHeight ? maxHeight : naturalHeight;
 
-                            return ClipRRect(
-                              borderRadius: BorderRadius.circular(12),
-                              child: SizedBox(
-                                width: double.infinity,
-                                height: playerHeight,
-                                child: Container(
-                                  color: Colors.black,
-                                  alignment: Alignment.center,
-                                  child: AspectRatio(
-                                    aspectRatio: _displayAspectRatio,
-                                    child: Chewie(controller: _chewieController!),
-                                  ),
+                            return SizedBox(
+                              width: double.infinity,
+                              height: playerHeight,
+                              child: Container(
+                                color: Colors.black,
+                                alignment: Alignment.center,
+                                child: AspectRatio(
+                                  aspectRatio: _displayAspectRatio,
+                                  child: Chewie(controller: _chewieController!),
                                 ),
                               ),
                             );

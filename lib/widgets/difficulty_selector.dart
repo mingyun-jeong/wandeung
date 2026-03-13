@@ -123,7 +123,7 @@ class DifficultySelector extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     level != null
-                        ? 'Lv.${colorScale!.levels.length - level.level + 1}'
+                        ? 'Lv.${level.level}'
                         : dc.korean,
                     style: TextStyle(
                       fontSize: 10,

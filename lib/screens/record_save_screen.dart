@@ -464,135 +464,137 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
         title: _isEditMode ? '기록 편집' : '기록 저장',
         showBackButton: true,
       ),
-      body: Column(
-        children: [
-          // 기록일시 (편집 모드에서만, 영상 위)
-          if (_isEditMode && widget.existingRecord!.createdAt != null)
-            Padding(
-              padding: const EdgeInsets.only(left: 16, right: 16, top: 12),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  Icon(Icons.access_time_rounded,
-                      size: 14,
-                      color: Theme.of(context)
-                          .colorScheme
-                          .onSurface
-                          .withOpacity(0.4)),
-                  const SizedBox(width: 4),
-                  Text(
-                    '기록일시 ${_formatDateTime(widget.existingRecord!.createdAt!)}',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Theme.of(context)
-                          .colorScheme
-                          .onSurface
-                          .withOpacity(0.45),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.only(bottom: 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // 기록일시 (편집 모드에서만, 영상 위)
+            if (_isEditMode && widget.existingRecord!.createdAt != null)
+              Padding(
+                padding: const EdgeInsets.only(left: 16, right: 16, top: 12),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    Icon(Icons.access_time_rounded,
+                        size: 14,
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withOpacity(0.4)),
+                    const SizedBox(width: 4),
+                    Text(
+                      '기록일시 ${_formatDateTime(widget.existingRecord!.createdAt!)}',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withOpacity(0.45),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
 
-          // 영상 플레이어 (스크롤 밖 — 컨트롤 제스처 충돌 방지)
-          if (_hasVideo && !_videoFileMissing)
-            Padding(
-              padding: const EdgeInsets.only(left: 16, right: 16, top: 8),
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  final maxHeight =
-                      MediaQuery.of(context).size.height * 0.275;
-                  final naturalHeight =
-                      constraints.maxWidth / _displayAspectRatio;
-                  final playerHeight =
-                      naturalHeight > maxHeight ? maxHeight : naturalHeight;
+            // 영상 플레이어
+            if (_hasVideo && !_videoFileMissing)
+              Padding(
+                padding: const EdgeInsets.only(left: 16, right: 16, top: 8),
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final maxHeight =
+                        MediaQuery.of(context).size.height * 0.275;
+                    final naturalHeight =
+                        constraints.maxWidth / _displayAspectRatio;
+                    final playerHeight =
+                        naturalHeight > maxHeight ? maxHeight : naturalHeight;
 
-                  return SizedBox(
-                    width: double.infinity,
-                    height: playerHeight,
-                    child: Stack(
-                      children: [
-                        // 플레이어 또는 로딩 placeholder
-                        Positioned.fill(
-                          child: Container(
-                            color: Colors.black,
-                            alignment: Alignment.center,
-                            child: _chewieController != null
-                                ? Chewie(controller: _chewieController!)
-                                : const Center(
-                                    child: CircularProgressIndicator(
-                                        color: Colors.white),
-                                  ),
+                    return SizedBox(
+                      width: double.infinity,
+                      height: playerHeight,
+                      child: Stack(
+                        children: [
+                          // 플레이어 또는 로딩 placeholder
+                          Positioned.fill(
+                            child: Container(
+                              color: Colors.black,
+                              alignment: Alignment.center,
+                              child: _chewieController != null
+                                  ? Chewie(controller: _chewieController!)
+                                  : const Center(
+                                      child: CircularProgressIndicator(
+                                          color: Colors.white),
+                                    ),
+                            ),
                           ),
-                        ),
-                        // 편집 버튼 (편집 모드에서만)
-                        if (_isEditMode &&
-                            _chewieController != null &&
-                            widget.existingRecord!.videoPath != null)
-                          Positioned(
-                            top: 8,
-                            right: 8,
-                            child: Material(
-                              color: Colors.black54,
-                              borderRadius: BorderRadius.circular(20),
-                              child: InkWell(
+                          // 편집 버튼 (편집 모드에서만)
+                          if (_isEditMode &&
+                              _chewieController != null &&
+                              widget.existingRecord!.videoPath != null)
+                            Positioned(
+                              top: 8,
+                              right: 8,
+                              child: Material(
+                                color: Colors.black54,
                                 borderRadius: BorderRadius.circular(20),
-                                onTap: _openVideoEditor,
-                                child: const Padding(
-                                  padding: EdgeInsets.symmetric(
-                                      horizontal: 12, vertical: 6),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(Icons.movie_edit,
-                                          color: Colors.white, size: 16),
-                                      SizedBox(width: 4),
-                                      Text('편집',
-                                          style: TextStyle(
-                                              color: Colors.white,
-                                              fontSize: 12,
-                                              fontWeight: FontWeight.w600)),
-                                    ],
+                                child: InkWell(
+                                  borderRadius: BorderRadius.circular(20),
+                                  onTap: _openVideoEditor,
+                                  child: const Padding(
+                                    padding: EdgeInsets.symmetric(
+                                        horizontal: 12, vertical: 6),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(Icons.movie_edit,
+                                            color: Colors.white, size: 16),
+                                        SizedBox(width: 4),
+                                        Text('편집',
+                                            style: TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.w600)),
+                                      ],
+                                    ),
                                   ),
                                 ),
                               ),
                             ),
-                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              )
+            else if (_videoFileMissing)
+              Padding(
+                padding: const EdgeInsets.only(left: 16, right: 16, top: 8),
+                child: Container(
+                  height: 140,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE8ECF0),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.videocam_off_rounded, size: 36,
+                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.25)),
+                        const SizedBox(height: 6),
+                        Text('영상 파일을 찾을 수 없습니다.\n촬영 영상은 기기에만 저장되므로,\n파일 삭제·이동 또는 다른 기기에서\n로그인한 경우 재생할 수 없습니다.',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                                fontSize: 12,
+                                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4))),
                       ],
                     ),
-                  );
-                },
-              ),
-            )
-          else if (_videoFileMissing)
-            Padding(
-              padding: const EdgeInsets.only(left: 16, right: 16, top: 8),
-              child: Container(
-                height: 140,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFE8ECF0),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.videocam_off_rounded, size: 36,
-                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.25)),
-                      const SizedBox(height: 6),
-                      Text('영상 파일을 찾을 수 없습니다.\n촬영 영상은 기기에만 저장되므로,\n파일 삭제·이동 또는 다른 기기에서\n로그인한 경우 재생할 수 없습니다.',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                              fontSize: 12,
-                              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4))),
-                    ],
                   ),
                 ),
               ),
-            ),
 
-          Expanded(
-            child: SingleChildScrollView(
+            Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -852,9 +854,8 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
                 ],
               ),
             ),
-          ),
-          // 하단 고정 버튼
-          SafeArea(
+            // 하단 고정 버튼
+            SafeArea(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
               child: Row(
@@ -901,12 +902,14 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
                 ],
               ),
             ),
-          ),
-        ],
+            ),
+          ],
+        ),
       ),
     );
   }
 }
+
 
 /// 내보내기 영상 목록 위젯
 class _ExportedVideosList extends ConsumerWidget {

@@ -110,10 +110,7 @@ class _VideoPlaybackScreenState extends State<VideoPlaybackScreen> {
                 ],
               )
             : _chewieController != null
-                ? AspectRatio(
-                    aspectRatio: _displayAspectRatio!,
-                    child: Chewie(controller: _chewieController!),
-                  )
+                ? Chewie(controller: _chewieController!)
                 : const CircularProgressIndicator(color: Colors.white),
       ),
     );

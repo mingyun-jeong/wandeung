@@ -168,7 +168,7 @@ class _RecordDetailScreenState extends ConsumerState<RecordDetailScreen> {
               LayoutBuilder(
                 builder: (context, constraints) {
                   final maxHeight =
-                      MediaQuery.of(context).size.height * 0.5;
+                      MediaQuery.of(context).size.height * 0.7;
                   final naturalHeight =
                       constraints.maxWidth / _displayAspectRatio!;
                   final playerHeight =
@@ -180,10 +180,7 @@ class _RecordDetailScreenState extends ConsumerState<RecordDetailScreen> {
                     child: Container(
                       color: Colors.black,
                       alignment: Alignment.center,
-                      child: AspectRatio(
-                        aspectRatio: _displayAspectRatio!,
-                        child: Chewie(controller: _chewieController!),
-                      ),
+                      child: Chewie(controller: _chewieController!),
                     ),
                   );
                 },

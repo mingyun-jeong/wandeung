@@ -110,24 +110,25 @@ class _RecordsTabScreenState extends ConsumerState<RecordsTabScreen> {
               markerBuilder: (context, day, events) {
                 if (events.isEmpty) return const SizedBox.shrink();
                 final count = events.length;
-                final dots = count.clamp(1, 4);
                 return Positioned(
-                  bottom: 2,
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: List.generate(dots, (i) {
-                      return Container(
-                        width: 5,
-                        height: 5,
-                        margin: const EdgeInsets.symmetric(horizontal: 1),
-                        decoration: BoxDecoration(
-                          color: i == 0
-                              ? WandeungColors.accent
-                              : WandeungColors.accent.withOpacity(0.5),
-                          shape: BoxShape.circle,
-                        ),
-                      );
-                    }),
+                  bottom: 1,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                    decoration: BoxDecoration(
+                      color: WandeungColors.accent,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    constraints: const BoxConstraints(minWidth: 16),
+                    child: Text(
+                      '$count',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        height: 1.2,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
                   ),
                 );
               },

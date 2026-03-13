@@ -4,9 +4,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../config/supabase_config.dart';
 import '../models/climbing_gym.dart';
 import '../models/climbing_record.dart';
+import '../models/gym_color_scale.dart';
 import '../models/user_climbing_stats.dart';
 import '../services/video_upload_service.dart';
 import 'auth_provider.dart';
+import 'gym_color_scale_provider.dart';
 
 // 필터 상태 (카테고리별 단일 선택)
 final selectedColorFilterProvider = StateProvider<String?>((ref) => null);
@@ -14,7 +16,7 @@ final selectedStatusFilterProvider = StateProvider<String?>((ref) => null);
 final selectedTagFilterProvider = StateProvider<String?>((ref) => null);
 final selectedGymFilterProvider = StateProvider<String?>((ref) => null);
 
-const _selectWithGym = '*, climbing_gyms(name)';
+const _selectWithGym = '*, climbing_gyms(name, brand_name)';
 
 /// authProvider를 watch해서 현재 유저 ID를 가져온다.
 /// 로그인하면 자동으로 provider가 re-fetch되고, 로그아웃하면 빈 값 반환.
@@ -218,7 +220,7 @@ final recentGymsProvider = FutureProvider<List<ClimbingGym>>((ref) async {
 
   final response = await SupabaseConfig.client
       .from('climbing_records')
-      .select('climbing_gyms(id, name, address, latitude, longitude, google_place_id), recorded_at')
+      .select('climbing_gyms(id, name, address, latitude, longitude, google_place_id, brand_name), recorded_at')
       .eq('user_id', userId)
       .isFilter('parent_record_id', null)
       .not('gym_id', 'is', null)
@@ -305,7 +307,11 @@ class RecordService {
   static final _supabase = SupabaseConfig.client;
 
   /// Google Place ID로 기존 gym 찾거나 새로 생성
-  static Future<String> _findOrCreateGym(ClimbingGym gym) async {
+  /// [scales] 전달 시 브랜드 자동매칭으로 brand_name 설정
+  static Future<String> _findOrCreateGym(
+    ClimbingGym gym, {
+    List<GymColorScale>? scales,
+  }) async {
     final userId = _supabase.auth.currentUser!.id;
 
     if (gym.googlePlaceId != null) {
@@ -319,13 +325,17 @@ class RecordService {
       if (existing != null) return existing['id'] as String;
     }
 
+    // 브랜드 자동매칭
+    final insertMap = {...gym.toInsertMap(), 'created_by': userId};
+    if (scales != null && insertMap['brand_name'] == null) {
+      final brand = matchBrand(gym.name, scales);
+      if (brand != null) insertMap['brand_name'] = brand;
+    }
+
     // 새 gym 생성
     final inserted = await _supabase
         .from('climbing_gyms')
-        .insert({
-          ...gym.toInsertMap(),
-          'created_by': userId,
-        })
+        .insert(insertMap)
         .select('id')
         .single();
 
@@ -342,12 +352,13 @@ class RecordService {
     String? thumbnailPath,
     List<String> tags = const [],
     int? videoDurationSeconds,
+    List<GymColorScale>? scales,
   }) async {
     final userId = _supabase.auth.currentUser!.id;
 
     String? resolvedGymId;
     if (gym != null) {
-      resolvedGymId = await _findOrCreateGym(gym);
+      resolvedGymId = await _findOrCreateGym(gym, scales: scales);
     }
 
     final record = ClimbingRecord(
@@ -380,10 +391,11 @@ class RecordService {
     required String status,
     ClimbingGym? gym,
     List<String> tags = const [],
+    List<GymColorScale>? scales,
   }) async {
     String? resolvedGymId;
     if (gym != null) {
-      resolvedGymId = await _findOrCreateGym(gym);
+      resolvedGymId = await _findOrCreateGym(gym, scales: scales);
     }
 
     final response = await _supabase

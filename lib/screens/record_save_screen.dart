@@ -18,6 +18,8 @@ import '../models/climbing_record.dart';
 import '../providers/camera_settings_provider.dart';
 import '../providers/record_provider.dart';
 import '../utils/constants.dart';
+import '../models/gym_color_scale.dart';
+import '../providers/gym_color_scale_provider.dart';
 import '../widgets/difficulty_selector.dart';
 import '../widgets/gym_selection_sheet.dart';
 import '../widgets/gym_map_sheet.dart';
@@ -294,6 +296,7 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
               : 'in_progress',
           gym: _editGym,
           tags: _tags,
+          scales: ref.read(allColorScalesProvider).valueOrNull,
         );
       } else {
         final settings = ref.read(cameraSettingsProvider);
@@ -315,6 +318,7 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
           thumbnailPath: thumbnailPath,
           tags: _tags,
           videoDurationSeconds: durationSeconds,
+          scales: ref.read(allColorScalesProvider).valueOrNull,
         );
 
         // 썸네일 즉시 R2 업로드 (작은 파일이므로 네트워크 종류 무관)
@@ -449,6 +453,11 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
     // 편집 모드에서는 로컬 상태, 신규 저장에서는 cameraSettingsProvider 사용
     final displayGym = _isEditMode ? _editGym : settings.selectedGym;
     final displayColor = _isEditMode ? _editColor : settings.color;
+
+    // 암장 이름으로 브랜드 색상표 조회
+    final GymColorScale? colorScale = displayGym != null
+        ? ref.watch(gymColorScaleProvider(displayGym.name))
+        : null;
 
     return Scaffold(
       appBar: WandeungAppBar(
@@ -591,11 +600,24 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
                   // 난이도 선택
                   DifficultySelector(
                     selectedColor: displayColor,
+                    colorScale: colorScale,
                     onColorChanged: (c) {
                       if (_isEditMode) {
                         setState(() => _editColor = c);
                       } else {
                         ref.read(cameraSettingsProvider.notifier).setColor(c);
+                      }
+                      // 브랜드 색상표가 있으면 등급 자동 추천
+                      if (colorScale != null) {
+                        final level = colorScale.levelForColor(c);
+                        if (level != null) {
+                          final suggestedGrade = level.vMin;
+                          if (_isEditMode) {
+                            setState(() => _editGrade = suggestedGrade);
+                          } else {
+                            ref.read(cameraSettingsProvider.notifier).setGrade(suggestedGrade);
+                          }
+                        }
                       }
                     },
                   ),

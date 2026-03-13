@@ -22,9 +22,9 @@ class MainShellScreen extends ConsumerWidget {
         index: currentIndex,
         children: const [
           HomeTabScreen(),
-          GymGradesTabScreen(),
-          CameraTabScreen(),
           RecordsTabScreen(),
+          CameraTabScreen(),
+          GymGradesTabScreen(),
           StatsTabScreen(),
         ],
       ),
@@ -46,9 +46,9 @@ class MainShellScreen extends ConsumerWidget {
               label: '홈',
             ),
             NavigationDestination(
-              icon: Icon(Icons.format_list_numbered_outlined),
-              selectedIcon: Icon(Icons.format_list_numbered_rounded),
-              label: '난이도',
+              icon: Icon(Icons.calendar_month_outlined),
+              selectedIcon: Icon(Icons.calendar_month_rounded),
+              label: '캘린더',
             ),
             NavigationDestination(
               icon: Icon(Icons.videocam_outlined),
@@ -56,9 +56,9 @@ class MainShellScreen extends ConsumerWidget {
               label: '촬영',
             ),
             NavigationDestination(
-              icon: Icon(Icons.calendar_month_outlined),
-              selectedIcon: Icon(Icons.calendar_month_rounded),
-              label: '캘린더',
+              icon: Icon(Icons.format_list_numbered_outlined),
+              selectedIcon: Icon(Icons.format_list_numbered_rounded),
+              label: '난이도',
             ),
             NavigationDestination(
               icon: Icon(Icons.bar_chart_outlined),

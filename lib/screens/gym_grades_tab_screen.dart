@@ -132,59 +132,175 @@ class _GymGradesTabScreenState extends ConsumerState<GymGradesTabScreen> {
   }
 }
 
-class _BrandCard extends StatelessWidget {
+class _BrandCard extends StatefulWidget {
   final GymColorScale scale;
+  final bool initiallyExpanded;
 
-  const _BrandCard({required this.scale});
+  const _BrandCard({required this.scale, this.initiallyExpanded = false});
+
+  @override
+  State<_BrandCard> createState() => _BrandCardState();
+}
+
+class _BrandCardState extends State<_BrandCard>
+    with SingleTickerProviderStateMixin {
+  late bool _expanded = widget.initiallyExpanded;
+  late final AnimationController _controller = AnimationController(
+    duration: const Duration(milliseconds: 250),
+    vsync: this,
+    value: _expanded ? 1.0 : 0.0,
+  );
+  late final Animation<double> _expandAnimation = CurvedAnimation(
+    parent: _controller,
+    curve: Curves.easeInOut,
+  );
+  late final Animation<double> _rotationAnimation = Tween<double>(
+    begin: 0.0,
+    end: 0.5,
+  ).animate(_expandAnimation);
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _toggle() {
+    setState(() {
+      _expanded = !_expanded;
+      if (_expanded) {
+        _controller.forward();
+      } else {
+        _controller.reverse();
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final scale = widget.scale;
+
+    // 색상 미리보기 (접혀있을 때 표시)
+    final previewColors = scale.levels.map((l) => l.color).toList();
 
     return Card(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: const EdgeInsets.only(bottom: 8),
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: const BorderSide(color: Color(0xFFE8ECF0)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // 브랜드 이름
-            Row(
-              children: [
-                Icon(
-                  Icons.location_on_rounded,
-                  size: 20,
-                  color: colorScheme.primary,
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    scale.brandName,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-                Text(
-                  '${scale.levels.length}단계',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: colorScheme.onSurface.withOpacity(0.5),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            // 난이도 레벨 목록
-            ...scale.levels.map((level) => _ColorLevelRow(level: level)),
-          ],
+        side: BorderSide(
+          color: _expanded ? colorScheme.primary.withOpacity(0.3) : const Color(0xFFE8ECF0),
         ),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        children: [
+          // 헤더 (항상 보임, 탭하면 토글)
+          InkWell(
+            onTap: _toggle,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // 첫 번째 줄: 브랜드명 + 단계 + 화살표
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.location_on_rounded,
+                        size: 20,
+                        color: colorScheme.primary,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          scale.brandName,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                      Text(
+                        '${scale.levels.length}단계',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: colorScheme.onSurface.withOpacity(0.5),
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      RotationTransition(
+                        turns: _rotationAnimation,
+                        child: Icon(
+                          Icons.expand_more_rounded,
+                          size: 22,
+                          color: colorScheme.onSurface.withOpacity(0.4),
+                        ),
+                      ),
+                    ],
+                  ),
+                  // 두 번째 줄: 접혀있을 때 색상 미리보기
+                  AnimatedSize(
+                    duration: const Duration(milliseconds: 200),
+                    child: _expanded
+                        ? const SizedBox.shrink()
+                        : Padding(
+                            padding: const EdgeInsets.only(left: 28, top: 8),
+                            child: Wrap(
+                              spacing: 5,
+                              runSpacing: 5,
+                              children: previewColors.map((dc) {
+                                if (dc == DifficultyColor.star) {
+                                  return const Icon(Icons.star_rounded,
+                                      color: Color(0xFFFFD700), size: 18);
+                                }
+                                return Container(
+                                  width: 16,
+                                  height: 16,
+                                  decoration: BoxDecoration(
+                                    color: dc == DifficultyColor.rainbow
+                                        ? null
+                                        : Color(dc.colorValue),
+                                    gradient: dc == DifficultyColor.rainbow
+                                        ? const LinearGradient(colors: [
+                                            Colors.red, Colors.orange,
+                                            Colors.yellow, Colors.green,
+                                            Colors.blue, Colors.purple,
+                                          ])
+                                        : null,
+                                    shape: BoxShape.circle,
+                                    border: dc.needsDarkIcon
+                                        ? Border.all(
+                                            color: const Color(0xFFE0E0E0),
+                                            width: 0.5)
+                                        : null,
+                                  ),
+                                );
+                              }).toList(),
+                            ),
+                          ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          // 난이도 레벨 목록 (펼쳐질 때만)
+          SizeTransition(
+            sizeFactor: _expandAnimation,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+              child: Column(
+                children: [
+                  const Divider(height: 1),
+                  const SizedBox(height: 10),
+                  ...scale.levels
+                      .map((level) => _ColorLevelRow(level: level)),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

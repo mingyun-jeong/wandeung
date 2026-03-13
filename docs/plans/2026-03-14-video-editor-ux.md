@@ -8,6 +8,28 @@
 
 **Tech Stack:** Flutter, Riverpod, video_editor_2, ffmpeg_kit_flutter_new
 
+## Progress
+
+- [x] Task 1: OverlayItem 모델에 startTime, endTime, rotation 필드 추가
+- [x] Task 2: SpeedSegmentsNotifier에 splitAt, mergeAdjacent, moveBoundary 추가
+- [x] Task 3: selectedEditorTabProvider 추가
+- [x] Task 4: FFmpeg 오버레이 필터에 시간 기반 enable 추가
+- [x] Task 5: SubtitleImageRenderer에서 스티커 회전 렌더링 지원
+- [x] Task 6: EditorTabBar 하단 탭 바 위젯 생성
+- [x] Task 7: SpeedSegmentTimeline 인터랙티브 위젯
+- [x] Task 8: TextMultiTrackTimeline 멀티트랙 타임라인 위젯
+- [x] Task 9: StickerTimelineTrack 멀티트랙 타임라인 위젯
+- [x] Task 10: OverlayStickerSheet에 이모지 탭 추가
+- [x] Task 11: OverlayLayer에 핀치 줌/회전 + 시간 기반 표시 추가
+- [x] Task 12: VideoEditorScreen을 탭 바 레이아웃으로 변경
+- [ ] Task 13: 통합 테스트 및 정리 (미사용 파일 삭제: speed_picker_sheet.dart, speed_segment_bar.dart, subtitle_timeline_track.dart)
+
+### 추가 수정 사항 (플랜 외)
+- 영상 자동 반복재생 비활성화 (`setLooping(false)`)
+- 속도 탭 빈 segments RangeError 방어 처리
+- 탭 콘텐츠 영역 고정 높이(120) — 영상 프리뷰 크기 안정화
+- TimelineRuler 공용 위젯 추가 (텍스트/스티커 탭에 시간 눈금 표시)
+
 ---
 
 ## Task 1: OverlayItem 모델에 startTime, endTime, rotation 필드 추가

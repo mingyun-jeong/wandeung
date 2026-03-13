@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../config/supabase_config.dart';
 import '../models/climbing_record.dart';
+import 'auth_provider.dart';
 
 enum StatsPeriod {
   week('7일', 7),
@@ -187,7 +188,8 @@ class PeriodStatsData {
 
 final periodStatsProvider = FutureProvider<PeriodStatsData>((ref) async {
   final period = ref.watch(statsPeriodProvider);
-  final userId = SupabaseConfig.client.auth.currentUser!.id;
+  final userId = ref.watch(authProvider).valueOrNull?.id;
+  if (userId == null) return PeriodStatsData(current: [], previous: []);
 
   final response = await SupabaseConfig.client
       .from('climbing_records')

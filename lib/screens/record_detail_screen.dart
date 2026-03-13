@@ -8,6 +8,7 @@ import '../config/r2_config.dart';
 import '../models/climbing_record.dart';
 import '../providers/upload_queue_provider.dart';
 import '../utils/constants.dart';
+import '../utils/video_download_cache.dart';
 import '../widgets/wandeung_app_bar.dart';
 import 'video_editor_screen.dart';
 
@@ -124,12 +125,32 @@ class _RecordDetailScreenState extends ConsumerState<RecordDetailScreen> {
         extraActions: [
           if (record.videoPath != null)
             IconButton(
-              onPressed: () {
+              onPressed: () async {
+                final videoPath = record.videoPath!;
+                String localPath;
+
+                if (record.isLocalVideo) {
+                  if (!File(videoPath).existsSync()) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('영상 파일을 찾을 수 없습니다')),
+                      );
+                    }
+                    return;
+                  }
+                  localPath = videoPath;
+                } else {
+                  final downloaded = await downloadRemoteVideoWithDialog(context, videoPath);
+                  if (downloaded == null) return;
+                  localPath = downloaded;
+                }
+
+                if (!context.mounted) return;
                 Navigator.push(
                   context,
                   MaterialPageRoute(
                     builder: (_) => VideoEditorScreen(
-                      videoPath: record.videoPath!,
+                      videoPath: localPath,
                       existingRecord: record,
                     ),
                   ),

@@ -24,6 +24,7 @@ import '../widgets/gym_map_sheet.dart';
 import '../widgets/tag_input.dart';
 import '../widgets/wandeung_app_bar.dart';
 import '../utils/cache_cleanup.dart';
+import '../utils/video_download_cache.dart';
 import '../utils/thumbnail_utils.dart';
 import 'records_tab_screen.dart';
 import 'video_editor_screen.dart';
@@ -173,30 +174,38 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
     super.dispose();
   }
 
-  void _openVideoEditor() {
+  Future<void> _openVideoEditor() async {
     final videoPath = widget.existingRecord!.videoPath;
     if (videoPath == null) return;
 
-    if (!videoPath.startsWith('/') || !File(videoPath).existsSync()) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('로컬 영상 파일이 없어 편집할 수 없습니다')),
-      );
-      return;
+    String localPath;
+    if (videoPath.startsWith('/')) {
+      if (!File(videoPath).existsSync()) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('로컬 영상 파일이 없어 편집할 수 없습니다')),
+        );
+        return;
+      }
+      localPath = videoPath;
+    } else {
+      final downloaded = await downloadRemoteVideoWithDialog(context, videoPath);
+      if (downloaded == null) return;
+      localPath = downloaded;
     }
 
-    Navigator.push<bool>(
+    if (!mounted) return;
+    final exported = await Navigator.push<bool>(
       context,
       MaterialPageRoute(
         builder: (_) => VideoEditorScreen(
-          videoPath: videoPath,
+          videoPath: localPath,
           existingRecord: widget.existingRecord,
         ),
       ),
-    ).then((exported) {
-      if (exported == true && mounted) {
-        ref.invalidate(exportedRecordsProvider(widget.existingRecord!.id!));
-      }
-    });
+    );
+    if (exported == true && mounted) {
+      ref.invalidate(exportedRecordsProvider(widget.existingRecord!.id!));
+    }
   }
 
   Future<void> _deleteVideo() async {

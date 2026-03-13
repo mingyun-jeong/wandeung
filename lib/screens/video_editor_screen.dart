@@ -300,6 +300,21 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
             Expanded(
               child: LayoutBuilder(
                 builder: (context, constraints) {
+                  // AspectRatio 위젯이 실제로 차지하는 크기 계산
+                  final double videoWidth;
+                  final double videoHeight;
+                  if (constraints.maxWidth / constraints.maxHeight >
+                      _displayAspectRatio) {
+                    // 세로가 꽉 차고 좌우 여백
+                    videoHeight = constraints.maxHeight;
+                    videoWidth = videoHeight * _displayAspectRatio;
+                  } else {
+                    // 가로가 꽉 차고 상하 여백
+                    videoWidth = constraints.maxWidth;
+                    videoHeight = videoWidth / _displayAspectRatio;
+                  }
+                  final videoSize = Size(videoWidth, videoHeight);
+
                   return Stack(
                     alignment: Alignment.center,
                     children: [
@@ -344,36 +359,38 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
                         ),
 
                       // 드래그 가능한 오버레이 레이어
-                      Positioned.fill(
-                        child: OverlayLayer(
-                          previewSize: Size(
-                            constraints.maxWidth,
-                            constraints.maxHeight,
+                      Center(
+                        child: SizedBox(
+                          width: videoWidth,
+                          height: videoHeight,
+                          child: OverlayLayer(
+                            previewSize: videoSize,
                           ),
                         ),
                       ),
 
                       // Text 오버레이 레이어
-                      Positioned.fill(
-                        child: SubtitleOverlayLayer(
-                          previewSize: Size(
-                            constraints.maxWidth,
-                            constraints.maxHeight,
-                          ),
-                          currentPosition: _currentPosition,
-                          onSubtitleTap: () {
-                            final selectedId =
-                                ref.read(selectedSubtitleIdProvider);
-                            if (selectedId != null) {
-                              final sub = ref
-                                  .read(subtitlesProvider)
-                                  .where((s) => s.id == selectedId)
-                                  .firstOrNull;
-                              if (sub != null) {
-                                _showSubtitleEditor(existingItem: sub);
+                      Center(
+                        child: SizedBox(
+                          width: videoWidth,
+                          height: videoHeight,
+                          child: SubtitleOverlayLayer(
+                            previewSize: videoSize,
+                            currentPosition: _currentPosition,
+                            onSubtitleTap: () {
+                              final selectedId =
+                                  ref.read(selectedSubtitleIdProvider);
+                              if (selectedId != null) {
+                                final sub = ref
+                                    .read(subtitlesProvider)
+                                    .where((s) => s.id == selectedId)
+                                    .firstOrNull;
+                                if (sub != null) {
+                                  _showSubtitleEditor(existingItem: sub);
+                                }
                               }
-                            }
-                          },
+                            },
+                          ),
                         ),
                       ),
                     ],

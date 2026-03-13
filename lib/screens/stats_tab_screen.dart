@@ -16,7 +16,15 @@ class StatsTabScreen extends ConsumerWidget {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      appBar: const WandeungAppBar(),
+      appBar: WandeungAppBar(
+        extraActions: [
+          IconButton(
+            icon: const Icon(Icons.refresh_rounded),
+            tooltip: '새로고침',
+            onPressed: () => ref.invalidate(periodStatsProvider),
+          ),
+        ],
+      ),
       body: RefreshIndicator(
         onRefresh: () async => ref.invalidate(periodStatsProvider),
         child: CustomScrollView(

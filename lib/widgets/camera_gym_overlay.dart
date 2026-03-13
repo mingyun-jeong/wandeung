@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/camera_settings_provider.dart';
+import '../providers/gym_color_scale_provider.dart';
 import 'gym_map_sheet.dart';
 import 'gym_selection_sheet.dart';
 
@@ -77,6 +78,13 @@ class CameraGymOverlay extends ConsumerWidget {
       currentGym: settings.selectedGym,
       onGymSelected: (gym) {
         ref.read(cameraSettingsProvider.notifier).setGym(gym);
+        // 브랜드 색상표가 있으면 Lv.1(최고 난이도) 색상으로 기본값 설정
+        final colorScale = ref.read(gymColorScaleProvider(gym.name));
+        if (colorScale != null && colorScale.levels.isNotEmpty) {
+          final lv1 = colorScale.levels.first;
+          ref.read(cameraSettingsProvider.notifier).setColor(lv1.color);
+          ref.read(cameraSettingsProvider.notifier).setGrade(lv1.vMin);
+        }
       },
     );
   }

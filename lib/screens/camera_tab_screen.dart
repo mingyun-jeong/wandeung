@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../providers/camera_settings_provider.dart';
+import '../providers/gym_color_scale_provider.dart';
 import '../utils/cache_cleanup.dart';
 import '../providers/gym_provider.dart';
 import '../widgets/camera_grade_overlay.dart';
@@ -226,6 +227,13 @@ class _CameraTabScreenState extends ConsumerState<CameraTabScreen>
           final settings = ref.read(cameraSettingsProvider);
           if (settings.selectedGym == null) {
             ref.read(cameraSettingsProvider.notifier).setGym(gyms.first);
+            // 브랜드 색상표가 있으면 Lv.1(최고 난이도) 색상으로 기본값 설정
+            final colorScale = ref.read(gymColorScaleProvider(gyms.first.name));
+            if (colorScale != null && colorScale.levels.isNotEmpty) {
+              final lv1 = colorScale.levels.first;
+              ref.read(cameraSettingsProvider.notifier).setColor(lv1.color);
+              ref.read(cameraSettingsProvider.notifier).setGrade(lv1.vMin);
+            }
           }
         }
       });

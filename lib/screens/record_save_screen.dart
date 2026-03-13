@@ -51,7 +51,7 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
   VideoPlayerController? _videoController;
   ChewieController? _chewieController;
   double _displayAspectRatio = 9 / 16;
-  ClimbingStatus _status = ClimbingStatus.completed;
+  ClimbingStatus _status = ClimbingStatus.inProgress;
   List<String> _tags = [];
   bool _isSaving = false;
   bool _videoFileMissing = false;

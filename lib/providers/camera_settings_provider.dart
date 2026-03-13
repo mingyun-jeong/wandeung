@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/climbing_gym.dart';
 import '../utils/constants.dart';
+import 'user_grade_provider.dart';
 
 class CameraSettings {
   final ClimbingGrade? grade;
@@ -28,9 +29,10 @@ class CameraSettings {
 }
 
 class CameraSettingsNotifier extends StateNotifier<CameraSettings> {
-  CameraSettingsNotifier()
-      : super(const CameraSettings(
-            grade: ClimbingGrade.v1, color: DifficultyColor.yellow));
+  CameraSettingsNotifier(ClimbingGrade? userGrade)
+      : super(CameraSettings(
+            grade: userGrade ?? ClimbingGrade.v1,
+            color: userGrade?.defaultColor ?? DifficultyColor.yellow));
 
   void setGrade(ClimbingGrade grade) => state = state.copyWith(grade: grade);
   void setColor(DifficultyColor color) => state = state.copyWith(color: color);
@@ -46,7 +48,10 @@ class CameraSettingsNotifier extends StateNotifier<CameraSettings> {
 
 final cameraSettingsProvider =
     StateNotifierProvider<CameraSettingsNotifier, CameraSettings>(
-  (ref) => CameraSettingsNotifier(),
+  (ref) {
+    final userGrade = ref.read(userGradeProvider);
+    return CameraSettingsNotifier(userGrade);
+  },
 );
 
 /// 하단 네비게이션 탭 인덱스 (0=촬영, 1=캘린더)

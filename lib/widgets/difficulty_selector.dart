@@ -122,9 +122,8 @@ class DifficultySelector extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    // 브랜드 색상표가 있으면 "Lv.N" + V범위 표시
                     level != null
-                        ? 'Lv.${level.level}'
+                        ? 'Lv.${colorScale!.levels.length - level.level + 1}'
                         : dc.korean,
                     style: TextStyle(
                       fontSize: 10,

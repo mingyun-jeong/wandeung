@@ -9,9 +9,7 @@ enum ClimbingGrade {
 
   /// 정렬용 숫자 인덱스 (vBbbbb=−4, vBbb=−3, vBb=−2, vB=−1, v0=0, v1=1, …)
   int get sortIndex => index - 4;
-}
 
-extension ClimbingGradeExt on ClimbingGrade {
   String get label => switch (this) {
         ClimbingGrade.vBbbbb => 'Vbbbbb',
         ClimbingGrade.vBbb => 'Vbbb',
@@ -28,6 +26,26 @@ extension ClimbingGradeExt on ClimbingGrade {
         ClimbingGrade.vB => '초보',
         ClimbingGrade.v0 => '초보',
         _ => label,
+      };
+
+  /// 기본 난이도 색상 매핑
+  DifficultyColor get defaultColor => switch (this) {
+        ClimbingGrade.vBbbbb => DifficultyColor.white,
+        ClimbingGrade.vBbb => DifficultyColor.yellow,
+        ClimbingGrade.vBb => DifficultyColor.orange,
+        ClimbingGrade.vB => DifficultyColor.green,
+        ClimbingGrade.v0 => DifficultyColor.green,
+        ClimbingGrade.v1 => DifficultyColor.blue,
+        ClimbingGrade.v2 => DifficultyColor.blue,
+        ClimbingGrade.v3 => DifficultyColor.red,
+        ClimbingGrade.v4 => DifficultyColor.red,
+        ClimbingGrade.v5 => DifficultyColor.purple,
+        ClimbingGrade.v6 => DifficultyColor.purple,
+        ClimbingGrade.v7 => DifficultyColor.gray,
+        ClimbingGrade.v8 => DifficultyColor.brown,
+        ClimbingGrade.v9 => DifficultyColor.brown,
+        ClimbingGrade.v10 => DifficultyColor.black,
+        _ => DifficultyColor.black,
       };
 }
 

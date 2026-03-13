@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/camera_settings_provider.dart';
+import '../providers/user_grade_provider.dart';
 import 'camera_tab_screen.dart';
 import 'home_tab_screen.dart';
 import 'records_tab_screen.dart';
@@ -11,6 +12,8 @@ class MainShellScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // SharedPreferences에서 사용자 등급 미리 로드
+    ref.watch(userGradeProvider);
     final currentIndex = ref.watch(bottomNavIndexProvider);
 
     return Scaffold(

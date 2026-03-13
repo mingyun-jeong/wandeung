@@ -62,17 +62,16 @@ class CameraGradeOverlay extends ConsumerWidget {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (_) => _ColorSheet(ref: ref),
+      builder: (_) => const _ColorSheet(),
     );
   }
 }
 
-class _ColorSheet extends StatelessWidget {
-  final WidgetRef ref;
-  const _ColorSheet({required this.ref});
+class _ColorSheet extends ConsumerWidget {
+  const _ColorSheet();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(cameraSettingsProvider);
 
     // 브랜드 색상표 조회

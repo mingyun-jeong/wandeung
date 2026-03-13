@@ -15,8 +15,7 @@
 INSERT INTO gym_color_scales (brand_name, levels) VALUES
 
 -- 더클라임: 갈색,회색,보라,빨강,파랑,초록,노랑,주황,흰색
-('-- 더클라임: 갈색,회색,보라,빨강,파랑,초록,노랑,주황,흰색
-', '[
+('더클라임', '[
   {"level":1,"color":"brown","v_min":"v10","v_max":"v10"},
   {"level":2,"color":"gray","v_min":"v7","v_max":"v9"},
   {"level":3,"color":"purple","v_min":"v6","v_max":"v7"},

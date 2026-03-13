@@ -248,6 +248,7 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
   }
 
   void _showOverlayStickers() {
+    _controller.video.pause();
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -259,6 +260,7 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
   }
 
   void _showSubtitleEditor({SubtitleItem? existingItem}) {
+    _controller.video.pause();
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,

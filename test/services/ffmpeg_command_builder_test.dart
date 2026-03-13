@@ -63,11 +63,13 @@ void main() {
       expect(command, isNot(contains('filter_complex')));
     });
 
-    test('overlay stickers still use drawtext', () {
+    test('overlay stickers use PNG overlay filter', () {
       const overlay = OverlayItem(
         id: 'o1',
         text: 'V3',
         position: Offset(0.1, 0.1),
+        startTime: Duration.zero,
+        endTime: Duration(seconds: 3),
       );
 
       final args = FFmpegCommandBuilder.buildExportArgs(
@@ -76,14 +78,16 @@ void main() {
         trimStart: Duration.zero,
         trimEnd: const Duration(seconds: 10),
         overlays: [overlay],
+        overlayImagePaths: ['/tmp/ovl_0.png'],
         videoResolution: const Size(1920, 1080),
-        fontPath: '/fonts/NanumGothic-Bold.ttf',
       );
       final command = _joinArgs(args);
 
-      expect(command, contains('drawtext='));
-      expect(command, contains('fontfile=/fonts/NanumGothic-Bold.ttf'));
+      expect(command, contains('-loop 1 -i /tmp/ovl_0.png'));
+      expect(command, contains('overlay='));
+      expect(command, contains("enable='between(t,0.000,3.000)'"));
       expect(command, contains('[vout]'));
+      expect(command, isNot(contains('drawtext=')));
     });
 
     test('overlays and subtitle images chain correctly', () {
@@ -91,6 +95,8 @@ void main() {
         id: 'o1',
         text: 'V3',
         position: Offset(0.1, 0.1),
+        startTime: Duration.zero,
+        endTime: Duration(seconds: 3),
       );
       const subtitle = SubtitleItem(
         id: 's1',
@@ -105,15 +111,15 @@ void main() {
         trimStart: Duration.zero,
         trimEnd: const Duration(seconds: 10),
         overlays: [overlay],
+        overlayImagePaths: ['/tmp/ovl_0.png'],
         subtitles: [subtitle],
         subtitleImagePaths: ['/tmp/sub_0.png'],
         videoResolution: const Size(1920, 1080),
       );
       final command = _joinArgs(args);
 
-      // drawtext (오버레이) + overlay (자막) 모두 존재
-      expect(command, contains('drawtext='));
-      expect(command, contains('overlay='));
+      // overlay 필터가 2개 (오버레이 스티커 + 자막)
+      expect('overlay='.allMatches(command).length, 2);
       expect(command, contains('[vout]'));
     });
 
@@ -185,6 +191,28 @@ void main() {
       final filterValue = args[fcIndex + 1];
       expect(filterValue, contains("enable='between(t,"));
       expect(filterValue, contains('[vout]'));
+    });
+
+    test('subtitle PNG inputs use -loop 1', () {
+      const subtitle = SubtitleItem(
+        id: '1',
+        text: '테스트',
+        startTime: Duration(seconds: 1),
+        endTime: Duration(seconds: 3),
+      );
+
+      final args = FFmpegCommandBuilder.buildExportArgs(
+        inputPath: '/input.mp4',
+        outputPath: '/output.mp4',
+        trimStart: Duration.zero,
+        trimEnd: const Duration(seconds: 10),
+        subtitles: [subtitle],
+        subtitleImagePaths: ['/tmp/sub_0.png'],
+        videoResolution: const Size(1920, 1080),
+      );
+      final command = _joinArgs(args);
+
+      expect(command, contains('-loop 1 -i /tmp/sub_0.png'));
     });
 
     test('multiple subtitles create chained overlays', () {

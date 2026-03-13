@@ -36,8 +36,9 @@ class FFmpegCommandBuilder {
     }
 
     // 자막 PNG 이미지를 추가 입력으로 등록
+    // -loop 1: 단일 프레임 PNG를 무한 반복하여 enable 시간 조건이 정상 동작하도록 함
     for (final imgPath in subtitleImagePaths) {
-      args.addAll(['-i', imgPath]);
+      args.addAll(['-loop', '1', '-i', imgPath]);
     }
 
     args.addAll([

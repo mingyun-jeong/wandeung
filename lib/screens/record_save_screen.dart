@@ -483,7 +483,7 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
               child: LayoutBuilder(
                 builder: (context, constraints) {
                   final maxHeight =
-                      MediaQuery.of(context).size.height * 0.55;
+                      MediaQuery.of(context).size.height * 0.275;
                   final naturalHeight =
                       constraints.maxWidth / _displayAspectRatio;
                   final playerHeight =

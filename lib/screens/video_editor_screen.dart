@@ -12,8 +12,10 @@ import '../models/climbing_record.dart';
 import '../models/subtitle_item.dart';
 import '../providers/record_provider.dart';
 import '../providers/subtitle_provider.dart';
+import '../providers/upload_queue_provider.dart';
 import '../providers/video_editor_provider.dart';
 import '../services/video_export_service.dart';
+import '../services/video_upload_service.dart';
 import '../utils/thumbnail_utils.dart';
 import '../widgets/editor/export_progress_dialog.dart';
 import '../widgets/editor/overlay_layer.dart';
@@ -164,13 +166,33 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
             await Gal.putVideo(result.outputPath, album: '완등');
           } catch (_) {}
           final thumbnailPath = await generateThumbnail(result.outputPath);
-          await RecordService.saveExport(
+          final savedExport = await RecordService.saveExport(
             parentRecordId: widget.existingRecord!.id!,
             parentRecord: widget.existingRecord!,
             videoPath: result.outputPath,
             thumbnailPath: thumbnailPath,
             videoDurationSeconds: result.duration.inSeconds,
           );
+
+          // 썸네일 즉시 R2 업로드
+          if (thumbnailPath != null) {
+            try {
+              await VideoUploadService.uploadThumbnailAndUpdateRecord(
+                recordId: savedExport.id!,
+                localThumbnailPath: thumbnailPath,
+                userId: savedExport.userId,
+              );
+            } catch (e) {
+              debugPrint('내보내기 썸네일 업로드 실패: $e');
+            }
+          }
+
+          // 영상은 업로드 큐에 등록 (Wi-Fi 설정에 따라 처리)
+          ref.read(uploadQueueProvider.notifier).enqueue(
+            recordId: savedExport.id!,
+            localVideoPath: result.outputPath,
+          );
+
           if (mounted) {
             ref.invalidate(
                 exportedRecordsProvider(widget.existingRecord!.id!));

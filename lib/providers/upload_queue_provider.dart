@@ -119,8 +119,7 @@ class UploadQueueNotifier extends StateNotifier<List<UploadTask>> {
           .from('climbing_records')
           .select('id, video_path')
           .eq('user_id', userId)
-          .like('video_path', '/%')
-          .isFilter('parent_record_id', null);
+          .like('video_path', '/%');
 
       int enqueued = 0;
       for (final row in response as List) {

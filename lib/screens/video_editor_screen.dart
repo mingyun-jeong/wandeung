@@ -19,9 +19,7 @@ import '../widgets/editor/export_progress_dialog.dart';
 import '../widgets/editor/overlay_layer.dart';
 import '../widgets/editor/overlay_sticker_sheet.dart';
 import '../widgets/editor/editor_tab_bar.dart';
-import '../widgets/editor/speed_segment_timeline.dart';
-import '../widgets/editor/text_multi_track_timeline.dart';
-import '../widgets/editor/sticker_timeline_track.dart';
+import '../widgets/editor/shared_editor_timeline.dart';
 import '../widgets/editor/subtitle_editor_sheet.dart';
 import '../widgets/editor/subtitle_overlay_layer.dart';
 import 'record_save_screen.dart';
@@ -446,9 +444,9 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
               ),
             ),
 
-            // ─── 탭별 콘텐츠 (고정 높이) ─────────────
+            // ─── 탭별 콘텐츠 ─────────────────────────
             SizedBox(
-              height: 120,
+              height: 170,
               child: _buildTabContent(ref),
             ),
 
@@ -462,47 +460,38 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
   }
   Widget _buildTabContent(WidgetRef ref) {
     final tab = ref.watch(selectedEditorTabProvider);
-    switch (tab) {
-      case EditorTab.trim:
-        return Container(
-          margin: const EdgeInsets.symmetric(horizontal: 8),
-          child: Column(
-            children: [
-              TrimSlider(
+
+    // 트림 탭: 기존 TrimSlider 사용
+    if (tab == EditorTab.trim) {
+      return Container(
+        margin: const EdgeInsets.symmetric(horizontal: 8),
+        child: Column(
+          children: [
+            TrimSlider(
+              controller: _controller,
+              height: 60,
+              child: TrimTimeline(
                 controller: _controller,
-                height: 60,
-                child: TrimTimeline(
-                  controller: _controller,
-                  padding: const EdgeInsets.only(top: 10),
-                ),
+                padding: const EdgeInsets.only(top: 10),
               ),
-            ],
-          ),
-        );
-
-      case EditorTab.speed:
-        return SpeedSegmentTimeline(
-          totalDuration: _controller.videoDuration,
-          currentPosition: _currentPosition,
-          onSplit: () {
-            ref.read(speedSegmentsProvider.notifier).splitAt(_currentPosition);
-          },
-        );
-
-      case EditorTab.text:
-        return TextMultiTrackTimeline(
-          totalDuration: _controller.videoDuration,
-          currentPosition: _currentPosition,
-          onAddText: () => _showSubtitleEditor(),
-          onEditText: (sub) => _showSubtitleEditor(existingItem: sub),
-        );
-
-      case EditorTab.sticker:
-        return StickerTimelineTrack(
-          totalDuration: _controller.videoDuration,
-          currentPosition: _currentPosition,
-          onAddSticker: _showOverlayStickers,
-        );
+            ),
+          ],
+        ),
+      );
     }
+
+    // 속도/텍스트/스티커: 트림된 영역 기준 통합 타임라인
+    return SharedEditorTimeline(
+      effectiveStart: _controller.startTrim,
+      effectiveDuration: _controller.endTrim - _controller.startTrim,
+      currentPosition: _currentPosition,
+      activeTab: tab,
+      onSplit: () {
+        ref.read(speedSegmentsProvider.notifier).splitAt(_currentPosition);
+      },
+      onAddText: () => _showSubtitleEditor(),
+      onEditText: (sub) => _showSubtitleEditor(existingItem: sub),
+      onAddSticker: _showOverlayStickers,
+    );
   }
 }

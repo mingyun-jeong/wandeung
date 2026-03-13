@@ -52,7 +52,8 @@ class _OverlayStickerSheetState extends ConsumerState<OverlayStickerSheet> {
     return DefaultTabController(
       length: 2,
       child: Container(
-        padding: const EdgeInsets.all(20),
+        padding: EdgeInsets.fromLTRB(
+            20, 20, 20, 20 + MediaQuery.of(context).viewPadding.bottom),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [

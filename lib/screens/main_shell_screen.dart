@@ -5,6 +5,7 @@ import '../providers/user_grade_provider.dart';
 import 'camera_tab_screen.dart';
 import 'home_tab_screen.dart';
 import 'records_tab_screen.dart';
+import 'gym_grades_tab_screen.dart';
 import 'stats_tab_screen.dart';
 
 class MainShellScreen extends ConsumerWidget {
@@ -21,6 +22,7 @@ class MainShellScreen extends ConsumerWidget {
         index: currentIndex,
         children: const [
           HomeTabScreen(),
+          GymGradesTabScreen(),
           CameraTabScreen(),
           RecordsTabScreen(),
           StatsTabScreen(),
@@ -42,6 +44,11 @@ class MainShellScreen extends ConsumerWidget {
               icon: Icon(Icons.home_outlined),
               selectedIcon: Icon(Icons.home_rounded),
               label: '홈',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.format_list_numbered_outlined),
+              selectedIcon: Icon(Icons.format_list_numbered_rounded),
+              label: '난이도',
             ),
             NavigationDestination(
               icon: Icon(Icons.videocam_outlined),

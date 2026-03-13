@@ -74,7 +74,7 @@ class HomeTabScreen extends ConsumerWidget {
                                     ref
                                         .read(
                                             bottomNavIndexProvider.notifier)
-                                        .state = 2;
+                                        .state = 3;
                                   },
                                   style: TextButton.styleFrom(
                                     padding: const EdgeInsets.symmetric(

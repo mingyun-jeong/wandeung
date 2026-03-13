@@ -217,7 +217,7 @@ class _CameraTabScreenState extends ConsumerState<CameraTabScreen>
   @override
   Widget build(BuildContext context) {
     final currentTab = ref.watch(bottomNavIndexProvider);
-    if (currentTab == 1) {
+    if (currentTab == 2) {
       _ensureCameraInitialized();
     }
 
@@ -334,7 +334,7 @@ class _CameraTabScreenState extends ConsumerState<CameraTabScreen>
                   // X 버튼 → 기록 탭으로 전환
                   GestureDetector(
                     onTap: () {
-                      ref.read(bottomNavIndexProvider.notifier).state = 2;
+                      ref.read(bottomNavIndexProvider.notifier).state = 3;
                     },
                     child: Container(
                       width: 40,

@@ -47,7 +47,7 @@ class RecordSaveScreen extends ConsumerStatefulWidget {
 class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
   VideoPlayerController? _videoController;
   ChewieController? _chewieController;
-  double _displayAspectRatio = 16 / 9;
+  double _displayAspectRatio = 9 / 16;
   ClimbingStatus _status = ClimbingStatus.completed;
   List<String> _tags = [];
   bool _isSaving = false;
@@ -59,7 +59,9 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
   ClimbingGrade? _editGrade;
 
   bool get _isEditMode => widget.existingRecord != null;
-
+  bool get _hasVideo =>
+      widget.videoPath != null ||
+      (_isEditMode && widget.existingRecord!.videoPath != null);
   String _formatDateTime(DateTime dt) {
     final local = dt.toLocal();
     return '${local.year}.${local.month.toString().padLeft(2, '0')}.${local.day.toString().padLeft(2, '0')} '
@@ -446,65 +448,69 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
       ),
       body: Column(
         children: [
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+          // 기록일시 (편집 모드에서만, 영상 위)
+          if (_isEditMode && widget.existingRecord!.createdAt != null)
+            Padding(
+              padding: const EdgeInsets.only(left: 16, right: 16, top: 12),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  // 기록일시 (편집 모드에서만, 영상 위)
-                  if (_isEditMode && widget.existingRecord!.createdAt != null) ...[
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
+                  Icon(Icons.access_time_rounded,
+                      size: 14,
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withOpacity(0.4)),
+                  const SizedBox(width: 4),
+                  Text(
+                    '기록일시 ${_formatDateTime(widget.existingRecord!.createdAt!)}',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withOpacity(0.45),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+          // 영상 플레이어 (스크롤 밖 — 컨트롤 제스처 충돌 방지)
+          if (_hasVideo && !_videoFileMissing)
+            Padding(
+              padding: const EdgeInsets.only(left: 16, right: 16, top: 8),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final maxHeight =
+                      MediaQuery.of(context).size.height * 0.55;
+                  final naturalHeight =
+                      constraints.maxWidth / _displayAspectRatio;
+                  final playerHeight =
+                      naturalHeight > maxHeight ? maxHeight : naturalHeight;
+
+                  return SizedBox(
+                    width: double.infinity,
+                    height: playerHeight,
+                    child: Stack(
                       children: [
-                        Icon(Icons.access_time_rounded,
-                            size: 14,
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onSurface
-                                .withOpacity(0.4)),
-                        const SizedBox(width: 4),
-                        Text(
-                          '기록일시 ${_formatDateTime(widget.existingRecord!.createdAt!)}',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onSurface
-                                .withOpacity(0.45),
+                        // 플레이어 또는 로딩 placeholder
+                        Positioned.fill(
+                          child: Container(
+                            color: Colors.black,
+                            alignment: Alignment.center,
+                            child: _chewieController != null
+                                ? Chewie(controller: _chewieController!)
+                                : const Center(
+                                    child: CircularProgressIndicator(
+                                        color: Colors.white),
+                                  ),
                           ),
                         ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                  ],
-
-                  // 영상 플레이어
-                  if (_chewieController != null)
-                    Stack(
-                      children: [
-                        LayoutBuilder(
-                          builder: (context, constraints) {
-                            final maxHeight =
-                                MediaQuery.of(context).size.height * 0.55;
-                            final naturalHeight =
-                                constraints.maxWidth / _displayAspectRatio;
-                            final playerHeight =
-                                naturalHeight > maxHeight ? maxHeight : naturalHeight;
-
-                            return SizedBox(
-                              width: double.infinity,
-                              height: playerHeight,
-                              child: Container(
-                                color: Colors.black,
-                                alignment: Alignment.center,
-                                child: Chewie(controller: _chewieController!),
-                              ),
-                            );
-                          },
-                        ),
                         // 편집 버튼 (편집 모드에서만)
-                        if (_isEditMode && widget.existingRecord!.videoPath != null)
+                        if (_isEditMode &&
+                            _chewieController != null &&
+                            widget.existingRecord!.videoPath != null)
                           Positioned(
                             top: 8,
                             right: 8,
@@ -535,39 +541,44 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
                             ),
                           ),
                       ],
-                    )
-                  else if (_videoFileMissing)
-                    Container(
-                      height: 140,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFE8ECF0),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Center(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.videocam_off_rounded, size: 36,
-                                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.25)),
-                            const SizedBox(height: 6),
-                            Text('영상 파일을 찾을 수 없습니다.\n촬영 영상은 기기에만 저장되므로,\n파일 삭제·이동 또는 다른 기기에서\n로그인한 경우 재생할 수 없습니다.',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                    fontSize: 12,
-                                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4))),
-                          ],
-                        ),
-                      ),
-                    )
-                  else if (_videoController == null &&
-                      _isEditMode &&
-                      widget.existingRecord!.videoPath != null)
-                    const SizedBox(
-                      height: 100,
-                      child: Center(child: CircularProgressIndicator()),
                     ),
-                  const SizedBox(height: 16),
+                  );
+                },
+              ),
+            )
+          else if (_videoFileMissing)
+            Padding(
+              padding: const EdgeInsets.only(left: 16, right: 16, top: 8),
+              child: Container(
+                height: 140,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE8ECF0),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.videocam_off_rounded, size: 36,
+                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.25)),
+                      const SizedBox(height: 6),
+                      Text('영상 파일을 찾을 수 없습니다.\n촬영 영상은 기기에만 저장되므로,\n파일 삭제·이동 또는 다른 기기에서\n로그인한 경우 재생할 수 없습니다.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                              fontSize: 12,
+                              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4))),
+                    ],
+                  ),
+                ),
+              ),
+            ),
 
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
                   // 난이도 선택
                   DifficultySelector(
                     selectedColor: displayColor,

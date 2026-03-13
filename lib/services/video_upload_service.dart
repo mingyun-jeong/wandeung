@@ -24,6 +24,7 @@ class VideoUploadService {
       objectKey: objectKey,
       file: file,
       contentType: 'video/mp4',
+      cacheControl: 'public, max-age=31536000, immutable',
     );
 
     await _supabase
@@ -47,6 +48,7 @@ class VideoUploadService {
       objectKey: objectKey,
       file: file,
       contentType: 'image/jpeg',
+      cacheControl: 'public, max-age=31536000, immutable',
     );
 
     await _supabase

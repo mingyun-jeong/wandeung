@@ -31,6 +31,7 @@ class R2Config {
     required String objectKey,
     required File file,
     String? contentType,
+    String? cacheControl,
   }) async {
     final bytes = await file.readAsBytes();
     final now = DateTime.now().toUtc();
@@ -42,6 +43,7 @@ class R2Config {
       headers: {
         'Host': _host,
         if (contentType != null) 'Content-Type': contentType,
+        if (cacheControl != null) 'Cache-Control': cacheControl,
         'x-amz-content-sha256': sha256.convert(bytes).toString(),
         'x-amz-date': _amzDateFormat(now),
       },

@@ -23,21 +23,24 @@ class OverlayLayer extends ConsumerWidget {
         return Positioned(
           left: left,
           top: top,
-          child: GestureDetector(
-            onPanUpdate: (details) {
-              final newDx =
-                  (left + details.delta.dx) / previewSize.width;
-              final newDy =
-                  (top + details.delta.dy) / previewSize.height;
-              ref.read(overlaysProvider.notifier).updatePosition(
-                    item.id,
-                    Offset(newDx.clamp(0.0, 1.0), newDy.clamp(0.0, 1.0)),
-                  );
-            },
-            onLongPress: () {
-              _showDeleteDialog(context, ref, item);
-            },
-            child: _OverlaySticker(item: item),
+          child: FractionalTranslation(
+            translation: const Offset(-0.5, -0.5),
+            child: GestureDetector(
+              onPanUpdate: (details) {
+                final newDx =
+                    (left + details.delta.dx) / previewSize.width;
+                final newDy =
+                    (top + details.delta.dy) / previewSize.height;
+                ref.read(overlaysProvider.notifier).updatePosition(
+                      item.id,
+                      Offset(newDx.clamp(0.0, 1.0), newDy.clamp(0.0, 1.0)),
+                    );
+              },
+              onLongPress: () {
+                _showDeleteDialog(context, ref, item);
+              },
+              child: _OverlaySticker(item: item),
+            ),
           ),
         );
       }).toList(),

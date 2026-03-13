@@ -39,65 +39,68 @@ class SubtitleOverlayLayer extends ConsumerWidget {
           return Positioned(
             left: left,
             top: top,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                GestureDetector(
-                  onPanUpdate: (details) {
-                    final newDx =
-                        (left + details.delta.dx) / previewSize.width;
-                    final newDy =
-                        (top + details.delta.dy) / previewSize.height;
-                    ref.read(subtitlesProvider.notifier).updatePosition(
-                          item.id,
-                          Offset(
-                              newDx.clamp(0.0, 1.0), newDy.clamp(0.0, 1.0)),
-                        );
-                  },
-                  onTap: () {
-                    if (isSelected) {
-                      ref.read(selectedSubtitleIdProvider.notifier).state =
-                          null;
-                    } else {
+            child: FractionalTranslation(
+              translation: const Offset(-0.5, -0.5),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  GestureDetector(
+                    onPanUpdate: (details) {
+                      final newDx =
+                          (left + details.delta.dx) / previewSize.width;
+                      final newDy =
+                          (top + details.delta.dy) / previewSize.height;
+                      ref.read(subtitlesProvider.notifier).updatePosition(
+                            item.id,
+                            Offset(
+                                newDx.clamp(0.0, 1.0), newDy.clamp(0.0, 1.0)),
+                          );
+                    },
+                    onTap: () {
+                      if (isSelected) {
+                        ref.read(selectedSubtitleIdProvider.notifier).state =
+                            null;
+                      } else {
+                        ref.read(selectedSubtitleIdProvider.notifier).state =
+                            item.id;
+                      }
+                    },
+                    onDoubleTap: () {
                       ref.read(selectedSubtitleIdProvider.notifier).state =
                           item.id;
-                    }
-                  },
-                  onDoubleTap: () {
-                    ref.read(selectedSubtitleIdProvider.notifier).state =
-                        item.id;
-                    onSubtitleTap?.call();
-                  },
-                  onLongPress: () {
-                    _showDeleteDialog(context, ref, item);
-                  },
-                  child: Container(
-                    decoration: isSelected
-                        ? BoxDecoration(
-                            border:
-                                Border.all(color: Colors.blue, width: 2),
-                            borderRadius: BorderRadius.circular(4),
-                          )
-                        : null,
-                    child: Transform.rotate(
-                      angle: item.rotation,
-                      child: _SubtitleDisplay(item: item),
+                      onSubtitleTap?.call();
+                    },
+                    onLongPress: () {
+                      _showDeleteDialog(context, ref, item);
+                    },
+                    child: Container(
+                      decoration: isSelected
+                          ? BoxDecoration(
+                              border:
+                                  Border.all(color: Colors.blue, width: 2),
+                              borderRadius: BorderRadius.circular(4),
+                            )
+                          : null,
+                      child: Transform.rotate(
+                        angle: item.rotation,
+                        child: _SubtitleDisplay(item: item),
+                      ),
                     ),
                   ),
-                ),
-                if (isSelected)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 6),
-                    child: _InlineEditToolbar(
-                      item: item,
-                      onChanged: (updated) {
-                        ref
-                            .read(subtitlesProvider.notifier)
-                            .updateSubtitle(item.id, updated);
-                      },
+                  if (isSelected)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 6),
+                      child: _InlineEditToolbar(
+                        item: item,
+                        onChanged: (updated) {
+                          ref
+                              .read(subtitlesProvider.notifier)
+                              .updateSubtitle(item.id, updated);
+                        },
+                      ),
                     ),
-                  ),
-              ],
+                ],
+              ),
             ),
           );
         }),

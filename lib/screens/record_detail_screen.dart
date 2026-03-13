@@ -11,6 +11,7 @@ import '../utils/constants.dart';
 import '../utils/video_download_cache.dart';
 import '../widgets/wandeung_app_bar.dart';
 import 'video_editor_screen.dart';
+import '../app.dart';
 
 class RecordDetailScreen extends ConsumerStatefulWidget {
   final ClimbingRecord record;
@@ -303,7 +304,7 @@ class _RecordDetailScreenState extends ConsumerState<RecordDetailScreen> {
                             horizontal: 14, vertical: 7),
                         decoration: BoxDecoration(
                           color: isCompleted
-                              ? const Color(0xFF14B8A6).withOpacity(0.1)
+                              ? WandeungColors.success.withOpacity(0.1)
                               : const Color(0xFFFF6B35).withOpacity(0.1),
                           borderRadius: BorderRadius.circular(22),
                         ),
@@ -316,7 +317,7 @@ class _RecordDetailScreenState extends ConsumerState<RecordDetailScreen> {
                                   : Icons.sports_kabaddi_rounded,
                               size: 16,
                               color: isCompleted
-                                  ? const Color(0xFF0D9488)
+                                  ? WandeungColors.success
                                   : const Color(0xFFE65100),
                             ),
                             const SizedBox(width: 5),
@@ -326,7 +327,7 @@ class _RecordDetailScreenState extends ConsumerState<RecordDetailScreen> {
                                 fontSize: 13,
                                 fontWeight: FontWeight.w600,
                                 color: isCompleted
-                                    ? const Color(0xFF0D9488)
+                                    ? WandeungColors.success
                                     : const Color(0xFFE65100),
                               ),
                             ),

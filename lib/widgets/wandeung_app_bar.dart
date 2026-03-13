@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../app.dart';
 import '../providers/auth_provider.dart';
 import '../screens/login_screen.dart';
 import '../screens/profile_screen.dart';
@@ -22,7 +23,6 @@ class WandeungAppBar extends ConsumerWidget implements PreferredSizeWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final colorScheme = Theme.of(context).colorScheme;
     final user = ref.watch(authProvider).valueOrNull;
     final photoUrl = user?.userMetadata?['picture'] as String?;
 
@@ -51,12 +51,12 @@ class WandeungAppBar extends ConsumerWidget implements PreferredSizeWidget {
                   ),
                 ),
                 const SizedBox(width: 10),
-                Text(
+                const Text(
                   '완등',
                   style: TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.w800,
-                    color: colorScheme.primary,
+                    color: WandeungColors.accent,
                     letterSpacing: -1.5,
                   ),
                 ),

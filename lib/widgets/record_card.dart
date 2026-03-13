@@ -6,6 +6,7 @@ import '../screens/record_save_screen.dart';
 import '../screens/video_playback_screen.dart';
 import '../utils/constants.dart';
 import 'upload_status_indicator.dart';
+import '../app.dart';
 
 class RecordCard extends StatelessWidget {
   final ClimbingRecord record;
@@ -87,8 +88,8 @@ class RecordCard extends StatelessWidget {
                   },
                   behavior: HitTestBehavior.opaque,
                   child: Container(
-                    width: 38,
-                    height: 38,
+                    width: 48,
+                    height: 48,
                     decoration: BoxDecoration(
                       color: colorScheme.primary.withOpacity(0.1),
                       shape: BoxShape.circle,
@@ -209,7 +210,7 @@ class _StatusBadge extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
         color: isCompleted
-            ? const Color(0xFF14B8A6).withOpacity(0.1)
+            ? WandeungColors.success.withOpacity(0.1)
             : const Color(0xFFFF6B35).withOpacity(0.1),
         borderRadius: BorderRadius.circular(20),
       ),
@@ -219,7 +220,7 @@ class _StatusBadge extends StatelessWidget {
           fontSize: 11,
           fontWeight: FontWeight.w600,
           color: isCompleted
-              ? const Color(0xFF0D9488)
+              ? WandeungColors.success
               : const Color(0xFFE65100),
         ),
       ),

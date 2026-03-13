@@ -13,6 +13,7 @@ import '../widgets/camera_grade_overlay.dart';
 import '../widgets/camera_gym_overlay.dart';
 import '../widgets/zoom_controls.dart';
 import 'record_save_screen.dart';
+import '../app.dart';
 
 class CameraTabScreen extends ConsumerStatefulWidget {
   const CameraTabScreen({super.key});
@@ -382,18 +383,25 @@ class _CameraTabScreenState extends ConsumerState<CameraTabScreen>
             ),
           ),
 
-          // 좌측 오버레이: 난이도/색상 + 암장 (녹화 중에는 숨김)
+          // 하단 오버레이: 암장 + 난이도 (녹화 중에는 숨김)
           if (!_isRecording)
-            const Positioned(
+            Positioned(
               left: 16,
-              bottom: 200,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  CameraGradeOverlay(),
-                  SizedBox(height: 8),
-                  CameraGymOverlay(),
-                ],
+              right: 16,
+              bottom: 140,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.6),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: const Row(
+                  children: [
+                    Expanded(child: CameraGymOverlay()),
+                    SizedBox(width: 8),
+                    CameraGradeOverlay(),
+                  ],
+                ),
               ),
             ),
 
@@ -412,7 +420,7 @@ class _CameraTabScreenState extends ConsumerState<CameraTabScreen>
                     border: Border.all(color: Colors.white, width: 4),
                     boxShadow: [
                       BoxShadow(
-                        color: const Color(0xFF14B8A6).withOpacity(0.3),
+                        color: WandeungColors.accent.withOpacity(0.3),
                         blurRadius: 12,
                         offset: const Offset(0, 4),
                       ),
@@ -424,7 +432,7 @@ class _CameraTabScreenState extends ConsumerState<CameraTabScreen>
                             width: 28,
                             height: 28,
                             decoration: BoxDecoration(
-                              color: const Color(0xFF14B8A6),
+                              color: WandeungColors.accent,
                               borderRadius: BorderRadius.circular(5),
                             ),
                           )
@@ -436,8 +444,8 @@ class _CameraTabScreenState extends ConsumerState<CameraTabScreen>
                                 begin: Alignment.topLeft,
                                 end: Alignment.bottomRight,
                                 colors: [
-                                  Color(0xFF14B8A6),
-                                  Color(0xFF0D9488),
+                                  WandeungColors.accent,
+                                  WandeungColors.accentLight,
                                 ],
                               ),
                               shape: BoxShape.circle,
@@ -449,10 +457,10 @@ class _CameraTabScreenState extends ConsumerState<CameraTabScreen>
             ),
           ),
 
-          // 우측: 줌 컨트롤 (암장 선택과 같은 높이)
+          // 우측: 줌 컨트롤
           Positioned(
             right: 16,
-            bottom: 200,
+            bottom: 220,
             child: ZoomControls(
               currentZoom: _currentZoom,
               minZoom: _minZoom,

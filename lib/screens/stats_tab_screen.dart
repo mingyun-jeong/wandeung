@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/stats_provider.dart';
 import '../widgets/wandeung_app_bar.dart';
+import '../app.dart';
 
 class StatsTabScreen extends ConsumerWidget {
   const StatsTabScreen({super.key});
@@ -114,6 +115,7 @@ class StatsTabScreen extends ConsumerWidget {
                 return SliverList(
                   delegate: SliverChildListDelegate([
                     _SummarySection(stats: stats, period: period),
+                    _InsightCard(stats: stats, period: period),
                     _DailyClimbChartSection(stats: stats, period: period),
                     _ColorTrendSection(stats: stats, period: period),
                     if (stats.gymBreakdown
@@ -149,8 +151,8 @@ class _SummarySection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    const completedColor = Color(0xFF4ADE80);
-    const inProgressColor = Color(0xFFFBBF24);
+    const completedColor = WandeungColors.success;
+    const inProgressColor = WandeungColors.inProgress;
 
     final completedRatio = stats.totalClimbs > 0
         ? stats.totalCompleted / stats.totalClimbs
@@ -165,20 +167,20 @@ class _SummarySection extends StatelessWidget {
         width: double.infinity,
         padding: const EdgeInsets.all(22),
         decoration: BoxDecoration(
-          gradient: LinearGradient(
+          gradient: const LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              colorScheme.primary,
-              colorScheme.primary.withOpacity(0.85),
-              const Color(0xFF0D9488),
+              WandeungColors.secondary,
+              WandeungColors.primary,
+              Color(0xFF16213E),
             ],
-            stops: const [0.0, 0.6, 1.0],
+            stops: [0.0, 0.6, 1.0],
           ),
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: colorScheme.primary.withOpacity(0.3),
+              color: WandeungColors.primary.withOpacity(0.3),
               blurRadius: 16,
               offset: const Offset(0, 6),
             ),
@@ -1015,6 +1017,109 @@ class _GymSection extends StatelessWidget {
         fontSize: 11,
         fontWeight: FontWeight.w700,
         color: color,
+      ),
+    );
+  }
+}
+
+class _InsightCard extends StatelessWidget {
+  final PeriodStatsData stats;
+  final StatsPeriod period;
+  const _InsightCard({required this.stats, required this.period});
+
+  @override
+  Widget build(BuildContext context) {
+    final insights = <String>[];
+
+    if (stats.hasPrevious) {
+      final rateDiff = stats.completionRate - stats.prevCompletionRate;
+      if (rateDiff > 0) {
+        insights.add('완등률이 이전 대비 ${rateDiff.toStringAsFixed(0)}% 상승했어요!');
+      } else if (rateDiff < 0) {
+        insights.add('완등률이 이전 대비 ${rateDiff.abs().toStringAsFixed(0)}% 하락했어요');
+      }
+
+      final climbDiff = stats.totalClimbs - stats.prevTotalClimbs;
+      if (climbDiff > 0) {
+        insights.add('등반 횟수가 ${climbDiff}건 증가했어요!');
+      }
+    }
+
+    if (stats.totalCompleted > 0) {
+      insights.add('${period.label} 동안 ${stats.totalCompleted}개 루트를 완등했어요');
+    }
+
+    // Top gym
+    final topGyms = stats.gymBreakdown.where((g) => g.total > 0).toList();
+    if (topGyms.isNotEmpty) {
+      insights.add('가장 많이 간 암장: ${topGyms.first.name} (${topGyms.first.total}회)');
+    }
+
+    if (insights.isEmpty) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+      child: Container(
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          color: WandeungColors.accent.withOpacity(0.05),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: WandeungColors.accent.withOpacity(0.15)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: WandeungColors.accent.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(
+                    Icons.auto_awesome_rounded,
+                    size: 16,
+                    color: WandeungColors.accent,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                const Text(
+                  '인사이트',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: WandeungColors.textPrimary,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            ...insights.map((insight) => Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Padding(
+                    padding: EdgeInsets.only(top: 2),
+                    child: Icon(Icons.circle, size: 6, color: WandeungColors.accent),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      insight,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        height: 1.4,
+                        color: WandeungColors.textPrimary,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            )),
+          ],
+        ),
       ),
     );
   }

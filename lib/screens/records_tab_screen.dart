@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:table_calendar/table_calendar.dart';
+import '../app.dart';
 import '../models/climbing_record.dart';
 import '../providers/record_provider.dart';
 import '../utils/constants.dart';
@@ -109,22 +110,24 @@ class _RecordsTabScreenState extends ConsumerState<RecordsTabScreen> {
               markerBuilder: (context, day, events) {
                 if (events.isEmpty) return const SizedBox.shrink();
                 final count = events.length;
+                final dots = count.clamp(1, 4);
                 return Positioned(
                   bottom: 2,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                    decoration: BoxDecoration(
-                      color: colorScheme.primary,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      '+$count',
-                      style: TextStyle(
-                        color: colorScheme.onPrimary,
-                        fontSize: 9,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: List.generate(dots, (i) {
+                      return Container(
+                        width: 5,
+                        height: 5,
+                        margin: const EdgeInsets.symmetric(horizontal: 1),
+                        decoration: BoxDecoration(
+                          color: i == 0
+                              ? WandeungColors.accent
+                              : WandeungColors.accent.withOpacity(0.5),
+                          shape: BoxShape.circle,
+                        ),
+                      );
+                    }),
                   ),
                 );
               },
@@ -216,16 +219,24 @@ class _RecordsTabScreenState extends ConsumerState<RecordsTabScreen> {
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.terrain_outlined,
-                                size: 48,
-                                color: colorScheme.onSurface.withOpacity(0.2)),
-                            const SizedBox(height: 10),
-                            Text(
+                            Container(
+                              width: 56,
+                              height: 56,
+                              decoration: BoxDecoration(
+                                color: WandeungColors.accent.withOpacity(0.08),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(Icons.terrain_outlined,
+                                  size: 28,
+                                  color: WandeungColors.accent.withOpacity(0.4)),
+                            ),
+                            const SizedBox(height: 12),
+                            const Text(
                               '이 날의 등반 기록이 없습니다',
                               style: TextStyle(
                                   fontSize: 14,
-                                  color:
-                                      colorScheme.onSurface.withOpacity(0.4)),
+                                  fontWeight: FontWeight.w500,
+                                  color: WandeungColors.textSecondary),
                             ),
                           ],
                         ),

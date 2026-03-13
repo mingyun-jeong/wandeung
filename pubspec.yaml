@@ -124,14 +124,14 @@ flutter:
   # see https://flutter.dev/to/font-from-package
 
 flutter_native_splash:
-  color: "#2D2D2D"
+  color: "#1A1A2E"
   image: assets/images/app_icon.png
   image_dark: assets/images/app_icon.png
-  color_dark: "#1A1A1A"
+  color_dark: "#1A1A2E"
   android_12:
-    color: "#2D2D2D"
+    color: "#1A1A2E"
     image: assets/images/app_icon.png
-    icon_background_color: "#2D2D2D"
-    color_dark: "#1A1A1A"
+    icon_background_color: "#1A1A2E"
+    color_dark: "#1A1A2E"
     image_dark: assets/images/app_icon.png
-    icon_background_color_dark: "#1A1A1A"
+    icon_background_color_dark: "#1A1A2E"

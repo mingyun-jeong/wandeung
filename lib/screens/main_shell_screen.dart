@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../app.dart';
 import '../providers/camera_settings_provider.dart';
 import '../providers/user_grade_provider.dart';
 import 'camera_tab_screen.dart';
@@ -13,25 +14,28 @@ class MainShellScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // SharedPreferences에서 사용자 등급 미리 로드
     ref.watch(userGradeProvider);
     final currentIndex = ref.watch(bottomNavIndexProvider);
 
     return Scaffold(
-      body: IndexedStack(
-        index: currentIndex,
-        children: const [
-          HomeTabScreen(),
-          RecordsTabScreen(),
-          CameraTabScreen(),
-          GymGradesTabScreen(),
-          StatsTabScreen(),
-        ],
+      body: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 200),
+        child: IndexedStack(
+          key: ValueKey(currentIndex),
+          index: currentIndex,
+          children: const [
+            HomeTabScreen(),
+            RecordsTabScreen(),
+            CameraTabScreen(),
+            GymGradesTabScreen(),
+            StatsTabScreen(),
+          ],
+        ),
       ),
       bottomNavigationBar: Container(
         decoration: const BoxDecoration(
           border: Border(
-            top: BorderSide(color: Color(0xFFE8ECF0), width: 1),
+            top: BorderSide(color: WandeungColors.border, width: 1),
           ),
         ),
         child: NavigationBar(
@@ -61,8 +65,8 @@ class MainShellScreen extends ConsumerWidget {
               label: '난이도',
             ),
             NavigationDestination(
-              icon: Icon(Icons.bar_chart_outlined),
-              selectedIcon: Icon(Icons.bar_chart_rounded),
+              icon: Icon(Icons.insights_outlined),
+              selectedIcon: Icon(Icons.insights_rounded),
               label: '통계',
             ),
           ],

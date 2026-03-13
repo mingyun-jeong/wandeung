@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../providers/video_editor_provider.dart';
+import '../../app.dart';
 
 /// 내보내기 진행률을 예쁜 바텀시트로 표시한다.
 class ExportProgressSheet extends ConsumerStatefulWidget {
@@ -46,7 +47,7 @@ class _ExportProgressSheetState extends ConsumerState<ExportProgressSheet>
     final status = ref.watch(exportStatusProvider);
     final percent = progress != null ? (progress * 100).round() : 0;
     final colorScheme = Theme.of(context).colorScheme;
-    const teal = Color(0xFF14B8A6);
+    const teal = WandeungColors.accent;
 
     return PopScope(
       canPop: false,

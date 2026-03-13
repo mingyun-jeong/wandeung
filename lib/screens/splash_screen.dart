@@ -130,7 +130,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF2D2D2D),
+      backgroundColor: const Color(0xFF1A1A2E),
       body: AnimatedBuilder(
         animation: _fadeOutController,
         builder: (context, child) => Opacity(

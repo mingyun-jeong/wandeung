@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../app.dart';
 import '../models/climbing_gym.dart';
 import '../models/user_climbing_stats.dart';
 import '../providers/camera_settings_provider.dart';
@@ -21,6 +22,7 @@ class HomeTabScreen extends ConsumerWidget {
     return Scaffold(
       appBar: const WandeungAppBar(),
       body: RefreshIndicator(
+        color: WandeungColors.accent,
         onRefresh: () async {
           ref.invalidate(userStatsProvider);
           ref.invalidate(recentRecordsProvider);
@@ -28,7 +30,7 @@ class HomeTabScreen extends ConsumerWidget {
         },
         child: CustomScrollView(
           slivers: [
-            // 요약 통계
+            // 요약 통계 (streak + 완등률)
             SliverToBoxAdapter(
               child: statsAsync.when(
                 data: (stats) => _StatsSection(stats: stats),
@@ -41,6 +43,14 @@ class HomeTabScreen extends ConsumerWidget {
                   child: Text('통계를 불러올 수 없습니다'),
                 ),
               ),
+            ),
+
+            // 주간 활동 히트맵
+            SliverToBoxAdapter(
+              child: statsAsync.whenOrNull(
+                    data: (stats) => const _WeeklyHeatmap(),
+                  ) ??
+                  const SizedBox.shrink(),
             ),
 
             // 최근 방문 암장
@@ -122,37 +132,45 @@ class HomeTabScreen extends ConsumerWidget {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Container(
-                              width: 64,
-                              height: 64,
+                              width: 72,
+                              height: 72,
                               decoration: BoxDecoration(
-                                color: colorScheme.surfaceContainerHighest
-                                    .withOpacity(0.5),
+                                color: WandeungColors.accent.withOpacity(0.08),
                                 shape: BoxShape.circle,
                               ),
                               child: Icon(
                                 Icons.terrain_outlined,
-                                size: 32,
-                                color:
-                                    colorScheme.onSurface.withOpacity(0.25),
+                                size: 36,
+                                color: WandeungColors.accent.withOpacity(0.4),
                               ),
                             ),
-                            const SizedBox(height: 12),
-                            Text(
+                            const SizedBox(height: 16),
+                            const Text(
                               '아직 기록이 없어요',
                               style: TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w500,
-                                color:
-                                    colorScheme.onSurface.withOpacity(0.35),
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: WandeungColors.textSecondary,
                               ),
                             ),
-                            const SizedBox(height: 4),
-                            Text(
+                            const SizedBox(height: 6),
+                            const Text(
                               '첫 등반을 기록해보세요!',
                               style: TextStyle(
                                 fontSize: 13,
-                                color:
-                                    colorScheme.onSurface.withOpacity(0.25),
+                                color: WandeungColors.textTertiary,
+                              ),
+                            ),
+                            const SizedBox(height: 20),
+                            FilledButton.icon(
+                              onPressed: () {
+                                ref.read(bottomNavIndexProvider.notifier).state = 2;
+                              },
+                              icon: const Icon(Icons.videocam_rounded, size: 18),
+                              label: const Text('촬영하기'),
+                              style: FilledButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 24, vertical: 12),
                               ),
                             ),
                           ],
@@ -195,6 +213,139 @@ class HomeTabScreen extends ConsumerWidget {
   }
 }
 
+// ─── 주간 활동 히트맵 ─────────────────────────────────────────────────────────
+
+class _WeeklyHeatmap extends ConsumerWidget {
+  const _WeeklyHeatmap();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final monday = today.subtract(Duration(days: today.weekday - 1));
+
+    final dayLabels = ['월', '화', '수', '목', '금', '토', '일'];
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: WandeungColors.border),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Row(
+              children: [
+                Icon(Icons.local_fire_department_rounded,
+                    size: 16, color: WandeungColors.accent),
+                SizedBox(width: 6),
+                Text(
+                  '이번 주 활동',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: WandeungColors.textPrimary,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: List.generate(7, (i) {
+                final day = monday.add(Duration(days: i));
+                final isToday = day.isAtSameMomentAs(today);
+                final isFuture = day.isAfter(today);
+
+                return ref.watch(recordsByDateProvider(day)).when(
+                      data: (records) {
+                        final hasRecord = records.isNotEmpty;
+                        return _DayDot(
+                          label: dayLabels[i],
+                          hasRecord: hasRecord,
+                          isToday: isToday,
+                          isFuture: isFuture,
+                        );
+                      },
+                      loading: () => _DayDot(
+                        label: dayLabels[i],
+                        hasRecord: false,
+                        isToday: isToday,
+                        isFuture: isFuture,
+                      ),
+                      error: (_, __) => _DayDot(
+                        label: dayLabels[i],
+                        hasRecord: false,
+                        isToday: isToday,
+                        isFuture: isFuture,
+                      ),
+                    );
+              }),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DayDot extends StatelessWidget {
+  final String label;
+  final bool hasRecord;
+  final bool isToday;
+  final bool isFuture;
+
+  const _DayDot({
+    required this.label,
+    required this.hasRecord,
+    required this.isToday,
+    required this.isFuture,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: isToday ? FontWeight.w700 : FontWeight.w500,
+            color: isToday
+                ? WandeungColors.accent
+                : WandeungColors.textTertiary,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Container(
+          width: 28,
+          height: 28,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: hasRecord
+                ? WandeungColors.accent
+                : isFuture
+                    ? Colors.transparent
+                    : WandeungColors.border.withOpacity(0.5),
+            border: isToday && !hasRecord
+                ? Border.all(color: WandeungColors.accent, width: 2)
+                : null,
+          ),
+          child: hasRecord
+              ? const Icon(Icons.check_rounded, size: 16, color: Colors.white)
+              : null,
+        ),
+      ],
+    );
+  }
+}
+
+// ─── 최근 방문 암장 ───────────────────────────────────────────────────────────
+
 class _RecentGymsSection extends StatefulWidget {
   final List<ClimbingGym> gyms;
   const _RecentGymsSection({required this.gyms});
@@ -231,9 +382,7 @@ class _RecentGymsSectionState extends State<_RecentGymsSection>
         _contentWidth = width;
         _measured = true;
       });
-      // 8 is the gap between duplicated sets
       final totalScroll = _contentWidth + 8;
-      // Speed: ~40 pixels per second
       final duration = Duration(milliseconds: (totalScroll / 40 * 1000).round());
       _controller
         ..duration = duration
@@ -261,15 +410,15 @@ class _RecentGymsSectionState extends State<_RecentGymsSection>
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: const Color(0xFFE8ECF0)),
+          border: Border.all(color: WandeungColors.border),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
+            const Icon(
               Icons.location_on_outlined,
               size: 15,
-              color: colorScheme.primary,
+              color: WandeungColors.accent,
             ),
             const SizedBox(width: 4),
             Text(
@@ -358,16 +507,14 @@ class _RecentGymsSectionState extends State<_RecentGymsSection>
   }
 }
 
+// ─── 통계 섹션 (리디자인) ─────────────────────────────────────────────────────
+
 class _StatsSection extends StatelessWidget {
   final UserClimbingStats stats;
   const _StatsSection({required this.stats});
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    const completedColor = Color(0xFF4ADE80);
-    const inProgressColor = Color(0xFFFBBF24);
-
     final completedRatio = stats.totalClimbs > 0
         ? stats.totalCompleted / stats.totalClimbs
         : 0.0;
@@ -376,126 +523,155 @@ class _StatsSection extends StatelessWidget {
         : 0.0;
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(22),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  colorScheme.primary,
-                  colorScheme.primary.withOpacity(0.85),
-                  const Color(0xFF0D9488),
-                ],
-                stops: const [0.0, 0.6, 1.0],
-              ),
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: colorScheme.primary.withOpacity(0.3),
-                  blurRadius: 16,
-                  offset: const Offset(0, 6),
-                ),
-              ],
+      padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(22),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              WandeungColors.secondary,
+              WandeungColors.primary,
+              Color(0xFF16213E),
+            ],
+            stops: [0.0, 0.6, 1.0],
+          ),
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: WandeungColors.primary.withOpacity(0.3),
+              blurRadius: 16,
+              offset: const Offset(0, 6),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Text(
-                      '최근 30일',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                        color: colorScheme.onPrimary.withOpacity(0.7),
-                      ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Streak 배너
+            if (stats.currentStreak > 0)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 14),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: WandeungColors.accent.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: WandeungColors.accent.withOpacity(0.3),
                     ),
-                    const Spacer(),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: colorScheme.onPrimary.withOpacity(0.15),
-                        borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.local_fire_department_rounded,
+                        size: 16,
+                        color: WandeungColors.accentLight,
                       ),
-                      child: Text(
-                        '총 ${stats.totalClimbs}건',
-                        style: TextStyle(
-                          fontSize: 12,
+                      const SizedBox(width: 4),
+                      Text(
+                        '연속 ${stats.currentStreak}일째 클라이밍 중!',
+                        style: const TextStyle(
+                          fontSize: 13,
                           fontWeight: FontWeight.w600,
-                          color: colorScheme.onPrimary.withOpacity(0.8),
+                          color: WandeungColors.accentLight,
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _RateDisplay(
-                        label: '완등',
-                        rate: stats.completionRate,
-                        count: stats.totalCompleted,
-                        color: completedColor,
-                        onPrimaryColor: colorScheme.onPrimary,
-                      ),
-                    ),
-                    Container(
-                      width: 1,
-                      height: 48,
-                      color: colorScheme.onPrimary.withOpacity(0.2),
-                    ),
-                    Expanded(
-                      child: _RateDisplay(
-                        label: '도전중',
-                        rate: stats.inProgressRate,
-                        count: stats.totalInProgress,
-                        color: inProgressColor,
-                        onPrimaryColor: colorScheme.onPrimary,
-                      ),
-                    ),
-                  ],
+              ),
+
+            Row(
+              children: [
+                Text(
+                  '최근 30일',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.white.withOpacity(0.7),
+                  ),
                 ),
-                const SizedBox(height: 18),
-                // 세그먼트 프로그레스 바
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(4),
-                  child: SizedBox(
-                    height: 6,
-                    child: Row(
-                      children: [
-                        if (completedRatio > 0)
-                          Expanded(
-                            flex: (completedRatio * 1000).round(),
-                            child: Container(color: completedColor),
-                          ),
-                        if (inProgressRatio > 0)
-                          Expanded(
-                            flex: (inProgressRatio * 1000).round(),
-                            child: Container(color: inProgressColor),
-                          ),
-                        if ((1 - completedRatio - inProgressRatio) > 0)
-                          Expanded(
-                            flex: ((1 - completedRatio - inProgressRatio) * 1000).round(),
-                            child: Container(
-                              color: colorScheme.onPrimary.withOpacity(0.15),
-                            ),
-                          ),
-                      ],
+                const Spacer(),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    '총 ${stats.totalClimbs}건',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white.withOpacity(0.8),
                     ),
                   ),
                 ),
               ],
             ),
-          ),
-        ],
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: _RateDisplay(
+                    label: '완등',
+                    rate: stats.completionRate,
+                    count: stats.totalCompleted,
+                    color: WandeungColors.success,
+                  ),
+                ),
+                Container(
+                  width: 1,
+                  height: 48,
+                  color: Colors.white.withOpacity(0.2),
+                ),
+                Expanded(
+                  child: _RateDisplay(
+                    label: '도전중',
+                    rate: stats.inProgressRate,
+                    count: stats.totalInProgress,
+                    color: WandeungColors.inProgress,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 18),
+            // 세그먼트 프로그레스 바
+            ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: SizedBox(
+                height: 6,
+                child: Row(
+                  children: [
+                    if (completedRatio > 0)
+                      Expanded(
+                        flex: (completedRatio * 1000).round(),
+                        child: Container(color: WandeungColors.success),
+                      ),
+                    if (inProgressRatio > 0)
+                      Expanded(
+                        flex: (inProgressRatio * 1000).round(),
+                        child: Container(color: WandeungColors.inProgress),
+                      ),
+                    if ((1 - completedRatio - inProgressRatio) > 0)
+                      Expanded(
+                        flex: ((1 - completedRatio - inProgressRatio) * 1000).round(),
+                        child: Container(
+                          color: Colors.white.withOpacity(0.15),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -506,14 +682,12 @@ class _RateDisplay extends StatelessWidget {
   final double rate;
   final int count;
   final Color color;
-  final Color onPrimaryColor;
 
   const _RateDisplay({
     required this.label,
     required this.rate,
     required this.count,
     required this.color,
-    required this.onPrimaryColor,
   });
 
   @override
@@ -526,10 +700,10 @@ class _RateDisplay extends StatelessWidget {
           children: [
             Text(
               rate.toStringAsFixed(0),
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 36,
                 fontWeight: FontWeight.w800,
-                color: onPrimaryColor,
+                color: Colors.white,
                 height: 1,
                 letterSpacing: -1.5,
               ),
@@ -541,7 +715,7 @@ class _RateDisplay extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w700,
-                  color: onPrimaryColor.withOpacity(0.6),
+                  color: Colors.white.withOpacity(0.6),
                 ),
               ),
             ),
@@ -561,11 +735,11 @@ class _RateDisplay extends StatelessWidget {
             ),
             const SizedBox(width: 4),
             Text(
-              '$label ${count}건',
+              '$label $count건',
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
-                color: onPrimaryColor.withOpacity(0.7),
+                color: Colors.white.withOpacity(0.7),
               ),
             ),
           ],

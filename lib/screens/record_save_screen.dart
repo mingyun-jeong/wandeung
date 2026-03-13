@@ -30,6 +30,7 @@ import '../utils/video_download_cache.dart';
 import '../utils/thumbnail_utils.dart';
 import 'records_tab_screen.dart';
 import 'video_editor_screen.dart';
+import '../app.dart';
 
 class RecordSaveScreen extends ConsumerStatefulWidget {
   final String? videoPath;
@@ -777,7 +778,7 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
                       final isSelected = _status == s;
                       final isCompleted = s == ClimbingStatus.completed;
                       final activeColor = isCompleted
-                          ? const Color(0xFF0D9488)
+                          ? WandeungColors.success
                           : const Color(0xFFFF6B35);
                       return Padding(
                         padding: EdgeInsets.only(right: isCompleted ? 8 : 0),

@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 
 import '../config/r2_config.dart';
+import '../app.dart';
 
 /// 다운로드 작업을 제어하기 위한 토큰.
 /// 취소 요청 및 상태 추적에 사용한다.
@@ -328,7 +329,7 @@ class _DownloadBottomSheetState extends State<_DownloadBottomSheet>
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    const teal = Color(0xFF14B8A6);
+    const teal = WandeungColors.accent;
 
     return Container(
       decoration: const BoxDecoration(

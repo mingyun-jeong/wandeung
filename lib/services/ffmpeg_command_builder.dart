@@ -128,10 +128,17 @@ class FFmpegCommandBuilder {
         final px = item.position.dx.toStringAsFixed(4);
         final py = item.position.dy.toStringAsFixed(4);
 
-        // 오버레이 스티커는 항상 표시 (enable 없음)
-        final overlayFilter =
+        String overlayFilter =
             "$currentLabel[$inputIdx:v]overlay="
             "x=$px*W-w/2:y=$py*H-h/2";
+
+        // 시간 범위가 지정된 경우 enable 조건 추가
+        if (item.startTime != null && item.endTime != null) {
+          final startSec = item.startTime!.inMilliseconds / 1000.0;
+          final endSec = item.endTime!.inMilliseconds / 1000.0;
+          overlayFilter += ":"
+              "enable='between(t,${startSec.toStringAsFixed(3)},${endSec.toStringAsFixed(3)})'";
+        }
 
         filters.add('$overlayFilter$outputLabel');
         currentLabel = outputLabel;

@@ -48,6 +48,67 @@ class SpeedSegmentsNotifier extends StateNotifier<List<SpeedSegment>> {
     state = [SpeedSegment(start: start, end: end, speed: speed)];
   }
 
+  /// 지정 시간 위치에서 구간을 분할
+  void splitAt(Duration position) {
+    final newSegments = <SpeedSegment>[];
+    for (final seg in state) {
+      if (position > seg.start && position < seg.end) {
+        newSegments.add(seg.copyWith(end: position));
+        newSegments.add(seg.copyWith(start: position));
+      } else {
+        newSegments.add(seg);
+      }
+    }
+    state = newSegments;
+  }
+
+  /// 인접한 동일 속도 구간을 병합
+  void mergeAdjacent() {
+    if (state.length <= 1) return;
+    final merged = <SpeedSegment>[state.first];
+    for (int i = 1; i < state.length; i++) {
+      final prev = merged.last;
+      final curr = state[i];
+      if ((prev.speed - curr.speed).abs() < 0.01 && prev.end == curr.start) {
+        merged[merged.length - 1] = prev.copyWith(end: curr.end);
+      } else {
+        merged.add(curr);
+      }
+    }
+    state = merged;
+  }
+
+  /// 특정 구간의 배속을 변경하고 인접 동일 속도 구간을 자동 병합
+  void updateSpeedAndMerge(int index, double speed) {
+    updateSpeed(index, speed);
+    mergeAdjacent();
+  }
+
+  /// 구간 경계(구간 사이 경계선)를 이동
+  void moveBoundary(int boundaryIndex, Duration newPosition) {
+    if (boundaryIndex < 0 || boundaryIndex >= state.length - 1) return;
+    final curr = state[boundaryIndex];
+    final next = state[boundaryIndex + 1];
+
+    const minDuration = Duration(milliseconds: 200);
+    final clampedPos = Duration(
+      milliseconds: newPosition.inMilliseconds.clamp(
+        curr.start.inMilliseconds + minDuration.inMilliseconds,
+        next.end.inMilliseconds - minDuration.inMilliseconds,
+      ),
+    );
+
+    state = [
+      for (int i = 0; i < state.length; i++)
+        if (i == boundaryIndex)
+          state[i].copyWith(end: clampedPos)
+        else if (i == boundaryIndex + 1)
+          state[i].copyWith(start: clampedPos)
+        else
+          state[i],
+    ];
+  }
+
   void reset() => state = [];
 }
 
@@ -55,6 +116,10 @@ final speedSegmentsProvider = StateNotifierProvider.autoDispose<
     SpeedSegmentsNotifier, List<SpeedSegment>>(
   (ref) => SpeedSegmentsNotifier(),
 );
+
+/// 현재 선택된 속도 구간 인덱스 (null이면 없음)
+final selectedSpeedSegmentProvider =
+    StateProvider.autoDispose<int?>((ref) => null);
 
 // ─── 오버레이 관리 ──────────────────────────────────────────
 
@@ -101,3 +166,16 @@ enum ExportStatus { exporting, completed, cancelled, error }
 
 final exportStatusProvider =
     StateProvider.autoDispose<ExportStatus>((ref) => ExportStatus.exporting);
+
+// ─── 편집 탭 ─────────────────────────────────────────────
+
+/// 편집 화면 하단 탭
+enum EditorTab { trim, speed, text, sticker }
+
+/// 현재 선택된 편집 탭
+final selectedEditorTabProvider =
+    StateProvider.autoDispose<EditorTab>((ref) => EditorTab.trim);
+
+/// 현재 선택된 오버레이 스티커 ID (null이면 없음)
+final selectedOverlayIdProvider =
+    StateProvider.autoDispose<String?>((ref) => null);

@@ -6,9 +6,16 @@ import '../../providers/camera_settings_provider.dart';
 import '../../providers/video_editor_provider.dart';
 import '../../utils/constants.dart';
 
-/// V-Grade 스티커를 추가하는 바텀시트
+/// V-Grade 스티커 + 이모지를 추가하는 바텀시트
 class OverlayStickerSheet extends ConsumerStatefulWidget {
-  const OverlayStickerSheet({super.key});
+  final Duration currentPosition;
+  final Duration videoDuration;
+
+  const OverlayStickerSheet({
+    super.key,
+    required this.currentPosition,
+    required this.videoDuration,
+  });
 
   @override
   ConsumerState<OverlayStickerSheet> createState() =>
@@ -19,6 +26,12 @@ class _OverlayStickerSheetState extends ConsumerState<OverlayStickerSheet> {
   ClimbingGrade _selectedGrade = ClimbingGrade.v1;
   DifficultyColor _selectedColor = DifficultyColor.blue;
 
+  static const _emojiCategories = {
+    '클라이밍': ['🧗', '💪', '🔥', '⛰️', '🏔️', '🪨', '🎯', '👏', '🧗‍♂️', '🧗‍♀️'],
+    '감정': ['😆', '😤', '🥲', '😎', '🤯', '🫣', '😱', '🥳', '😮‍💨', '🫠'],
+    '기타': ['⭐', '❤️', '✨', '🎉', '👍', '💯', '🏆', '🥇', '💥', '🔔'],
+  };
+
   @override
   void initState() {
     super.initState();
@@ -28,37 +41,75 @@ class _OverlayStickerSheetState extends ConsumerState<OverlayStickerSheet> {
     if (settings.color != null) _selectedColor = settings.color!;
   }
 
+  Duration get _stickerStartTime => widget.currentPosition;
+  Duration get _stickerEndTime {
+    final end = widget.currentPosition + const Duration(seconds: 3);
+    return end > widget.videoDuration ? widget.videoDuration : end;
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(20),
+    return DefaultTabController(
+      length: 2,
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // 헤더
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  '스티커 추가',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                ),
+                IconButton(
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.close),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+
+            // 탭 바
+            const TabBar(
+              tabs: [
+                Tab(text: '등급'),
+                Tab(text: '이모지'),
+              ],
+            ),
+            const SizedBox(height: 12),
+
+            // 탭 콘텐츠
+            SizedBox(
+              height: 320,
+              child: TabBarView(
+                children: [
+                  _buildGradeTab(),
+                  _buildEmojiTab(),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGradeTab() {
+    return SingleChildScrollView(
       child: Column(
-        mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 헤더
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                '등급 스티커 추가',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
-              ),
-              IconButton(
-                onPressed: () => Navigator.pop(context),
-                icon: const Icon(Icons.close),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-
           // 등급 선택
           const Text('등급', style: TextStyle(fontWeight: FontWeight.w600)),
           const SizedBox(height: 8),
           DropdownButtonFormField<ClimbingGrade>(
             value: _selectedGrade,
             decoration: InputDecoration(
-              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
@@ -134,12 +185,12 @@ class _OverlayStickerSheetState extends ConsumerState<OverlayStickerSheet> {
           ),
           const SizedBox(height: 12),
 
-          // 하단 고정 추가 버튼
+          // 추가 버튼
           SafeArea(
             child: SizedBox(
               width: double.infinity,
               child: FilledButton(
-                onPressed: _addSticker,
+                onPressed: _addGradeSticker,
                 child: const Text('추가'),
               ),
             ),
@@ -149,16 +200,79 @@ class _OverlayStickerSheetState extends ConsumerState<OverlayStickerSheet> {
     );
   }
 
-  void _addSticker() {
+  Widget _buildEmojiTab() {
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: _emojiCategories.entries.map((entry) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                entry.key,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: entry.value.map((emoji) {
+                  return GestureDetector(
+                    onTap: () => _addEmojiSticker(emoji),
+                    child: Container(
+                      width: 48,
+                      height: 48,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        emoji,
+                        style: const TextStyle(fontSize: 28),
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: 16),
+            ],
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  void _addGradeSticker() {
     final overlay = OverlayItem(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       text: _selectedGrade.label,
-      position: const Offset(0.5, 0.3), // 화면 중앙 상단
+      position: const Offset(0.5, 0.3),
       fontSize: 24.0,
       color: _selectedColor == DifficultyColor.white
           ? Colors.black87
           : Colors.white,
       backgroundColor: Color(_selectedColor.colorValue),
+      startTime: _stickerStartTime,
+      endTime: _stickerEndTime,
+    );
+
+    ref.read(overlaysProvider.notifier).addOverlay(overlay);
+    Navigator.pop(context);
+  }
+
+  void _addEmojiSticker(String emoji) {
+    final overlay = OverlayItem(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      text: emoji,
+      position: const Offset(0.5, 0.3),
+      fontSize: 48.0,
+      color: Colors.white,
+      startTime: _stickerStartTime,
+      endTime: _stickerEndTime,
     );
 
     ref.read(overlaysProvider.notifier).addOverlay(overlay);

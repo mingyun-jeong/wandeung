@@ -69,11 +69,34 @@ class SubtitleImageRenderer {
     final contentW = textW + pad * 2;
     final contentH = textH + pad * 2;
 
-    final imgWi = contentW.ceil();
-    final imgHi = contentH.ceil();
+    // 회전 시 필요한 바운딩 박스 계산
+    final angle = item.rotation;
+    final double imgW;
+    final double imgH;
+    if (angle == 0.0) {
+      imgW = contentW;
+      imgH = contentH;
+    } else {
+      final cosA = math.cos(angle).abs();
+      final sinA = math.sin(angle).abs();
+      imgW = contentW * cosA + contentH * sinA;
+      imgH = contentW * sinA + contentH * cosA;
+    }
+
+    final imgWi = imgW.ceil();
+    final imgHi = imgH.ceil();
 
     final recorder = ui.PictureRecorder();
     final canvas = ui.Canvas(recorder);
+
+    // 회전 적용 (중심 기준)
+    if (angle != 0.0) {
+      canvas.translate(imgWi / 2, imgHi / 2);
+      canvas.rotate(angle);
+      canvas.translate(-contentW / 2, -contentH / 2);
+    } else {
+      canvas.translate((imgWi - contentW) / 2, (imgHi - contentH) / 2);
+    }
 
     // 배경
     if (item.backgroundColor != null) {

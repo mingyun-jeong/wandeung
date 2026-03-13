@@ -36,6 +36,9 @@ class OverlayItem {
   final double fontSize;
   final Color color;
   final Color? backgroundColor;
+  final Duration? startTime; // null이면 영상 전체
+  final Duration? endTime; // null이면 영상 전체
+  final double rotation; // 라디안 단위 (기본 0.0)
 
   const OverlayItem({
     required this.id,
@@ -44,7 +47,16 @@ class OverlayItem {
     this.fontSize = 24.0,
     this.color = const Color(0xFFFFFFFF),
     this.backgroundColor,
+    this.startTime,
+    this.endTime,
+    this.rotation = 0.0,
   });
+
+  /// 주어진 시간에 이 스티커가 보이는지 여부
+  bool isVisibleAt(Duration time) {
+    if (startTime == null || endTime == null) return true;
+    return time >= startTime! && time < endTime!;
+  }
 
   OverlayItem copyWith({
     String? id,
@@ -54,6 +66,11 @@ class OverlayItem {
     Color? color,
     Color? backgroundColor,
     bool clearBackground = false,
+    Duration? startTime,
+    bool clearStartTime = false,
+    Duration? endTime,
+    bool clearEndTime = false,
+    double? rotation,
   }) {
     return OverlayItem(
       id: id ?? this.id,
@@ -63,6 +80,9 @@ class OverlayItem {
       color: color ?? this.color,
       backgroundColor:
           clearBackground ? null : (backgroundColor ?? this.backgroundColor),
+      startTime: clearStartTime ? null : (startTime ?? this.startTime),
+      endTime: clearEndTime ? null : (endTime ?? this.endTime),
+      rotation: rotation ?? this.rotation,
     );
   }
 }

@@ -18,11 +18,12 @@ import '../utils/thumbnail_utils.dart';
 import '../widgets/editor/export_progress_dialog.dart';
 import '../widgets/editor/overlay_layer.dart';
 import '../widgets/editor/overlay_sticker_sheet.dart';
-import '../widgets/editor/speed_picker_sheet.dart';
-import '../widgets/editor/speed_segment_bar.dart';
+import '../widgets/editor/editor_tab_bar.dart';
+import '../widgets/editor/speed_segment_timeline.dart';
+import '../widgets/editor/text_multi_track_timeline.dart';
+import '../widgets/editor/sticker_timeline_track.dart';
 import '../widgets/editor/subtitle_editor_sheet.dart';
 import '../widgets/editor/subtitle_overlay_layer.dart';
-import '../widgets/editor/subtitle_timeline_track.dart';
 import 'record_save_screen.dart';
 
 /// 비디오 편집 화면
@@ -81,6 +82,7 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
           _displayAspectRatio = _controller.video.value.aspectRatio;
         }
 
+        _controller.video.setLooping(false);
         setState(() => _isInitialized = true);
         // 배속 구간 초기화 (전체 영상, 1x)
         ref
@@ -245,17 +247,14 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
     }
   }
 
-  void _showSpeedPicker() {
-    showModalBottomSheet(
-      context: context,
-      builder: (_) => const SpeedPickerSheet(),
-    );
-  }
-
   void _showOverlayStickers() {
     showModalBottomSheet(
       context: context,
-      builder: (_) => const OverlayStickerSheet(),
+      isScrollControlled: true,
+      builder: (_) => OverlayStickerSheet(
+        currentPosition: _currentPosition,
+        videoDuration: _controller.videoDuration,
+      ),
     );
   }
 
@@ -284,8 +283,12 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
     }
 
     final segments = ref.watch(speedSegmentsProvider);
-    final currentSpeed =
-        segments.isNotEmpty ? segments.first.speed : 1.0;
+    final currentSpeed = segments
+            .where((s) =>
+                _currentPosition >= s.start && _currentPosition < s.end)
+            .firstOrNull
+            ?.speed ??
+        1.0;
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -406,6 +409,7 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
                           height: videoHeight,
                           child: OverlayLayer(
                             previewSize: videoSize,
+                            currentPosition: _currentPosition,
                           ),
                         ),
                       ),
@@ -440,131 +444,63 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
               ),
             ),
 
-            // ─── 배속 구간 바 ─────────────────────────
-            SpeedSegmentBar(
-              segments: segments,
-              totalDuration: _controller.videoDuration,
+            // ─── 탭별 콘텐츠 (고정 높이) ─────────────
+            SizedBox(
+              height: 120,
+              child: _buildTabContent(ref),
             ),
 
-            // ─── 자막 타임라인 트랙 ─────────────────────
-            SubtitleTimelineTrack(
-              totalDuration: _controller.videoDuration,
-              currentPosition: _currentPosition,
-              onSubtitleTap: (sub) => _showSubtitleEditor(existingItem: sub),
-            ),
-
-            // ─── 트림 슬라이더 ────────────────────────
-            Container(
-              margin: const EdgeInsets.symmetric(horizontal: 8),
-              child: Column(
-                children: [
-                  TrimSlider(
-                    controller: _controller,
-                    height: 60,
-                    child: TrimTimeline(
-                      controller: _controller,
-                      padding: const EdgeInsets.only(top: 10),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 8),
-
-            // ─── 하단 툴바 ───────────────────────────
-            Container(
-              padding: const EdgeInsets.symmetric(
-                  horizontal: 24, vertical: 12),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  _ToolbarButton(
-                    icon: Icons.speed,
-                    label: '속도',
-                    badge: currentSpeed != 1.0
-                        ? '${currentSpeed}x'
-                        : null,
-                    onTap: _showSpeedPicker,
-                  ),
-                  _ToolbarButton(
-                    icon: Icons.emoji_emotions,
-                    label: '스티커',
-                    onTap: _showOverlayStickers,
-                  ),
-                  _ToolbarButton(
-                    icon: Icons.title,
-                    label: '텍스트',
-                    badge: ref.watch(subtitlesProvider).isNotEmpty
-                        ? '${ref.watch(subtitlesProvider).length}'
-                        : null,
-                    onTap: () => _showSubtitleEditor(),
-                  ),
-                ],
-              ),
-            ),
+            // ─── 하단 탭 바 ──────────────────────
+            const EditorTabBar(),
             const SizedBox(height: 8),
           ],
         ),
       ),
     );
   }
-}
-
-/// 하단 툴바 버튼
-class _ToolbarButton extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final String? badge;
-  final VoidCallback onTap;
-
-  const _ToolbarButton({
-    required this.icon,
-    required this.label,
-    this.badge,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Stack(
-            clipBehavior: Clip.none,
+  Widget _buildTabContent(WidgetRef ref) {
+    final tab = ref.watch(selectedEditorTabProvider);
+    switch (tab) {
+      case EditorTab.trim:
+        return Container(
+          margin: const EdgeInsets.symmetric(horizontal: 8),
+          child: Column(
             children: [
-              Icon(icon, color: Colors.white, size: 28),
-              if (badge != null)
-                Positioned(
-                  top: -6,
-                  right: -12,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 4, vertical: 1),
-                    decoration: BoxDecoration(
-                      color: Colors.red,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      badge!,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 9,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
+              TrimSlider(
+                controller: _controller,
+                height: 60,
+                child: TrimTimeline(
+                  controller: _controller,
+                  padding: const EdgeInsets.only(top: 10),
                 ),
+              ),
             ],
           ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: const TextStyle(color: Colors.white70, fontSize: 12),
-          ),
-        ],
-      ),
-    );
+        );
+
+      case EditorTab.speed:
+        return SpeedSegmentTimeline(
+          totalDuration: _controller.videoDuration,
+          currentPosition: _currentPosition,
+          onSplit: () {
+            ref.read(speedSegmentsProvider.notifier).splitAt(_currentPosition);
+          },
+        );
+
+      case EditorTab.text:
+        return TextMultiTrackTimeline(
+          totalDuration: _controller.videoDuration,
+          currentPosition: _currentPosition,
+          onAddText: () => _showSubtitleEditor(),
+          onEditText: (sub) => _showSubtitleEditor(existingItem: sub),
+        );
+
+      case EditorTab.sticker:
+        return StickerTimelineTrack(
+          totalDuration: _controller.videoDuration,
+          currentPosition: _currentPosition,
+          onAddSticker: _showOverlayStickers,
+        );
+    }
   }
 }

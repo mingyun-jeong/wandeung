@@ -95,3 +95,9 @@ final overlaysProvider =
 /// null = 내보내기 중 아님, 0.0~1.0 = 진행률
 final exportProgressProvider =
     StateProvider.autoDispose<double?>((ref) => null);
+
+/// 내보내기 상태
+enum ExportStatus { exporting, completed, cancelled, error }
+
+final exportStatusProvider =
+    StateProvider.autoDispose<ExportStatus>((ref) => ExportStatus.exporting);

@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:cross_file/cross_file.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -121,12 +119,28 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
   Future<void> _handleExport() async {
     if (_isExporting) return;
     setState(() => _isExporting = true);
+    ref.read(exportStatusProvider.notifier).state = ExportStatus.exporting;
+    ref.read(exportProgressProvider.notifier).state = null;
 
-    // 진행률 다이얼로그 표시
-    showDialog(
+    // 바텀시트 표시
+    showModalBottomSheet(
       context: context,
-      barrierDismissible: false,
-      builder: (_) => const ExportProgressDialog(),
+      isDismissible: false,
+      enableDrag: false,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) => ExportProgressSheet(
+        onCancel: () async {
+          await VideoExportService.cancelExport();
+        },
+        onResume: () {
+          // 바텀시트 닫고 내보내기 재시작
+          Navigator.pop(sheetContext);
+          _handleExport();
+        },
+        onClose: () {
+          Navigator.pop(sheetContext);
+        },
+      ),
     );
 
     try {
@@ -148,17 +162,20 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
       );
 
       if (mounted) {
-        Navigator.pop(context); // 다이얼로그 닫기
+        ref.read(exportStatusProvider.notifier).state =
+            ExportStatus.completed;
 
-        // 내보내기 결과 영상 플레이어 표시
-        await Navigator.push<void>(
-          context,
-          MaterialPageRoute(
-            builder: (_) => _ExportPreviewScreen(videoPath: result.outputPath),
+        // 완료 후 잠시 보여주고 바텀시트 닫기
+        await Future<void>.delayed(const Duration(milliseconds: 400));
+        if (!mounted) return;
+        Navigator.pop(context); // 바텀시트 닫기
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('내보내기가 완료되었습니다'),
+            behavior: SnackBarBehavior.floating,
           ),
         );
-
-        if (!mounted) return;
 
         if (widget.existingRecord != null) {
           // 기존 기록 편집 → 내보내기 영상을 자식 레코드로 저장
@@ -196,7 +213,7 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
           if (mounted) {
             ref.invalidate(
                 exportedRecordsProvider(widget.existingRecord!.id!));
-            Navigator.pop(context, true); // RecordSaveScreen으로 복귀
+            Navigator.pop(context, true); // 기록 페이지로 복귀
           }
         } else {
           // 신규 촬영 → 저장 화면으로 이동
@@ -211,17 +228,19 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
           );
         }
       }
+    } on ExportCancelledException {
+      if (mounted) {
+        ref.read(exportStatusProvider.notifier).state =
+            ExportStatus.cancelled;
+        ref.read(exportProgressProvider.notifier).state = null;
+      }
     } catch (e) {
       if (mounted) {
-        Navigator.pop(context); // 다이얼로그 닫기
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('내보내기 실패: $e')),
-        );
+        ref.read(exportStatusProvider.notifier).state = ExportStatus.error;
       }
     } finally {
       if (mounted) {
         setState(() => _isExporting = false);
-        ref.read(exportProgressProvider.notifier).state = null;
       }
     }
   }
@@ -545,191 +564,6 @@ class _ToolbarButton extends StatelessWidget {
             style: const TextStyle(color: Colors.white70, fontSize: 12),
           ),
         ],
-      ),
-    );
-  }
-}
-
-/// 내보내기 결과 영상 미리보기 화면
-class _ExportPreviewScreen extends StatefulWidget {
-  final String videoPath;
-  const _ExportPreviewScreen({required this.videoPath});
-
-  @override
-  State<_ExportPreviewScreen> createState() => _ExportPreviewScreenState();
-}
-
-class _ExportPreviewScreenState extends State<_ExportPreviewScreen> {
-  late VideoPlayerController _controller;
-  bool _initialized = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = VideoPlayerController.file(File(widget.videoPath))
-      ..initialize().then((_) {
-        if (mounted) {
-          setState(() => _initialized = true);
-          _controller.play();
-        }
-      });
-    _controller.addListener(_onPlayerStateChanged);
-  }
-
-  void _onPlayerStateChanged() {
-    if (mounted) setState(() {});
-  }
-
-  @override
-  void dispose() {
-    _controller.removeListener(_onPlayerStateChanged);
-    _controller.dispose();
-    super.dispose();
-  }
-
-  String _formatDuration(Duration d) {
-    final min = d.inMinutes.remainder(60).toString().padLeft(2, '0');
-    final sec = d.inSeconds.remainder(60).toString().padLeft(2, '0');
-    return '$min:$sec';
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.black,
-      body: SafeArea(
-        child: Column(
-          children: [
-            // 상단 바
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const SizedBox(width: 48),
-                  const Text(
-                    '내보내기 완료',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  IconButton(
-                    onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.close, color: Colors.white),
-                  ),
-                ],
-              ),
-            ),
-
-            // 영상 플레이어
-            Expanded(
-              child: Center(
-                child: _initialized
-                    ? GestureDetector(
-                        onTap: () {
-                          _controller.value.isPlaying
-                              ? _controller.pause()
-                              : _controller.play();
-                        },
-                        child: Stack(
-                          alignment: Alignment.center,
-                          children: [
-                            AspectRatio(
-                              aspectRatio: _controller.value.aspectRatio,
-                              child: VideoPlayer(_controller),
-                            ),
-                            if (!_controller.value.isPlaying)
-                              Container(
-                                decoration: BoxDecoration(
-                                  color: Colors.black38,
-                                  shape: BoxShape.circle,
-                                ),
-                                padding: const EdgeInsets.all(12),
-                                child: const Icon(
-                                  Icons.play_arrow_rounded,
-                                  size: 48,
-                                  color: Colors.white,
-                                ),
-                              ),
-                          ],
-                        ),
-                      )
-                    : const CircularProgressIndicator(color: Colors.white),
-              ),
-            ),
-
-            // 재생 진행 바
-            if (_initialized) ...[
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Row(
-                  children: [
-                    Text(
-                      _formatDuration(_controller.value.position),
-                      style: const TextStyle(
-                          color: Colors.white70, fontSize: 12),
-                    ),
-                    Expanded(
-                      child: SliderTheme(
-                        data: SliderTheme.of(context).copyWith(
-                          trackHeight: 2,
-                          thumbShape: const RoundSliderThumbShape(
-                              enabledThumbRadius: 6),
-                          overlayShape: const RoundSliderOverlayShape(
-                              overlayRadius: 12),
-                          activeTrackColor: Colors.white,
-                          inactiveTrackColor: Colors.white24,
-                          thumbColor: Colors.white,
-                        ),
-                        child: Slider(
-                          value: _controller.value.duration.inMilliseconds > 0
-                              ? _controller.value.position.inMilliseconds /
-                                  _controller.value.duration.inMilliseconds
-                              : 0.0,
-                          onChanged: (v) {
-                            final pos = Duration(
-                              milliseconds:
-                                  (v * _controller.value.duration.inMilliseconds)
-                                      .round(),
-                            );
-                            _controller.seekTo(pos);
-                          },
-                        ),
-                      ),
-                    ),
-                    Text(
-                      _formatDuration(_controller.value.duration),
-                      style: const TextStyle(
-                          color: Colors.white70, fontSize: 12),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-
-            // 확인 버튼
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
-              child: SizedBox(
-                width: double.infinity,
-                child: FilledButton.icon(
-                  onPressed: () => Navigator.pop(context),
-                  icon: const Icon(Icons.check_rounded),
-                  label: const Text(
-                    '확인',
-                    style: TextStyle(
-                        fontSize: 16, fontWeight: FontWeight.w600),
-                  ),
-                  style: FilledButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }

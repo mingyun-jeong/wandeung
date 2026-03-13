@@ -18,6 +18,17 @@ import 'subtitle_image_renderer.dart';
 class VideoExportService {
   VideoExportService._();
 
+  /// 현재 실행 중인 FFmpeg 세션 ID (취소용)
+  static int? _activeSessionId;
+
+  /// 현재 내보내기를 취소한다.
+  static Future<void> cancelExport() async {
+    if (_activeSessionId != null) {
+      await FFmpegKit.cancel(_activeSessionId!);
+      _activeSessionId = null;
+    }
+  }
+
   /// 편집된 영상을 MP4로 내보내기
   ///
   /// [onProgress] 0.0~1.0 범위의 진행률 콜백
@@ -164,15 +175,20 @@ class VideoExportService {
   }) async {
     final completer = Completer<void>();
 
-    await FFmpegKit.executeWithArgumentsAsync(
+    final session = await FFmpegKit.executeWithArgumentsAsync(
       args,
       (session) async {
+        _activeSessionId = null;
         // 세션 완료 시 returnCode 확인 시도
         // PlatformException 발생 시 출력 파일로 fallback
         try {
           final returnCode = await session.getReturnCode();
           if (ReturnCode.isSuccess(returnCode)) {
             if (!completer.isCompleted) completer.complete();
+          } else if (ReturnCode.isCancel(returnCode)) {
+            if (!completer.isCompleted) {
+              completer.completeError(const ExportCancelledException());
+            }
           } else {
             // FFmpeg 비정상 종료 — 출력 파일로 fallback 판단
             final outputFile = File(outputPath);
@@ -232,6 +248,8 @@ class VideoExportService {
       },
     );
 
+    _activeSessionId = await session.getSessionId();
+
     return completer.future;
   }
 
@@ -269,6 +287,10 @@ class VideoExportService {
     }
     return totalMs;
   }
+}
+
+class ExportCancelledException implements Exception {
+  const ExportCancelledException();
 }
 
 class VideoExportException implements Exception {

@@ -528,24 +528,8 @@ class _StatsSection extends StatelessWidget {
         width: double.infinity,
         padding: const EdgeInsets.all(22),
         decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              WandeungColors.secondary,
-              WandeungColors.primary,
-              Color(0xFF16213E),
-            ],
-            stops: [0.0, 0.6, 1.0],
-          ),
+          color: const Color(0xFFF0F0F0),
           borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: WandeungColors.primary.withOpacity(0.3),
-              blurRadius: 16,
-              offset: const Offset(0, 6),
-            ),
-          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -593,7 +577,7 @@ class _StatsSection extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
-                    color: Colors.white.withOpacity(0.7),
+                    color: Colors.black.withOpacity(0.5),
                   ),
                 ),
                 const Spacer(),
@@ -601,7 +585,7 @@ class _StatsSection extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(
                       horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.15),
+                    color: Colors.black.withOpacity(0.08),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
@@ -609,7 +593,7 @@ class _StatsSection extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
-                      color: Colors.white.withOpacity(0.8),
+                      color: Colors.black.withOpacity(0.6),
                     ),
                   ),
                 ),
@@ -629,7 +613,7 @@ class _StatsSection extends StatelessWidget {
                 Container(
                   width: 1,
                   height: 48,
-                  color: Colors.white.withOpacity(0.2),
+                  color: Colors.black.withOpacity(0.1),
                 ),
                 Expanded(
                   child: _RateDisplay(
@@ -663,7 +647,7 @@ class _StatsSection extends StatelessWidget {
                       Expanded(
                         flex: ((1 - completedRatio - inProgressRatio) * 1000).round(),
                         child: Container(
-                          color: Colors.white.withOpacity(0.15),
+                          color: Colors.black.withOpacity(0.08),
                         ),
                       ),
                   ],
@@ -703,7 +687,7 @@ class _RateDisplay extends StatelessWidget {
               style: const TextStyle(
                 fontSize: 36,
                 fontWeight: FontWeight.w800,
-                color: Colors.white,
+                color: Colors.black87,
                 height: 1,
                 letterSpacing: -1.5,
               ),
@@ -715,7 +699,7 @@ class _RateDisplay extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w700,
-                  color: Colors.white.withOpacity(0.6),
+                  color: Colors.black.withOpacity(0.4),
                 ),
               ),
             ),
@@ -739,7 +723,7 @@ class _RateDisplay extends StatelessWidget {
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
-                color: Colors.white.withOpacity(0.7),
+                color: Colors.black.withOpacity(0.5),
               ),
             ),
           ],

@@ -56,7 +56,7 @@ class WandeungAppBar extends ConsumerWidget implements PreferredSizeWidget {
                   style: TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.w800,
-                    color: WandeungColors.accent,
+                    color: Colors.black,
                     letterSpacing: -1.5,
                   ),
                 ),

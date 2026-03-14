@@ -116,12 +116,12 @@ class StatsTabScreen extends ConsumerWidget {
                   delegate: SliverChildListDelegate([
                     _SummarySection(stats: stats, period: period),
                     _InsightCard(stats: stats, period: period),
-                    _DailyClimbChartSection(stats: stats, period: period),
-                    _ColorTrendSection(stats: stats, period: period),
                     if (stats.gymBreakdown
                         .where((g) => g.total > 0)
                         .isNotEmpty)
                       _GymSection(stats: stats),
+                    _DailyClimbChartSection(stats: stats, period: period),
+                    _ColorTrendSection(stats: stats, period: period),
                     const SizedBox(height: 24),
                   ]),
                 );
@@ -167,24 +167,8 @@ class _SummarySection extends StatelessWidget {
         width: double.infinity,
         padding: const EdgeInsets.all(22),
         decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              WandeungColors.secondary,
-              WandeungColors.primary,
-              Color(0xFF16213E),
-            ],
-            stops: [0.0, 0.6, 1.0],
-          ),
+          color: const Color(0xFFF0F0F0),
           borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: WandeungColors.primary.withOpacity(0.3),
-              blurRadius: 16,
-              offset: const Offset(0, 6),
-            ),
-          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -196,7 +180,7 @@ class _SummarySection extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
-                    color: colorScheme.onPrimary.withOpacity(0.7),
+                    color: Colors.black.withOpacity(0.5),
                   ),
                 ),
                 const Spacer(),
@@ -204,7 +188,7 @@ class _SummarySection extends StatelessWidget {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: colorScheme.onPrimary.withOpacity(0.15),
+                    color: Colors.black.withOpacity(0.08),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
@@ -212,7 +196,7 @@ class _SummarySection extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
-                      color: colorScheme.onPrimary.withOpacity(0.8),
+                      color: Colors.black.withOpacity(0.6),
                     ),
                   ),
                 ),
@@ -230,10 +214,10 @@ class _SummarySection extends StatelessWidget {
                         children: [
                           Text(
                             stats.completionRate.toStringAsFixed(0),
-                            style: TextStyle(
+                            style: const TextStyle(
                               fontSize: 42,
                               fontWeight: FontWeight.w800,
-                              color: colorScheme.onPrimary,
+                              color: Colors.black87,
                               height: 1,
                               letterSpacing: -2,
                             ),
@@ -245,7 +229,7 @@ class _SummarySection extends StatelessWidget {
                               style: TextStyle(
                                 fontSize: 20,
                                 fontWeight: FontWeight.w700,
-                                color: colorScheme.onPrimary.withOpacity(0.6),
+                                color: Colors.black.withOpacity(0.4),
                               ),
                             ),
                           ),
@@ -257,7 +241,7 @@ class _SummarySection extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w500,
-                          color: colorScheme.onPrimary.withOpacity(0.7),
+                          color: Colors.black.withOpacity(0.5),
                         ),
                       ),
                     ],
@@ -266,7 +250,7 @@ class _SummarySection extends StatelessWidget {
                 Container(
                   width: 1,
                   height: 56,
-                  color: colorScheme.onPrimary.withOpacity(0.2),
+                  color: Colors.black.withOpacity(0.1),
                 ),
                 Expanded(
                   child: Column(
@@ -288,7 +272,7 @@ class _SummarySection extends StatelessWidget {
                             style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w600,
-                              color: colorScheme.onPrimary.withOpacity(0.9),
+                              color: Colors.black.withOpacity(0.7),
                             ),
                           ),
                         ],
@@ -311,7 +295,7 @@ class _SummarySection extends StatelessWidget {
                             style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w600,
-                              color: colorScheme.onPrimary.withOpacity(0.9),
+                              color: Colors.black.withOpacity(0.7),
                             ),
                           ),
                         ],
@@ -344,7 +328,7 @@ class _SummarySection extends StatelessWidget {
                             ((1 - completedRatio - inProgressRatio) * 1000)
                                 .round(),
                         child: Container(
-                          color: colorScheme.onPrimary.withOpacity(0.15),
+                          color: Colors.black.withOpacity(0.08),
                         ),
                       ),
                   ],
@@ -357,7 +341,7 @@ class _SummarySection extends StatelessWidget {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
-                  color: colorScheme.onPrimary.withOpacity(0.1),
+                  color: Colors.black.withOpacity(0.05),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Row(
@@ -367,7 +351,7 @@ class _SummarySection extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
-                        color: colorScheme.onPrimary.withOpacity(0.6),
+                        color: Colors.black.withOpacity(0.4),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -375,7 +359,7 @@ class _SummarySection extends StatelessWidget {
                       label: '등반',
                       diff: stats.totalClimbs - stats.prevTotalClimbs,
                       suffix: '건',
-                      onPrimaryColor: colorScheme.onPrimary,
+                      onPrimaryColor: Colors.black87,
                     ),
                     const SizedBox(width: 10),
                     _DiffChip(
@@ -383,7 +367,7 @@ class _SummarySection extends StatelessWidget {
                       diff: (stats.completionRate - stats.prevCompletionRate)
                           .round(),
                       suffix: '%p',
-                      onPrimaryColor: colorScheme.onPrimary,
+                      onPrimaryColor: Colors.black87,
                     ),
                   ],
                 ),
@@ -1062,9 +1046,8 @@ class _InsightCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(
-          color: WandeungColors.accent.withOpacity(0.05),
+          color: const Color(0xFFF0F0F0),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: WandeungColors.accent.withOpacity(0.15)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,

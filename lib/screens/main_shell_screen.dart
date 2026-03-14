@@ -18,19 +18,15 @@ class MainShellScreen extends ConsumerWidget {
     final currentIndex = ref.watch(bottomNavIndexProvider);
 
     return Scaffold(
-      body: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 200),
-        child: IndexedStack(
-          key: ValueKey(currentIndex),
-          index: currentIndex,
-          children: const [
-            HomeTabScreen(),
-            RecordsTabScreen(),
-            CameraTabScreen(),
-            GymGradesTabScreen(),
-            StatsTabScreen(),
-          ],
-        ),
+      body: IndexedStack(
+        index: currentIndex,
+        children: const [
+          HomeTabScreen(),
+          RecordsTabScreen(),
+          CameraTabScreen(),
+          GymGradesTabScreen(),
+          StatsTabScreen(),
+        ],
       ),
       bottomNavigationBar: Container(
         decoration: const BoxDecoration(

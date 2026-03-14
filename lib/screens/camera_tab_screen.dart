@@ -46,9 +46,14 @@ class _CameraTabScreenState extends ConsumerState<CameraTabScreen>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    // 카메라 탭이 아닐 때는 lifecycle 처리 불필요
+    final currentTab = ref.read(bottomNavIndexProvider);
+    if (currentTab != 2) return;
+
     if (state == AppLifecycleState.inactive) {
-      _controller?.dispose();
+      final controllerToDispose = _controller;
       _controller = null;
+      controllerToDispose?.dispose();
     } else if (state == AppLifecycleState.resumed) {
       if (_controller == null && !_isInitializing && _hasEverInitialized) {
         _initCamera();
@@ -211,14 +216,32 @@ class _CameraTabScreenState extends ConsumerState<CameraTabScreen>
   @override
   Widget build(BuildContext context) {
     final currentTab = ref.watch(bottomNavIndexProvider);
-    if (currentTab == 2) {
-      if (!_hasEverInitialized && !_isInitializing) {
-        _hasEverInitialized = true;
-        _initCamera();
-      } else if (_controller == null && !_isInitializing) {
-        // 탭 전환 등으로 controller가 없어진 경우 재초기화
-        _initCamera();
+
+    // ref.listen으로 탭 전환을 감지하여 카메라 lifecycle 관리
+    ref.listen(bottomNavIndexProvider, (previous, next) {
+      if (next == 2 && previous != 2) {
+        // 카메라 탭으로 진입
+        if (!_hasEverInitialized) {
+          _hasEverInitialized = true;
+          _initCamera();
+        } else if (_controller == null && !_isInitializing && _errorMessage == null) {
+          _initCamera();
+        }
+      } else if (next != 2 && previous == 2) {
+        // 카메라 탭에서 이탈 — 비동기로 dispose하여 build 중 side-effect 방지
+        final controllerToDispose = _controller;
+        _controller = null;
+        if (mounted) setState(() {});
+        controllerToDispose?.dispose();
       }
+    });
+
+    // 최초 진입 시 (listen은 변경만 감지하므로 초기 상태 처리)
+    if (currentTab == 2 && !_hasEverInitialized && !_isInitializing) {
+      _hasEverInitialized = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _initCamera();
+      });
     }
 
     ref.listen(nearbyGymsProvider, (_, next) {

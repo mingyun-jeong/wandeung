@@ -514,11 +514,14 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
         title: _isEditMode ? '기록 편집' : '기록 저장',
         showBackButton: true,
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.only(bottom: 16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+      body: Column(
+        children: [
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.only(bottom: 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
             // 기록일시 (편집 모드에서만, 영상 위)
             if (_isEditMode && widget.existingRecord!.createdAt != null)
               Padding(
@@ -903,8 +906,12 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
                 ],
               ),
             ),
-            // 하단 고정 버튼
-            SafeArea(
+          ],
+              ),
+            ),
+          ),
+          // 하단 고정 버튼
+          SafeArea(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
               child: Row(
@@ -951,9 +958,8 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
                 ],
               ),
             ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

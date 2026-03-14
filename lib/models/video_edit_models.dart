@@ -87,6 +87,30 @@ class OverlayItem {
   }
 }
 
+/// 내보내기 품질 설정
+enum ExportQuality {
+  /// 1080p (Full HD) — 일반 내보내기용
+  fullHd(1080, 20, '1080p'),
+
+  /// 4K (Ultra HD) — 고화질 내보내기용
+  uhd4k(2160, 18, '4K');
+
+  final int targetHeight;
+  final int crf;
+  final String label;
+
+  const ExportQuality(this.targetHeight, this.crf, this.label);
+}
+
+/// 업로드용 압축 설정 (720p, CRF 28)
+class UploadCompression {
+  UploadCompression._();
+
+  static const int targetHeight = 720;
+  static const int crf = 28;
+  static const String preset = 'fast';
+}
+
 /// 비디오 내보내기 결과
 class VideoEditResult {
   final String outputPath;

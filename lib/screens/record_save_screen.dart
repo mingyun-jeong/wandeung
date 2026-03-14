@@ -12,6 +12,7 @@ import 'package:ffmpeg_kit_flutter_new/ffprobe_kit.dart';
 import '../config/r2_config.dart';
 import '../config/supabase_config.dart';
 import '../providers/upload_queue_provider.dart';
+import '../services/video_export_service.dart';
 import '../services/video_upload_service.dart';
 import '../models/climbing_gym.dart';
 import '../models/climbing_record.dart';
@@ -36,12 +37,14 @@ class RecordSaveScreen extends ConsumerStatefulWidget {
   final String? videoPath;
   final String? originalVideoPath;
   final ClimbingRecord? existingRecord;
+  final String? videoQuality;
 
   const RecordSaveScreen({
     super.key,
     this.videoPath,
     this.originalVideoPath,
     this.existingRecord,
+    this.videoQuality,
   });
 
   @override
@@ -308,6 +311,8 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
 
         final thumbnailPath = await generateThumbnail(persistentPath);
         final durationSeconds = await _getVideoDuration(persistentPath);
+        final videoQuality =
+            widget.videoQuality ?? await _detectVideoQuality(persistentPath);
         final savedRecord = await RecordService.saveRecord(
           videoPath: persistentPath,
           grade: settings.grade!.name,
@@ -320,6 +325,7 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
           tags: _tags,
           videoDurationSeconds: durationSeconds,
           scales: ref.read(allColorScalesProvider).valueOrNull,
+          videoQuality: videoQuality,
         );
 
         // 썸네일 즉시 R2 업로드 (작은 파일이므로 네트워크 종류 무관)
@@ -335,10 +341,19 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
           }
         }
 
-        // 영상은 큐에 등록 (Wi-Fi 설정에 따라 처리)
+        // 업로드용 압축 후 큐에 등록
+        String uploadPath = persistentPath;
+        try {
+          uploadPath = await VideoExportService.compressForUpload(
+            inputPath: persistentPath,
+          );
+          debugPrint('업로드 압축 완료: $uploadPath');
+        } catch (e) {
+          debugPrint('업로드 압축 실패, 원본 사용: $e');
+        }
         ref.read(uploadQueueProvider.notifier).enqueue(
           recordId: savedRecord.id!,
-          localVideoPath: persistentPath,
+          localVideoPath: uploadPath,
         );
       }
 
@@ -443,6 +458,40 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
     // fallback to VideoPlayerController
     if (_videoController?.value.isInitialized == true) {
       return _videoController!.value.duration.inSeconds;
+    }
+    return null;
+  }
+
+  /// 영상 높이로부터 화질 라벨 추출 (720p, 1080p, 4K 등)
+  static String _qualityLabelFromHeight(int height) {
+    if (height >= 2160) return '4K';
+    if (height >= 1080) return '1080p';
+    if (height >= 720) return '720p';
+    if (height >= 480) return '480p';
+    return '${height}p';
+  }
+
+  Future<String?> _detectVideoQuality(String path) async {
+    try {
+      final session = await FFprobeKit.getMediaInformation(path);
+      final info = session.getMediaInformation();
+      await FFmpegKitConfig.clearSessions();
+      if (info != null) {
+        final streams = info.getStreams();
+        for (final stream in streams) {
+          final height = stream.getHeight();
+          if (height != null && height > 0) {
+            return _qualityLabelFromHeight(height);
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('FFprobe 해상도 조회 실패: $e');
+    }
+    // fallback to VideoPlayerController
+    if (_videoController?.value.isInitialized == true) {
+      final h = _videoController!.value.size.height.toInt();
+      if (h > 0) return _qualityLabelFromHeight(h);
     }
     return null;
   }
@@ -600,6 +649,81 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // 완등 여부
+                  Text('완등 여부',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 15,
+                        color: Theme.of(context).colorScheme.onSurface,
+                      )),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: ClimbingStatus.values.map((s) {
+                      final isSelected = _status == s;
+                      final isCompleted = s == ClimbingStatus.completed;
+                      final activeColor = isCompleted
+                          ? WandeungColors.success
+                          : const Color(0xFFFF6B35);
+                      return Padding(
+                        padding: EdgeInsets.only(right: isCompleted ? 8 : 0),
+                        child: GestureDetector(
+                          onTap: () => setState(() => _status = s),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 180),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 9),
+                            decoration: BoxDecoration(
+                              color: isSelected
+                                  ? activeColor.withOpacity(0.1)
+                                  : const Color(0xFFF1F5F9),
+                              borderRadius: BorderRadius.circular(22),
+                              border: Border.all(
+                                color: isSelected
+                                    ? activeColor.withOpacity(0.4)
+                                    : const Color(0xFFE2E8F0),
+                                width: isSelected ? 1.5 : 1,
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  isCompleted
+                                      ? Icons.check_circle_rounded
+                                      : Icons.sports_kabaddi_rounded,
+                                  color: isSelected
+                                      ? activeColor
+                                      : Theme.of(context)
+                                          .colorScheme
+                                          .onSurface
+                                          .withOpacity(0.3),
+                                  size: 18,
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  s.label,
+                                  style: TextStyle(
+                                    fontWeight: isSelected
+                                        ? FontWeight.w600
+                                        : FontWeight.w400,
+                                    fontSize: 13,
+                                    color: isSelected
+                                        ? activeColor
+                                        : Theme.of(context)
+                                            .colorScheme
+                                            .onSurface
+                                            .withOpacity(0.4),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: 16),
+
                   // 난이도 선택
                   DifficultySelector(
                     selectedColor: displayColor,
@@ -626,6 +750,7 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
                   ),
                   const SizedBox(height: 16),
 
+                  // 암장
                   Text('암장',
                       style: TextStyle(
                         fontWeight: FontWeight.w700,
@@ -763,80 +888,6 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
                     ),
                   const SizedBox(height: 16),
 
-                  Text('완등 여부',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 15,
-                        color: Theme.of(context).colorScheme.onSurface,
-                      )),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: ClimbingStatus.values.map((s) {
-                      final isSelected = _status == s;
-                      final isCompleted = s == ClimbingStatus.completed;
-                      final activeColor = isCompleted
-                          ? WandeungColors.success
-                          : const Color(0xFFFF6B35);
-                      return Padding(
-                        padding: EdgeInsets.only(right: isCompleted ? 8 : 0),
-                        child: GestureDetector(
-                          onTap: () => setState(() => _status = s),
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 180),
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 9),
-                            decoration: BoxDecoration(
-                              color: isSelected
-                                  ? activeColor.withOpacity(0.1)
-                                  : const Color(0xFFF1F5F9),
-                              borderRadius: BorderRadius.circular(22),
-                              border: Border.all(
-                                color: isSelected
-                                    ? activeColor.withOpacity(0.4)
-                                    : const Color(0xFFE2E8F0),
-                                width: isSelected ? 1.5 : 1,
-                              ),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  isCompleted
-                                      ? Icons.check_circle_rounded
-                                      : Icons.sports_kabaddi_rounded,
-                                  color: isSelected
-                                      ? activeColor
-                                      : Theme.of(context)
-                                          .colorScheme
-                                          .onSurface
-                                          .withOpacity(0.3),
-                                  size: 18,
-                                ),
-                                const SizedBox(width: 6),
-                                Text(
-                                  s.label,
-                                  style: TextStyle(
-                                    fontWeight: isSelected
-                                        ? FontWeight.w600
-                                        : FontWeight.w400,
-                                    fontSize: 13,
-                                    color: isSelected
-                                        ? activeColor
-                                        : Theme.of(context)
-                                            .colorScheme
-                                            .onSurface
-                                            .withOpacity(0.4),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                  const SizedBox(height: 16),
-
                   // 태그 입력
                   TagInput(
                     tags: _tags,
@@ -948,6 +999,13 @@ class _ExportedVideosList extends ConsumerWidget {
                     await RecordService.deleteRecord(export.id!);
                     ref.invalidate(exportedRecordsProvider(parentRecordId));
                   },
+                  onEditTitle: (newTitle) async {
+                    await RecordService.updateExportMemo(
+                      recordId: export.id!,
+                      memo: newTitle.isEmpty ? null : newTitle,
+                    );
+                    ref.invalidate(exportedRecordsProvider(parentRecordId));
+                  },
                 )),
           ],
         );
@@ -962,10 +1020,64 @@ class _ExportedVideosList extends ConsumerWidget {
 }
 
 /// 내보내기 영상 카드
-class _ExportedVideoCard extends StatelessWidget {
+class _ExportedVideoCard extends StatefulWidget {
   final ClimbingRecord record;
   final VoidCallback onDelete;
-  const _ExportedVideoCard({required this.record, required this.onDelete});
+  final ValueChanged<String> onEditTitle;
+  const _ExportedVideoCard({
+    required this.record,
+    required this.onDelete,
+    required this.onEditTitle,
+  });
+
+  @override
+  State<_ExportedVideoCard> createState() => _ExportedVideoCardState();
+}
+
+class _ExportedVideoCardState extends State<_ExportedVideoCard> {
+  bool _isEditing = false;
+  late final TextEditingController _titleController;
+  late final FocusNode _focusNode;
+
+  @override
+  void initState() {
+    super.initState();
+    _titleController = TextEditingController(
+      text: widget.record.memo?.isNotEmpty == true ? widget.record.memo : '',
+    );
+    _focusNode = FocusNode();
+    _focusNode.addListener(_onFocusChanged);
+  }
+
+  @override
+  void dispose() {
+    _focusNode.removeListener(_onFocusChanged);
+    _focusNode.dispose();
+    _titleController.dispose();
+    super.dispose();
+  }
+
+  void _onFocusChanged() {
+    if (!_focusNode.hasFocus && _isEditing) {
+      _commitEdit();
+    }
+  }
+
+  void _startEditing() {
+    setState(() => _isEditing = true);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _focusNode.requestFocus();
+    });
+  }
+
+  void _commitEdit() {
+    final newTitle = _titleController.text.trim();
+    final oldTitle = widget.record.memo ?? '';
+    setState(() => _isEditing = false);
+    if (newTitle != oldTitle) {
+      widget.onEditTitle(newTitle);
+    }
+  }
 
   String _formatDate(DateTime? dt) {
     if (dt == null) return '';
@@ -974,6 +1086,7 @@ class _ExportedVideoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final record = widget.record;
     final thumbPath = record.thumbnailPath;
     final hasThumbnail = thumbPath != null &&
         (thumbPath.startsWith('/') ? File(thumbPath).existsSync() : true);
@@ -1043,6 +1156,28 @@ class _ExportedVideoCard extends StatelessWidget {
                               child: const Icon(Icons.movie_rounded,
                                   color: Colors.white, size: 20),
                             ),
+                      if (record.videoQuality != null)
+                        Positioned(
+                          right: 3,
+                          top: 3,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 3, vertical: 1),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withOpacity(0.65),
+                              borderRadius: BorderRadius.circular(3),
+                            ),
+                            child: Text(
+                              record.videoQuality!,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 9,
+                                fontWeight: FontWeight.w500,
+                                height: 1.2,
+                              ),
+                            ),
+                          ),
+                        ),
                       if (record.videoDurationSeconds != null)
                         Positioned(
                           right: 3,
@@ -1074,13 +1209,30 @@ class _ExportedVideoCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      record.memo?.isNotEmpty == true
-                          ? record.memo!
-                          : '편집 영상',
-                      style: const TextStyle(
-                          fontSize: 14, fontWeight: FontWeight.w500),
-                    ),
+                    if (_isEditing)
+                      TextField(
+                        controller: _titleController,
+                        focusNode: _focusNode,
+                        style: const TextStyle(
+                            fontSize: 14, fontWeight: FontWeight.w500),
+                        decoration: const InputDecoration(
+                          hintText: '제목을 입력하세요',
+                          isDense: true,
+                          contentPadding: EdgeInsets.symmetric(
+                              horizontal: 0, vertical: 4),
+                          border: UnderlineInputBorder(),
+                        ),
+                        onSubmitted: (_) => _commitEdit(),
+                      )
+                    else
+                      Text(
+                        record.memo?.isNotEmpty == true
+                            ? record.memo!
+                            : '편집 영상',
+                        style: const TextStyle(
+                            fontSize: 14, fontWeight: FontWeight.w500),
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     const SizedBox(height: 2),
                     Text(
                       _formatDate(record.createdAt),
@@ -1094,8 +1246,21 @@ class _ExportedVideoCard extends StatelessWidget {
                   ],
                 ),
               ),
-              IconButton(
-                onPressed: () async {
+              GestureDetector(
+                onTap: _startEditing,
+                child: Padding(
+                  padding: const EdgeInsets.all(6),
+                  child: Icon(Icons.edit_rounded,
+                      size: 18,
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withOpacity(0.3)),
+                ),
+              ),
+              const SizedBox(width: 2),
+              GestureDetector(
+                onTap: () async {
                   final confirmed = await showDialog<bool>(
                     context: context,
                     builder: (ctx) => AlertDialog(
@@ -1115,14 +1280,17 @@ class _ExportedVideoCard extends StatelessWidget {
                       ],
                     ),
                   );
-                  if (confirmed == true) onDelete();
+                  if (confirmed == true) widget.onDelete();
                 },
-                icon: Icon(Icons.delete_outline_rounded,
-                    size: 20,
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withOpacity(0.3)),
+                child: Padding(
+                  padding: const EdgeInsets.all(6),
+                  child: Icon(Icons.delete_outline_rounded,
+                      size: 20,
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withOpacity(0.3)),
+                ),
               ),
             ],
           ),

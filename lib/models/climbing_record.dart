@@ -14,6 +14,7 @@ class ClimbingRecord {
   final DateTime? createdAt;
   final String? parentRecordId;
   final int? videoDurationSeconds;
+  final String? videoQuality;
 
   bool get isLocalVideo => videoPath != null && videoPath!.startsWith('/');
 
@@ -33,6 +34,7 @@ class ClimbingRecord {
     this.createdAt,
     this.parentRecordId,
     this.videoDurationSeconds,
+    this.videoQuality,
   });
 
   Map<String, dynamic> toInsertMap() => {
@@ -49,6 +51,7 @@ class ClimbingRecord {
         if (parentRecordId != null) 'parent_record_id': parentRecordId,
         if (videoDurationSeconds != null)
           'video_duration_seconds': videoDurationSeconds,
+        if (videoQuality != null) 'video_quality': videoQuality,
       };
 
   factory ClimbingRecord.fromMap(Map<String, dynamic> map) => ClimbingRecord(
@@ -69,5 +72,6 @@ class ClimbingRecord {
             : null,
         parentRecordId: map['parent_record_id'],
         videoDurationSeconds: map['video_duration_seconds'],
+        videoQuality: map['video_quality'],
       );
 }

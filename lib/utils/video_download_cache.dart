@@ -163,12 +163,157 @@ String _formatBytes(int bytes) {
   return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
 }
 
+/// Wi-Fi 미연결 시 네트워크 사용 확인 다이얼로그를 표시한다.
+/// 사용자가 확인하면 true, 취소하면 false 반환.
+/// Wi-Fi 연결 시 확인 없이 true 반환.
+///
+/// [title]과 [message]로 다이얼로그 내용을 커스텀할 수 있다.
+/// [confirmLabel]은 확인 버튼 텍스트 (기본: '다운로드').
+Future<bool> confirmIfNotWifi(
+  BuildContext context, {
+  String title = '영상 다운로드',
+  String message = '영상을 편집하려면 먼저 다운로드해야 합니다.\n\nWi-Fi에 연결되어 있지 않습니다. 모바일 데이터로 다운로드하시겠습니까?',
+  String confirmLabel = '다운로드',
+}) async {
+  bool isWifi;
+  try {
+    final interfaces = await NetworkInterface.list();
+    debugPrint('[Wi-Fi 체크] interfaces: ${interfaces.map((i) => i.name).toList()}');
+    // Android Wi-Fi 인터페이스명: wlan0
+    isWifi = interfaces.any((i) => i.name.startsWith('wlan'));
+  } catch (e) {
+    debugPrint('[Wi-Fi 체크] 오류: $e');
+    isWifi = false;
+  }
+  debugPrint('[Wi-Fi 체크] isWifi: $isWifi');
+  if (isWifi) return true;
+
+  final confirmed = await showModalBottomSheet<bool>(
+    context: context,
+    backgroundColor: Colors.transparent,
+    builder: (ctx) => Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // 핸들
+              Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: WandeungColors.border,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 20),
+              // 제목
+              Row(
+                children: [
+                  const Icon(Icons.wifi_off_rounded,
+                      size: 20, color: WandeungColors.textPrimary),
+                  const SizedBox(width: 8),
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w700,
+                      color: WandeungColors.textPrimary,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              // 안내 메시지
+              Container(
+                width: double.infinity,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                decoration: BoxDecoration(
+                  color: WandeungColors.surface,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: WandeungColors.border),
+                ),
+                child: Text(
+                  message,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    height: 1.5,
+                    color: WandeungColors.textSecondary,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              // 버튼 영역
+              Row(
+                children: [
+                  Expanded(
+                    child: SizedBox(
+                      height: 48,
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.pop(ctx, false),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: WandeungColors.textSecondary,
+                          side: const BorderSide(color: WandeungColors.border),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                        ),
+                        child: const Text(
+                          '취소',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: SizedBox(
+                      height: 48,
+                      child: FilledButton(
+                        onPressed: () => Navigator.pop(ctx, true),
+                        child: Text(
+                          confirmLabel,
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
+
+  return confirmed == true;
+}
+
 /// R2 영상을 다운로드하면서 예쁜 바텀시트 UI를 표시한다.
 /// 성공 시 로컬 경로, 실패 시 null 반환.
 Future<String?> downloadRemoteVideoWithDialog(
   BuildContext context,
   String objectKey,
 ) async {
+  // Wi-Fi 미연결 시 사용자 확인
+  final confirmed = await confirmIfNotWifi(context);
+  if (!confirmed) return null;
+  if (!context.mounted) return null;
+
   final progress = ValueNotifier<double>(0.0);
   final bytesInfo = ValueNotifier<(int, int)>((0, 0));
   final status = ValueNotifier<_DownloadStatus>(_DownloadStatus.downloading);

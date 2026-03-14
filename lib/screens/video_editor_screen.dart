@@ -17,6 +17,7 @@ import '../services/video_export_service.dart';
 import '../services/video_upload_service.dart';
 import '../utils/thumbnail_utils.dart';
 import '../utils/timeline_thumbnail_utils.dart';
+import '../utils/video_download_cache.dart';
 import '../widgets/editor/export_progress_dialog.dart';
 import '../widgets/editor/overlay_layer.dart';
 import '../widgets/editor/overlay_sticker_sheet.dart';
@@ -26,6 +27,7 @@ import '../widgets/editor/subtitle_editor_sheet.dart';
 import '../widgets/editor/subtitle_overlay_layer.dart';
 import '../widgets/editor/track_label_panel.dart';
 import '../widgets/editor/vllo_timeline.dart';
+import '../app.dart';
 import 'record_save_screen.dart';
 
 /// 비디오 편집 화면
@@ -273,8 +275,31 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
 
 
   /// 내보내기 실행
+  /// 내보내기 품질 선택 바텀시트
+  Future<ExportQuality?> _showQualityPicker() async {
+    return showModalBottomSheet<ExportQuality>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => const _ExportQualitySheet(),
+    );
+  }
+
   Future<void> _handleExport() async {
     if (_isExporting) return;
+
+    // Wi-Fi 미연결 시 사용자 확인 (내보내기 후 업로드 발생)
+    final wifiConfirmed = await confirmIfNotWifi(
+      context,
+      title: '영상 내보내기',
+      message: '내보내기 후 영상이 서버에 업로드됩니다.\n\nWi-Fi에 연결되어 있지 않습니다. 모바일 데이터로 진행하시겠습니까?',
+      confirmLabel: '진행',
+    );
+    if (!wifiConfirmed || !mounted) return;
+
+    // 품질 선택
+    final quality = await _showQualityPicker();
+    if (quality == null || !mounted) return;
+
     setState(() => _isExporting = true);
     ref.read(exportStatusProvider.notifier).state = ExportStatus.exporting;
     ref.read(exportProgressProvider.notifier).state = null;
@@ -313,6 +338,7 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
         overlays: overlays,
         subtitles: subtitles,
         videoResolution: _correctedVideoDimension,
+        quality: quality,
         onProgress: (progress) {
           ref.read(exportProgressProvider.notifier).state = progress;
         },
@@ -348,6 +374,7 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
             thumbnailPath: thumbnailPath,
             videoDurationSeconds: result.duration.inSeconds,
             memo: exportTitle,
+            videoQuality: quality.label,
           );
 
           // 썸네일 즉시 R2 업로드
@@ -363,10 +390,19 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
             }
           }
 
-          // 영상은 업로드 큐에 등록 (Wi-Fi 설정에 따라 처리)
+          // 업로드용 압축 후 큐에 등록
+          String uploadPath = result.outputPath;
+          try {
+            uploadPath = await VideoExportService.compressForUpload(
+              inputPath: result.outputPath,
+            );
+            debugPrint('업로드 압축 완료: $uploadPath');
+          } catch (e) {
+            debugPrint('업로드 압축 실패, 원본 사용: $e');
+          }
           ref.read(uploadQueueProvider.notifier).enqueue(
             recordId: savedExport.id!,
-            localVideoPath: result.outputPath,
+            localVideoPath: uploadPath,
           );
 
           if (mounted) {
@@ -382,6 +418,7 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
               builder: (_) => RecordSaveScreen(
                 videoPath: result.outputPath,
                 originalVideoPath: widget.videoPath,
+                videoQuality: quality.label,
               ),
             ),
           );
@@ -1184,6 +1221,203 @@ class _FullscreenVideoPageState extends State<_FullscreenVideoPage> {
                 ),
               ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─── 내보내기 품질 선택 바텀시트 ────────────────────────────
+
+class _ExportQualitySheet extends StatefulWidget {
+  const _ExportQualitySheet();
+
+  @override
+  State<_ExportQualitySheet> createState() => _ExportQualitySheetState();
+}
+
+class _ExportQualitySheetState extends State<_ExportQualitySheet> {
+  ExportQuality _selected = ExportQuality.fullHd;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // 핸들
+              Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: WandeungColors.border,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 20),
+              // 제목
+              const Row(
+                children: [
+                  Icon(Icons.tune, size: 20, color: WandeungColors.textPrimary),
+                  SizedBox(width: 8),
+                  Text(
+                    '내보내기 품질',
+                    style: TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w700,
+                      color: WandeungColors.textPrimary,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              // 품질 카드들
+              ...ExportQuality.values.map(_buildQualityCard),
+              const SizedBox(height: 16),
+              // 추출 버튼
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: FilledButton(
+                  onPressed: () => Navigator.pop(context, _selected),
+                  child: Text(
+                    '${_selected.label}로 추출하기',
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildQualityCard(ExportQuality q) {
+    final isSelected = _selected == q;
+    final is4K = q == ExportQuality.uhd4k;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: GestureDetector(
+        onTap: () => setState(() => _selected = q),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOut,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? WandeungColors.accent.withOpacity(0.06)
+                : WandeungColors.surface,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: isSelected ? WandeungColors.accent : WandeungColors.border,
+              width: isSelected ? 1.5 : 1,
+            ),
+          ),
+          child: Row(
+            children: [
+              // 아이콘
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? WandeungColors.accent.withOpacity(0.12)
+                      : WandeungColors.border.withOpacity(0.5),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(
+                  is4K ? Icons.four_k : Icons.hd,
+                  size: 22,
+                  color: isSelected
+                      ? WandeungColors.accent
+                      : WandeungColors.textSecondary,
+                ),
+              ),
+              const SizedBox(width: 14),
+              // 텍스트
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          q.label,
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight:
+                                isSelected ? FontWeight.w700 : FontWeight.w600,
+                            color: isSelected
+                                ? WandeungColors.accent
+                                : WandeungColors.textPrimary,
+                          ),
+                        ),
+                        if (is4K) ...[
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: WandeungColors.inProgress.withOpacity(0.15),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: const Text(
+                              '고화질',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                                color: WandeungColors.inProgress,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '${q.targetHeight}p · 선명한 화질',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: WandeungColors.textTertiary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // 라디오 체크
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                width: 22,
+                height: 22,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: isSelected ? WandeungColors.accent : Colors.transparent,
+                  border: Border.all(
+                    color: isSelected
+                        ? WandeungColors.accent
+                        : WandeungColors.textTertiary,
+                    width: 1.5,
+                  ),
+                ),
+                child: isSelected
+                    ? const Icon(Icons.check, size: 14, color: Colors.white)
+                    : null,
+              ),
+            ],
+          ),
         ),
       ),
     );

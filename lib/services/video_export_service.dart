@@ -14,6 +14,8 @@ import '../models/video_edit_models.dart';
 import 'ffmpeg_command_builder.dart';
 import 'subtitle_image_renderer.dart';
 
+export '../models/video_edit_models.dart' show ExportQuality, UploadCompression;
+
 /// FFmpeg를 사용하여 편집된 영상을 내보내는 서비스
 class VideoExportService {
   VideoExportService._();
@@ -41,6 +43,7 @@ class VideoExportService {
     List<SpeedSegment> speedSegments = const [],
     List<OverlayItem> overlays = const [],
     List<SubtitleItem> subtitles = const [],
+    ExportQuality? quality,
   }) async {
     final appDir = await getApplicationDocumentsDirectory();
     final timestamp = DateTime.now().millisecondsSinceEpoch;
@@ -73,12 +76,15 @@ class VideoExportService {
       videoResolution: videoResolution,
       subtitles: subtitles,
       subtitleImagePaths: subtitleImagePaths,
+      targetHeight: quality?.targetHeight,
+      crf: quality?.crf ?? 23,
     );
 
     final expectedDurationMs = _calculateExpectedDuration(
       trimStart, trimEnd, speedSegments,
     );
 
+    debugPrint('[FFmpeg] quality: ${quality?.label ?? "원본"}');
     debugPrint('[FFmpeg] overlayImages: $overlayImagePaths');
     debugPrint('[FFmpeg] subtitleImages: $subtitleImagePaths');
     debugPrint('[FFmpeg] args: ${args.join(' ')}');
@@ -286,6 +292,80 @@ class VideoExportService {
       totalMs += seg.adjustedDuration.inMilliseconds;
     }
     return totalMs;
+  }
+
+  /// 업로드용 압축 영상 생성
+  ///
+  /// 내보낸 고화질 영상을 720p + CRF 28로 재인코딩하여 업로드 용량 절감
+  static Future<String> compressForUpload({
+    required String inputPath,
+    void Function(double progress)? onProgress,
+  }) async {
+    final appDir = await getApplicationDocumentsDirectory();
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    final outputPath = '${appDir.path}/upload_$timestamp.mp4';
+
+    final args = FFmpegCommandBuilder.buildCompressArgs(
+      inputPath: inputPath,
+      outputPath: outputPath,
+      targetHeight: UploadCompression.targetHeight,
+      crf: UploadCompression.crf,
+      preset: UploadCompression.preset,
+    );
+
+    debugPrint('[FFmpeg] compress for upload: ${args.join(' ')}');
+
+    // 입력 파일의 영상 길이를 FFprobe 없이 추정할 수 없으므로
+    // progress는 간단하게 전달
+    final completer = Completer<void>();
+
+    final session = await FFmpegKit.executeWithArgumentsAsync(
+      args,
+      (session) async {
+        try {
+          final returnCode = await session.getReturnCode();
+          if (ReturnCode.isSuccess(returnCode)) {
+            if (!completer.isCompleted) completer.complete();
+          } else {
+            final outputFile = File(outputPath);
+            if (await outputFile.exists() && await outputFile.length() > 0) {
+              if (!completer.isCompleted) completer.complete();
+            } else {
+              if (!completer.isCompleted) {
+                completer.completeError(
+                    const VideoExportException('업로드 압축 실패', ''));
+              }
+            }
+          }
+        } on PlatformException {
+          final outputFile = File(outputPath);
+          if (await outputFile.exists() && await outputFile.length() > 0) {
+            if (!completer.isCompleted) completer.complete();
+          } else {
+            if (!completer.isCompleted) {
+              completer
+                  .completeError(const VideoExportException('업로드 압축 실패', ''));
+            }
+          }
+        }
+      },
+      (log) {},
+      (statistics) {
+        if (onProgress != null) {
+          final timeMs = statistics.getTime();
+          if (timeMs > 0) {
+            // 진행률은 호출측에서 대략적으로 추정
+            onProgress(timeMs / 1000.0);
+          }
+        }
+      },
+    );
+
+    _activeSessionId = await session.getSessionId();
+    await completer.future;
+    _activeSessionId = null;
+
+    return outputPath;
   }
 }
 

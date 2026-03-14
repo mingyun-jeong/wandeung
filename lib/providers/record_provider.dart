@@ -353,6 +353,7 @@ class RecordService {
     List<String> tags = const [],
     int? videoDurationSeconds,
     List<GymColorScale>? scales,
+    String? videoQuality,
   }) async {
     final userId = _supabase.auth.currentUser!.id;
 
@@ -372,6 +373,7 @@ class RecordService {
       tags: tags,
       recordedAt: DateTime.now(),
       videoDurationSeconds: videoDurationSeconds,
+      videoQuality: videoQuality,
     );
 
     final response = await _supabase
@@ -422,6 +424,7 @@ class RecordService {
     String? thumbnailPath,
     int? videoDurationSeconds,
     String? memo,
+    String? videoQuality,
   }) async {
     final userId = _supabase.auth.currentUser!.id;
 
@@ -438,6 +441,7 @@ class RecordService {
       recordedAt: parentRecord.recordedAt,
       parentRecordId: parentRecordId,
       videoDurationSeconds: videoDurationSeconds,
+      videoQuality: videoQuality,
     );
 
     final response = await _supabase
@@ -447,6 +451,17 @@ class RecordService {
         .single();
 
     return ClimbingRecord.fromMap(response);
+  }
+
+  /// 내보내기 영상 제목(memo) 수정
+  static Future<void> updateExportMemo({
+    required String recordId,
+    required String? memo,
+  }) async {
+    await _supabase
+        .from('climbing_records')
+        .update({'memo': memo})
+        .eq('id', recordId);
   }
 
   /// 기록 삭제 (로컬 파일 + R2 리모트 파일도 함께 정리)

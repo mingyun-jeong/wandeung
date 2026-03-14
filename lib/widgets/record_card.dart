@@ -151,6 +151,12 @@ class RecordCard extends StatelessWidget {
                     isLocalVideo: record.isLocalVideo,
                   ),
                 ),
+              if (record.videoQuality != null)
+                Positioned(
+                  right: 4,
+                  top: 4,
+                  child: _QualityBadge(quality: record.videoQuality!),
+                ),
               if (record.videoDurationSeconds != null)
                 Positioned(
                   right: 4,
@@ -290,6 +296,31 @@ class _TagBadge extends StatelessWidget {
         style: TextStyle(
           fontSize: 11,
           color: colorScheme.onSurface.withOpacity(0.6),
+        ),
+      ),
+    );
+  }
+}
+
+class _QualityBadge extends StatelessWidget {
+  final String quality;
+  const _QualityBadge({required this.quality});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+      decoration: BoxDecoration(
+        color: Colors.black.withOpacity(0.65),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Text(
+        quality,
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 10,
+          fontWeight: FontWeight.w500,
+          height: 1.2,
         ),
       ),
     );

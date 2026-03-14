@@ -24,6 +24,8 @@ class FFmpegCommandBuilder {
     List<String> overlayImagePaths = const [],
     List<SubtitleItem> subtitles = const [],
     List<String> subtitleImagePaths = const [],
+    int? targetHeight,
+    int crf = 23,
   }) {
     final args = <String>['-y'];
 
@@ -48,6 +50,10 @@ class FFmpegCommandBuilder {
       _formatDuration(trimEnd),
     ]);
 
+    // 원본보다 작을 때만 스케일링 적용
+    final needsScale = targetHeight != null &&
+        videoResolution.height > targetHeight;
+
     final filterComplex = _buildFilterComplex(
       speedSegments: speedSegments,
       overlays: overlays,
@@ -55,6 +61,7 @@ class FFmpegCommandBuilder {
       subtitles: subtitles,
       subtitleImagePaths: subtitleImagePaths,
       videoResolution: videoResolution,
+      targetHeight: needsScale ? targetHeight : null,
     );
 
     if (filterComplex != null) {
@@ -69,12 +76,15 @@ class FFmpegCommandBuilder {
         // 비디오 필터만 있고 오디오 필터가 없는 경우 원본 오디오 매핑
         args.addAll(['-map', '0:a?']);
       }
+    } else if (needsScale) {
+      // filter_complex가 없고 스케일링만 필요한 경우
+      args.addAll(['-vf', 'scale=-2:$targetHeight']);
     }
 
     args.addAll([
       '-c:v', 'libx264',
       '-preset', 'fast',
-      '-crf', '23',
+      '-crf', '$crf',
       '-c:a', 'aac',
       '-b:a', '128k',
       '-movflags', '+faststart',
@@ -92,6 +102,7 @@ class FFmpegCommandBuilder {
     required List<SubtitleItem> subtitles,
     required List<String> subtitleImagePaths,
     required Size videoResolution,
+    int? targetHeight,
   }) {
     final hasSpeedChange =
         speedSegments.isNotEmpty && speedSegments.any((s) => s.speed != 1.0);
@@ -99,8 +110,11 @@ class FFmpegCommandBuilder {
         overlays.isNotEmpty && overlayImagePaths.length == overlays.length;
     final hasSubtitleImages =
         subtitles.isNotEmpty && subtitleImagePaths.length == subtitles.length;
+    final hasScale = targetHeight != null;
 
-    if (!hasSpeedChange && !hasOverlayImages && !hasSubtitleImages) return null;
+    if (!hasSpeedChange && !hasOverlayImages && !hasSubtitleImages && !hasScale) {
+      return null;
+    }
 
     final filters = <String>[];
 
@@ -120,7 +134,7 @@ class FFmpegCommandBuilder {
       String currentLabel = hasSpeedChange ? '[vspeed]' : '[0:v]';
 
       for (int i = 0; i < overlays.length; i++) {
-        final isLast = i == overlays.length - 1 && !hasSubtitleImages;
+        final isLast = i == overlays.length - 1 && !hasSubtitleImages && !hasScale;
         final outputLabel = isLast ? '[vout]' : '[vovl$i]';
         // 입력 인덱스: 0=영상, 1~N=오버레이 PNG
         final inputIdx = 1 + i;
@@ -144,7 +158,7 @@ class FFmpegCommandBuilder {
         filters.add('$overlayFilter$outputLabel');
         currentLabel = outputLabel;
       }
-    } else if (hasSpeedChange && !hasSubtitleImages) {
+    } else if (hasSpeedChange && !hasSubtitleImages && !hasScale) {
       final lastIdx = filters.lastIndexWhere((f) => f.contains('[vspeed]'));
       if (lastIdx >= 0) {
         filters[lastIdx] = filters[lastIdx].replaceAll('[vspeed]', '[vout]');
@@ -164,7 +178,7 @@ class FFmpegCommandBuilder {
       }
 
       for (int i = 0; i < subtitles.length; i++) {
-        final isLast = i == subtitles.length - 1;
+        final isLast = i == subtitles.length - 1 && !hasScale;
         final outputLabel = isLast ? '[vout]' : '[vsub$i]';
         // 입력 인덱스: 0=영상, 오버레이PNG 개수 + 1~N=자막 PNG
         final inputIdx = 1 + overlayImagePaths.length + i;
@@ -185,6 +199,22 @@ class FFmpegCommandBuilder {
         filters.add('$overlayFilter$outputLabel');
         currentLabel = outputLabel;
       }
+    }
+
+    // --- 해상도 스케일링 ---
+    if (hasScale) {
+      // 마지막 비디오 필터의 출력 라벨을 찾아서 scale 체인 연결
+      String scaleInput;
+      if (hasSubtitleImages) {
+        scaleInput = '[vsub${subtitles.length - 1}]';
+      } else if (hasOverlayImages) {
+        scaleInput = '[vovl${overlays.length - 1}]';
+      } else if (hasSpeedChange) {
+        scaleInput = '[vspeed]';
+      } else {
+        scaleInput = '[0:v]';
+      }
+      filters.add('${scaleInput}scale=-2:$targetHeight[vout]');
     }
 
     final result = filters.isEmpty ? null : filters.join(';');
@@ -237,6 +267,29 @@ class FFmpegCommandBuilder {
     }
     filters.add('atempo=${remaining.toStringAsFixed(4)}');
     return filters.join(',');
+  }
+
+  /// 업로드용 압축 명령 생성 (단순 재인코딩 + 스케일링)
+  static List<String> buildCompressArgs({
+    required String inputPath,
+    required String outputPath,
+    required int targetHeight,
+    int crf = 28,
+    String preset = 'fast',
+  }) {
+    return [
+      '-y',
+      '-i', inputPath,
+      '-vf', 'scale=-2:$targetHeight',
+      '-c:v', 'libx264',
+      '-preset', preset,
+      '-crf', '$crf',
+      '-c:a', 'aac',
+      '-b:a', '96k',
+      '-movflags', '+faststart',
+      '-r', '30',
+      outputPath,
+    ];
   }
 
   static String _formatDuration(Duration d) {

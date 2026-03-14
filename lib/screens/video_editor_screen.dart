@@ -49,6 +49,10 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
   late VideoEditorController _controller;
   bool _isInitialized = false;
   bool _isExporting = false;
+  String _title = '제목 없음';
+  bool _isEditingTitle = false;
+  late final TextEditingController _titleController;
+  final FocusNode _titleFocusNode = FocusNode();
   Duration _currentPosition = Duration.zero;
   double _displayAspectRatio = 16 / 9;
   bool _isRotationCorrected = false;
@@ -66,6 +70,8 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
   @override
   void initState() {
     super.initState();
+    _titleController = TextEditingController(text: _title);
+    _titleFocusNode.addListener(_onTitleFocusChanged);
     _controller = VideoEditorController.file(
       XFile(widget.videoPath),
       minDuration: Duration.zero,
@@ -257,6 +263,9 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
 
   @override
   void dispose() {
+    _titleFocusNode.removeListener(_onTitleFocusChanged);
+    _titleFocusNode.dispose();
+    _titleController.dispose();
     _controller.video.removeListener(_onVideoPositionChanged);
     _controller.dispose();
     super.dispose();
@@ -331,12 +340,14 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
             await Gal.putVideo(result.outputPath, album: '완등');
           } catch (_) {}
           final thumbnailPath = await generateThumbnail(result.outputPath);
+          final exportTitle = _title == '제목 없음' ? null : _title;
           final savedExport = await RecordService.saveExport(
             parentRecordId: widget.existingRecord!.id!,
             parentRecord: widget.existingRecord!,
             videoPath: result.outputPath,
             thumbnailPath: thumbnailPath,
             videoDurationSeconds: result.duration.inSeconds,
+            memo: exportTitle,
           );
 
           // 썸네일 즉시 R2 업로드
@@ -450,17 +461,6 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
     );
   }
 
-  /// 비율 텍스트 (9:16, 16:9 등)
-  String get _aspectRatioLabel {
-    if (_displayAspectRatio < 1) {
-      const w = 9;
-      const h = 16;
-      return '$w:$h';
-    }
-    const w = 16;
-    const h = 9;
-    return '$w:$h';
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -681,6 +681,29 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
     );
   }
 
+  /// 제목 인라인 편집 모드 시작
+  void _startEditingTitle() {
+    _titleController.text = _title == '제목 없음' ? '' : _title;
+    setState(() => _isEditingTitle = true);
+    _titleFocusNode.requestFocus();
+  }
+
+  /// 제목 편집 확정
+  void _commitTitle() {
+    final value = _titleController.text.trim();
+    setState(() {
+      _title = value.isEmpty ? '제목 없음' : value;
+      _isEditingTitle = false;
+    });
+  }
+
+  /// 포커스 해제 시 편집 확정
+  void _onTitleFocusChanged() {
+    if (!_titleFocusNode.hasFocus && _isEditingTitle) {
+      _commitTitle();
+    }
+  }
+
   /// VLLO 스타일 상단 바: ← 제목 (비율) undo/redo [추출하기]
   Widget _buildVlloAppBar() {
     return Padding(
@@ -693,17 +716,64 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
             visualDensity: VisualDensity.compact,
           ),
           const SizedBox(width: 4),
-          // 제목 + 비율
+          // 제목 + 비율 (탭하여 인라인 수정)
           Expanded(
             child: Center(
-              child: Text(
-                '제목 없음 ($_aspectRatioLabel)',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
+              child: _isEditingTitle
+                  ? IntrinsicWidth(
+                      child: TextField(
+                        controller: _titleController,
+                        focusNode: _titleFocusNode,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        decoration: InputDecoration(
+                          isDense: true,
+                          contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 6),
+                          hintText: '제목을 입력하세요',
+                          hintStyle: TextStyle(
+                            color: Colors.white.withOpacity(0.3),
+                            fontSize: 14,
+                          ),
+                          enabledBorder: const UnderlineInputBorder(
+                            borderSide: BorderSide(color: Colors.white54),
+                          ),
+                          focusedBorder: const UnderlineInputBorder(
+                            borderSide: BorderSide(color: Colors.white),
+                          ),
+                        ),
+                        onSubmitted: (_) => _commitTitle(),
+                      ),
+                    )
+                  : GestureDetector(
+                      onTap: _startEditingTitle,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Flexible(
+                            child: Text(
+                              _title,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          const Icon(
+                            Icons.edit,
+                            color: Colors.white54,
+                            size: 14,
+                          ),
+                        ],
+                      ),
+                    ),
             ),
           ),
           // Undo/Redo

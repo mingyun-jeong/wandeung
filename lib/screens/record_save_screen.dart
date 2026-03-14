@@ -1000,8 +1000,10 @@ class _ExportedVideoCard extends StatelessWidget {
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (_) =>
-                    _FullScreenVideoPlayer(videoPath: vPath),
+                builder: (_) => _FullScreenVideoPlayer(
+                      videoPath: vPath,
+                      title: record.memo,
+                    ),
               ),
             );
           }
@@ -1075,9 +1077,11 @@ class _ExportedVideoCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      '편집 영상',
-                      style: TextStyle(
+                    Text(
+                      record.memo?.isNotEmpty == true
+                          ? record.memo!
+                          : '편집 영상',
+                      style: const TextStyle(
                           fontSize: 14, fontWeight: FontWeight.w500),
                     ),
                     const SizedBox(height: 2),
@@ -1134,7 +1138,8 @@ class _ExportedVideoCard extends StatelessWidget {
 /// 전체화면 영상 플레이어
 class _FullScreenVideoPlayer extends StatefulWidget {
   final String videoPath;
-  const _FullScreenVideoPlayer({required this.videoPath});
+  final String? title;
+  const _FullScreenVideoPlayer({required this.videoPath, this.title});
 
   @override
   State<_FullScreenVideoPlayer> createState() => _FullScreenVideoPlayerState();
@@ -1210,7 +1215,7 @@ class _FullScreenVideoPlayerState extends State<_FullScreenVideoPlayer> {
       appBar: AppBar(
         backgroundColor: Colors.black,
         foregroundColor: Colors.white,
-        title: const Text('편집 영상'),
+        title: Text(widget.title?.isNotEmpty == true ? widget.title! : '편집 영상'),
       ),
       body: Center(
         child: _chewieController != null && _initialized

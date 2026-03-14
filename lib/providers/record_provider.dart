@@ -421,6 +421,7 @@ class RecordService {
     required String videoPath,
     String? thumbnailPath,
     int? videoDurationSeconds,
+    String? memo,
   }) async {
     final userId = _supabase.auth.currentUser!.id;
 
@@ -433,6 +434,7 @@ class RecordService {
       videoPath: videoPath,
       thumbnailPath: thumbnailPath,
       tags: parentRecord.tags,
+      memo: memo,
       recordedAt: parentRecord.recordedAt,
       parentRecordId: parentRecordId,
       videoDurationSeconds: videoDurationSeconds,

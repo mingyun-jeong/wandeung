@@ -107,20 +107,25 @@ class SharedEditorTimeline extends ConsumerWidget {
     final segments = ref.watch(speedSegmentsProvider);
     final selectedIdx = ref.watch(selectedSpeedSegmentProvider);
 
+    // 구간이 하나뿐이면 자동 선택
+    final effectiveIdx =
+        selectedIdx ?? (segments.length == 1 ? 0 : null);
+
     return Row(
       children: [
         ..._speedOptions.map((speed) {
-          final isActive = selectedIdx != null &&
-              selectedIdx < segments.length &&
-              (segments[selectedIdx].speed - speed).abs() < 0.01;
+          final isActive = effectiveIdx != null &&
+              effectiveIdx < segments.length &&
+              (segments[effectiveIdx].speed - speed).abs() < 0.01;
 
           return Padding(
             padding: const EdgeInsets.only(right: 6),
             child: GestureDetector(
-              onTap: selectedIdx != null
+              behavior: HitTestBehavior.opaque,
+              onTap: effectiveIdx != null
                   ? () => ref
                       .read(speedSegmentsProvider.notifier)
-                      .updateSpeedAndMerge(selectedIdx, speed)
+                      .updateSpeedAndMerge(effectiveIdx, speed)
                   : null,
               child: Container(
                 padding:
@@ -129,7 +134,7 @@ class SharedEditorTimeline extends ConsumerWidget {
                   color: isActive
                       ? _speedColor(speed)
                       : Colors.white
-                          .withOpacity(selectedIdx != null ? 0.15 : 0.05),
+                          .withOpacity(effectiveIdx != null ? 0.15 : 0.05),
                   borderRadius: BorderRadius.circular(14),
                   border: Border.all(
                     color: isActive ? _speedColor(speed) : Colors.white24,
@@ -140,7 +145,7 @@ class SharedEditorTimeline extends ConsumerWidget {
                   style: TextStyle(
                     color: isActive
                         ? Colors.white
-                        : (selectedIdx != null
+                        : (effectiveIdx != null
                             ? Colors.white70
                             : Colors.white24),
                     fontWeight: FontWeight.w700,
@@ -153,6 +158,7 @@ class SharedEditorTimeline extends ConsumerWidget {
         }),
         const Spacer(),
         GestureDetector(
+          behavior: HitTestBehavior.opaque,
           onTap: onSplit,
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -182,6 +188,7 @@ class SharedEditorTimeline extends ConsumerWidget {
     return Align(
       alignment: Alignment.centerLeft,
       child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
         onTap: onTap,
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -253,7 +260,10 @@ class SharedEditorTimeline extends ConsumerWidget {
 
   Widget _buildSpeedTrack(WidgetRef ref, double effectiveMs) {
     final segments = ref.watch(speedSegmentsProvider);
-    final selectedIdx = ref.watch(selectedSpeedSegmentProvider);
+    final rawSelectedIdx = ref.watch(selectedSpeedSegmentProvider);
+    // 구간이 하나뿐이면 자동 선택
+    final selectedIdx =
+        rawSelectedIdx ?? (segments.length == 1 ? 0 : null);
 
     // 유효 범위와 겹치는 구간만
     final visible = <(int, SpeedSegment)>[];
@@ -306,6 +316,7 @@ class SharedEditorTimeline extends ConsumerWidget {
                   top: 2,
                   bottom: 2,
                   child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
                     onTap: () {
                       ref.read(selectedSpeedSegmentProvider.notifier).state =
                           (selectedIdx == i) ? null : i;

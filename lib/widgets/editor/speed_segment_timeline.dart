@@ -21,7 +21,10 @@ class SpeedSegmentTimeline extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final segments = ref.watch(speedSegmentsProvider);
-    final selectedIdx = ref.watch(selectedSpeedSegmentProvider);
+    final rawSelectedIdx = ref.watch(selectedSpeedSegmentProvider);
+    // 구간이 하나뿐이면 자동 선택
+    final selectedIdx =
+        rawSelectedIdx ?? (segments.length == 1 ? 0 : null);
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -39,6 +42,7 @@ class SpeedSegmentTimeline extends ConsumerWidget {
                 return Padding(
                   padding: const EdgeInsets.only(right: 8),
                   child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
                     onTap: selectedIdx != null
                         ? () {
                             ref
@@ -80,6 +84,7 @@ class SpeedSegmentTimeline extends ConsumerWidget {
               const Spacer(),
               // 분할 버튼
               GestureDetector(
+                behavior: HitTestBehavior.opaque,
                 onTap: onSplit,
                 child: Container(
                   padding:
@@ -148,6 +153,7 @@ class SpeedSegmentTimeline extends ConsumerWidget {
                         top: 2,
                         bottom: 2,
                         child: GestureDetector(
+                          behavior: HitTestBehavior.opaque,
                           onTap: () {
                             ref
                                 .read(selectedSpeedSegmentProvider.notifier)

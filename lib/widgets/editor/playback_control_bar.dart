@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
-/// 영상 프리뷰 아래 재생 컨트롤 바
+/// VLLO 스타일 재생 컨트롤 바
 ///
-/// ⏮ ◀ advancement 00:05 / 00:49 ▶ ⏭
+/// ⏮ ◁ 00:04:10 |||타임코드바||| 01:33 ▷ ⏭
 class PlaybackControlBar extends StatelessWidget {
   final Duration currentPosition;
   final Duration totalDuration;
@@ -27,101 +27,120 @@ class PlaybackControlBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final totalMs = totalDuration.inMilliseconds.toDouble();
+    final progress = totalMs > 0
+        ? (currentPosition.inMilliseconds / totalMs).clamp(0.0, 1.0)
+        : 0.0;
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      height: 36,
+      padding: const EdgeInsets.symmetric(horizontal: 8),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           // ⏮ 처음으로
-          _ControlButton(
-            icon: Icons.skip_previous_rounded,
-            onTap: onJumpToStart,
-            size: 22,
-          ),
-          const SizedBox(width: 8),
-          // ◀ 프레임 뒤로
-          _ControlButton(
-            icon: Icons.fast_rewind_rounded,
-            onTap: onStepBackward,
-            size: 22,
-          ),
-          const SizedBox(width: 12),
-          // 시간 표시
+          _ControlIcon(Icons.skip_previous_rounded, onJumpToStart),
+          // ◁ 프레임 뒤로
+          _ControlIcon(Icons.chevron_left_rounded, onStepBackward),
+          const SizedBox(width: 4),
+          // 현재 시간
           Text(
             _formatDuration(currentPosition),
             style: const TextStyle(
               color: Colors.white,
-              fontSize: 13,
+              fontSize: 12,
               fontWeight: FontWeight.w600,
               fontFeatures: [FontFeature.tabularFigures()],
             ),
           ),
-          // 재생/정지
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            child: GestureDetector(
-              onTap: onPlayPause,
-              child: Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.15),
-                  shape: BoxShape.circle,
+          const SizedBox(width: 6),
+          // 중앙 타임코드 바 + 재생 버튼
+          Expanded(
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                // 배경 바
+                Container(
+                  height: 3,
+                  decoration: BoxDecoration(
+                    color: Colors.white12,
+                    borderRadius: BorderRadius.circular(1.5),
+                  ),
                 ),
-                child: Icon(
-                  isPlaying
-                      ? Icons.pause_rounded
-                      : Icons.play_arrow_rounded,
-                  color: Colors.white,
-                  size: 22,
+                // 진행 바
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: FractionallySizedBox(
+                    widthFactor: progress,
+                    child: Container(
+                      height: 3,
+                      decoration: BoxDecoration(
+                        color: Colors.white54,
+                        borderRadius: BorderRadius.circular(1.5),
+                      ),
+                    ),
+                  ),
                 ),
-              ),
+                // 재생/정지 버튼 (중앙)
+                GestureDetector(
+                  onTap: onPlayPause,
+                  child: Container(
+                    width: 28,
+                    height: 28,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.15),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      isPlaying
+                          ? Icons.pause_rounded
+                          : Icons.play_arrow_rounded,
+                      color: Colors.white,
+                      size: 18,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
+          const SizedBox(width: 6),
+          // 총 시간
           Text(
             _formatDuration(totalDuration),
             style: const TextStyle(
-              color: Colors.white54,
-              fontSize: 13,
+              color: Colors.white38,
+              fontSize: 12,
               fontFeatures: [FontFeature.tabularFigures()],
             ),
           ),
-          const SizedBox(width: 12),
-          // ▶ 프레임 앞으로
-          _ControlButton(
-            icon: Icons.fast_forward_rounded,
-            onTap: onStepForward,
-            size: 22,
-          ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 4),
+          // ▷ 프레임 앞으로
+          _ControlIcon(Icons.chevron_right_rounded, onStepForward),
           // ⏭ 끝으로
-          _ControlButton(
-            icon: Icons.skip_next_rounded,
-            onTap: onJumpToEnd,
-            size: 22,
-          ),
+          _ControlIcon(Icons.skip_next_rounded, onJumpToEnd),
         ],
       ),
     );
   }
 
   static String _formatDuration(Duration d) {
+    final totalSeconds = d.inSeconds;
+    if (totalSeconds >= 3600) {
+      final h = d.inHours;
+      final m = d.inMinutes.remainder(60).toString().padLeft(2, '0');
+      final s = d.inSeconds.remainder(60).toString().padLeft(2, '0');
+      return '$h:$m:$s';
+    }
     final min = d.inMinutes.remainder(60).toString().padLeft(2, '0');
     final sec = d.inSeconds.remainder(60).toString().padLeft(2, '0');
     return '$min:$sec';
   }
 }
 
-class _ControlButton extends StatelessWidget {
+class _ControlIcon extends StatelessWidget {
   final IconData icon;
   final VoidCallback onTap;
-  final double size;
 
-  const _ControlButton({
-    required this.icon,
-    required this.onTap,
-    required this.size,
-  });
+  const _ControlIcon(this.icon, this.onTap);
 
   @override
   Widget build(BuildContext context) {
@@ -129,8 +148,8 @@ class _ControlButton extends StatelessWidget {
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
       child: Padding(
-        padding: const EdgeInsets.all(4),
-        child: Icon(icon, color: Colors.white70, size: size),
+        padding: const EdgeInsets.all(2),
+        child: Icon(icon, color: Colors.white54, size: 20),
       ),
     );
   }

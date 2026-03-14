@@ -639,19 +639,16 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
                       padding:
                           const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
                       decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.primary.withOpacity(0.06),
+                        color: Colors.grey.shade100,
                         border: Border.all(
-                            color: Theme.of(context)
-                                .colorScheme
-                                .primary
-                                .withOpacity(0.2)),
+                            color: Colors.grey.shade300),
                         borderRadius: BorderRadius.circular(14),
                       ),
                       child: Row(
                         children: [
                           Icon(Icons.location_on_rounded,
                               size: 18,
-                              color: Theme.of(context).colorScheme.primary),
+                              color: Colors.grey.shade600),
                           const SizedBox(width: 10),
                           Expanded(
                             child: GestureDetector(

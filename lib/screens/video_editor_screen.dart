@@ -536,9 +536,21 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
                         left: 8,
                         bottom:
                             (constraints.maxHeight - videoHeight) / 2 + 8,
-                        child: _VideoOverlayButton(
-                          icon: Icons.fullscreen_rounded,
-                          onTap: _openFullscreen,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            _VideoOverlayButton(
+                              icon: _controller.video.value.isPlaying
+                                  ? Icons.pause_rounded
+                                  : Icons.play_arrow_rounded,
+                              onTap: _togglePlayPause,
+                            ),
+                            const SizedBox(width: 6),
+                            _VideoOverlayButton(
+                              icon: Icons.fullscreen_rounded,
+                              onTap: _openFullscreen,
+                            ),
+                          ],
                         ),
                       ),
                     ],

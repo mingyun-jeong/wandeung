@@ -953,6 +953,26 @@ class _FullscreenVideoPageState extends State<_FullscreenVideoPage> {
                 icon: const Icon(Icons.close, color: Colors.white, size: 28),
               ),
             ),
+            // 재생/일시정지 버튼 (중앙)
+            if (!widget.controller.value.isPlaying)
+              Center(
+                child: GestureDetector(
+                  onTap: () => widget.controller.play(),
+                  child: Container(
+                    width: 56,
+                    height: 56,
+                    decoration: const BoxDecoration(
+                      color: Colors.black54,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.play_arrow_rounded,
+                      color: Colors.white,
+                      size: 36,
+                    ),
+                  ),
+                ),
+              ),
           ],
         ),
       ),

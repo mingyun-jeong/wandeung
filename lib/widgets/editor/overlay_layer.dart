@@ -8,11 +8,13 @@ import '../../providers/video_editor_provider.dart';
 class OverlayLayer extends ConsumerWidget {
   final Size previewSize;
   final Duration currentPosition;
+  final VoidCallback? onOverlaySelected;
 
   const OverlayLayer({
     super.key,
     required this.previewSize,
     required this.currentPosition,
+    this.onOverlaySelected,
   });
 
   @override
@@ -42,6 +44,9 @@ class OverlayLayer extends ConsumerWidget {
               onTap: () {
                 ref.read(selectedOverlayIdProvider.notifier).state =
                     isSelected ? null : item.id;
+                if (!isSelected) {
+                  onOverlaySelected?.call();
+                }
               },
               onPositionUpdate: (newDx, newDy) {
                 ref.read(overlaysProvider.notifier).updatePosition(

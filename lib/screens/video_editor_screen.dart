@@ -505,6 +505,11 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
                           child: OverlayLayer(
                             previewSize: videoSize,
                             currentPosition: _currentPosition,
+                            onOverlaySelected: () {
+                              ref
+                                  .read(selectedEditorTabProvider.notifier)
+                                  .state = EditorTab.sticker;
+                            },
                           ),
                         ),
                       ),
@@ -686,8 +691,97 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
       case EditorTab.text:
         return _buildPillAction('텍스트 추가', Icons.add, _showSubtitleEditor);
       case EditorTab.sticker:
-        return _buildPillAction('스티커 추가', Icons.add, _showOverlayStickers);
+        return _buildStickerActions();
     }
+  }
+
+  Widget _buildStickerActions() {
+    final selectedId = ref.watch(selectedOverlayIdProvider);
+    final overlays = ref.watch(overlaysProvider);
+    final selectedItem = selectedId != null
+        ? overlays.where((o) => o.id == selectedId).firstOrNull
+        : null;
+
+    if (selectedItem == null) {
+      return _buildPillAction('스티커 추가', Icons.add, _showOverlayStickers);
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      child: Row(
+        children: [
+          // 크기 조절
+          const Icon(Icons.format_size, color: Colors.white54, size: 16),
+          Expanded(
+            child: SliderTheme(
+              data: const SliderThemeData(
+                trackHeight: 2,
+                thumbShape:
+                    RoundSliderThumbShape(enabledThumbRadius: 6),
+                overlayShape:
+                    RoundSliderOverlayShape(overlayRadius: 12),
+                activeTrackColor: Colors.white70,
+                inactiveTrackColor: Colors.white24,
+                thumbColor: Colors.white,
+              ),
+              child: Slider(
+                value: selectedItem.fontSize.clamp(12.0, 96.0),
+                min: 12,
+                max: 96,
+                onChanged: (v) {
+                  ref.read(overlaysProvider.notifier).updateOverlay(
+                        selectedItem.id,
+                        selectedItem.copyWith(fontSize: v),
+                      );
+                },
+              ),
+            ),
+          ),
+          const SizedBox(width: 4),
+          // 각도 조절
+          const Icon(Icons.rotate_right, color: Colors.white54, size: 16),
+          Expanded(
+            child: SliderTheme(
+              data: const SliderThemeData(
+                trackHeight: 2,
+                thumbShape:
+                    RoundSliderThumbShape(enabledThumbRadius: 6),
+                overlayShape:
+                    RoundSliderOverlayShape(overlayRadius: 12),
+                activeTrackColor: Colors.white70,
+                inactiveTrackColor: Colors.white24,
+                thumbColor: Colors.white,
+              ),
+              child: Slider(
+                value: selectedItem.rotation,
+                min: -3.14159,
+                max: 3.14159,
+                onChanged: (v) {
+                  ref.read(overlaysProvider.notifier).updateOverlay(
+                        selectedItem.id,
+                        selectedItem.copyWith(rotation: v),
+                      );
+                },
+              ),
+            ),
+          ),
+          // 삭제 버튼
+          GestureDetector(
+            onTap: () {
+              ref
+                  .read(overlaysProvider.notifier)
+                  .removeOverlay(selectedItem.id);
+              ref.read(selectedOverlayIdProvider.notifier).state = null;
+            },
+            child: const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 4),
+              child:
+                  Icon(Icons.delete_outline, color: Colors.redAccent, size: 20),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildTrimActions() {

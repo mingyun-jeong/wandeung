@@ -29,6 +29,9 @@ class SharedEditorTimeline extends ConsumerWidget {
   // Sticker
   final VoidCallback onAddSticker;
 
+  // Seek
+  final void Function(Duration position)? onSeek;
+
   const SharedEditorTimeline({
     super.key,
     required this.effectiveStart,
@@ -39,6 +42,7 @@ class SharedEditorTimeline extends ConsumerWidget {
     required this.onAddText,
     required this.onEditText,
     required this.onAddSticker,
+    this.onSeek,
   });
 
   static const _trackHeight = 26.0;
@@ -67,6 +71,9 @@ class SharedEditorTimeline extends ConsumerWidget {
           TimelineRuler(
             totalDuration: effectiveDuration,
             currentPosition: _adjustedPosition,
+            onSeek: onSeek != null
+                ? (adjustedPos) => onSeek!(effectiveStart + adjustedPos)
+                : null,
           ),
           const SizedBox(height: 2),
           // 트랙들
@@ -236,10 +243,19 @@ class SharedEditorTimeline extends ConsumerWidget {
           final w = constraints.maxWidth;
           return Stack(
             children: [
-              Container(
-                decoration: BoxDecoration(
-                  color: Colors.white10,
-                  borderRadius: BorderRadius.circular(4),
+              GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTapDown: (d) =>
+                    _handleTrackSeek(d.localPosition.dx, w, effectiveMs),
+                onHorizontalDragStart: (d) =>
+                    _handleTrackSeek(d.localPosition.dx, w, effectiveMs),
+                onHorizontalDragUpdate: (d) =>
+                    _handleTrackSeek(d.localPosition.dx, w, effectiveMs),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white10,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
                 ),
               ),
               // 구간 블록
@@ -391,11 +407,20 @@ class SharedEditorTimeline extends ConsumerWidget {
 
               return Stack(
                 children: [
-                  Container(
-                    margin: const EdgeInsets.symmetric(vertical: 1),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.05),
-                      borderRadius: BorderRadius.circular(4),
+                  GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTapDown: (d) =>
+                        _handleTrackSeek(d.localPosition.dx, w, effectiveMs),
+                    onHorizontalDragStart: (d) =>
+                        _handleTrackSeek(d.localPosition.dx, w, effectiveMs),
+                    onHorizontalDragUpdate: (d) =>
+                        _handleTrackSeek(d.localPosition.dx, w, effectiveMs),
+                    child: Container(
+                      margin: const EdgeInsets.symmetric(vertical: 1),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.05),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
                     ),
                   ),
                   Positioned(
@@ -548,11 +573,20 @@ class SharedEditorTimeline extends ConsumerWidget {
 
               return Stack(
                 children: [
-                  Container(
-                    margin: const EdgeInsets.symmetric(vertical: 1),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.05),
-                      borderRadius: BorderRadius.circular(4),
+                  GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTapDown: (d) =>
+                        _handleTrackSeek(d.localPosition.dx, w, effectiveMs),
+                    onHorizontalDragStart: (d) =>
+                        _handleTrackSeek(d.localPosition.dx, w, effectiveMs),
+                    onHorizontalDragUpdate: (d) =>
+                        _handleTrackSeek(d.localPosition.dx, w, effectiveMs),
+                    child: Container(
+                      margin: const EdgeInsets.symmetric(vertical: 1),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.05),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
                     ),
                   ),
                   Positioned(
@@ -687,6 +721,17 @@ class SharedEditorTimeline extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  // ─── seek 유틸 ─────────────────────────────────────
+
+  /// 타임라인 배경에서 탭/드래그 시 seek 위치를 계산하여 콜백 호출
+  void _handleTrackSeek(double localX, double trackWidth, double effectiveMs) {
+    if (onSeek == null) return;
+    final ratio = (localX / trackWidth).clamp(0.0, 1.0);
+    final seekPos = effectiveStart +
+        Duration(milliseconds: (ratio * effectiveMs).round());
+    onSeek!(seekPos);
   }
 
   // ─── 유틸 ────────────────────────────────────────────

@@ -98,6 +98,13 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
     }
   }
 
+  /// 타임라인에서 특정 위치로 seek
+  void _seekTo(Duration position) {
+    _controller.video.pause();
+    _controller.video.seekTo(position);
+    setState(() => _currentPosition = position);
+  }
+
   @override
   void dispose() {
     _controller.video.removeListener(_onVideoPositionChanged);
@@ -492,6 +499,7 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
       onAddText: () => _showSubtitleEditor(),
       onEditText: (sub) => _showSubtitleEditor(existingItem: sub),
       onAddSticker: _showOverlayStickers,
+      onSeek: _seekTo,
     );
   }
 }

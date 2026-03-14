@@ -4,11 +4,13 @@ import 'package:flutter/material.dart';
 class TimelineRuler extends StatelessWidget {
   final Duration totalDuration;
   final Duration currentPosition;
+  final void Function(Duration position)? onSeek;
 
   const TimelineRuler({
     super.key,
     required this.totalDuration,
     required this.currentPosition,
+    this.onSeek,
   });
 
   @override
@@ -54,25 +56,41 @@ class TimelineRuler extends StatelessWidget {
           final playheadLeft =
               (currentPosition.inMilliseconds / totalMs) * width;
 
-          return Stack(
-            children: [
-              // 배경선
-              Positioned(
-                left: 0,
-                right: 0,
-                bottom: 0,
-                child: Container(height: 1, color: Colors.white12),
-              ),
-              // 눈금 라벨
-              ...labels,
-              // 재생 위치
-              Positioned(
-                left: playheadLeft - 0.5,
-                top: 0,
-                bottom: 0,
-                child: Container(width: 1, color: Colors.white70),
-              ),
-            ],
+          void handleSeek(double localX) {
+            if (onSeek == null) return;
+            final ratio = (localX / width).clamp(0.0, 1.0);
+            onSeek!(Duration(
+              milliseconds: (ratio * totalMs).round(),
+            ));
+          }
+
+          return GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTapDown: (details) => handleSeek(details.localPosition.dx),
+            onHorizontalDragStart: (details) =>
+                handleSeek(details.localPosition.dx),
+            onHorizontalDragUpdate: (details) =>
+                handleSeek(details.localPosition.dx),
+            child: Stack(
+              children: [
+                // 배경선
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  child: Container(height: 1, color: Colors.white12),
+                ),
+                // 눈금 라벨
+                ...labels,
+                // 재생 위치
+                Positioned(
+                  left: playheadLeft - 0.5,
+                  top: 0,
+                  bottom: 0,
+                  child: Container(width: 1, color: Colors.white70),
+                ),
+              ],
+            ),
           );
         },
       ),

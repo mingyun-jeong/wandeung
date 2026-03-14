@@ -26,6 +26,9 @@ class SubtitlesNotifier extends StateNotifier<List<SubtitleItem>> {
     ];
   }
 
+  /// Undo/Redo에서 상태 복원용
+  void restoreState(List<SubtitleItem> subtitles) => state = subtitles;
+
   void reset() => state = [];
 }
 

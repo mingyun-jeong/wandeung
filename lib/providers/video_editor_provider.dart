@@ -109,6 +109,9 @@ class SpeedSegmentsNotifier extends StateNotifier<List<SpeedSegment>> {
     ];
   }
 
+  /// Undo/Redo에서 상태 복원용
+  void restoreState(List<SpeedSegment> segments) => state = segments;
+
   void reset() => state = [];
 }
 
@@ -146,6 +149,9 @@ class OverlaysNotifier extends StateNotifier<List<OverlayItem>> {
   void removeOverlay(String id) {
     state = state.where((item) => item.id != id).toList();
   }
+
+  /// Undo/Redo에서 상태 복원용
+  void restoreState(List<OverlayItem> overlays) => state = overlays;
 
   void reset() => state = [];
 }

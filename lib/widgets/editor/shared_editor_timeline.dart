@@ -7,6 +7,7 @@ import '../../models/subtitle_item.dart';
 import '../../models/video_edit_models.dart';
 import '../../providers/subtitle_provider.dart';
 import '../../providers/video_editor_provider.dart';
+import 'thumbnail_strip.dart';
 import 'timeline_ruler.dart';
 
 /// 속도/텍스트/스티커 탭에서 공유하는 통합 타임라인
@@ -32,6 +33,9 @@ class SharedEditorTimeline extends ConsumerWidget {
   // Seek
   final void Function(Duration position)? onSeek;
 
+  // Thumbnails
+  final List<String> thumbnailPaths;
+
   const SharedEditorTimeline({
     super.key,
     required this.effectiveStart,
@@ -43,6 +47,7 @@ class SharedEditorTimeline extends ConsumerWidget {
     required this.onEditText,
     required this.onAddSticker,
     this.onSeek,
+    this.thumbnailPaths = const [],
   });
 
   static const _trackHeight = 26.0;
@@ -211,6 +216,29 @@ class SharedEditorTimeline extends ConsumerWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          // 썸네일 필름스트립
+          if (thumbnailPaths.isNotEmpty) ...[
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final w = constraints.maxWidth;
+                return Stack(
+                  children: [
+                    ThumbnailStrip(thumbnailPaths: thumbnailPaths),
+                    // 재생 위치 표시
+                    Positioned(
+                      left: (_adjustedPosition.inMilliseconds / effectiveMs) *
+                              w -
+                          0.5,
+                      top: 0,
+                      bottom: 0,
+                      child: Container(width: 1.5, color: Colors.white),
+                    ),
+                  ],
+                );
+              },
+            ),
+            const SizedBox(height: 2),
+          ],
           _buildSpeedTrack(ref, effectiveMs),
           const SizedBox(height: 2),
           _buildTextTracks(context, ref, effectiveMs),

@@ -8,6 +8,7 @@ import 'package:gal/gal.dart';
 
 import '../models/climbing_record.dart';
 import '../models/subtitle_item.dart';
+import '../providers/editor_history_provider.dart';
 import '../providers/record_provider.dart';
 import '../providers/subtitle_provider.dart';
 import '../providers/upload_queue_provider.dart';
@@ -15,10 +16,13 @@ import '../providers/video_editor_provider.dart';
 import '../services/video_export_service.dart';
 import '../services/video_upload_service.dart';
 import '../utils/thumbnail_utils.dart';
+import '../utils/timeline_thumbnail_utils.dart';
 import '../widgets/editor/export_progress_dialog.dart';
 import '../widgets/editor/overlay_layer.dart';
 import '../widgets/editor/overlay_sticker_sheet.dart';
 import '../widgets/editor/editor_tab_bar.dart';
+import '../widgets/editor/playback_control_bar.dart';
+import '../widgets/editor/quick_action_bar.dart';
 import '../widgets/editor/shared_editor_timeline.dart';
 import '../widgets/editor/subtitle_editor_sheet.dart';
 import '../widgets/editor/subtitle_overlay_layer.dart';
@@ -48,6 +52,7 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
   Duration _currentPosition = Duration.zero;
   double _displayAspectRatio = 16 / 9;
   bool _isRotationCorrected = false;
+  List<String> _timelineThumbnails = [];
 
   /// 회전 보정된 영상 해상도 (FFmpeg export용)
   Size get _correctedVideoDimension {
@@ -87,13 +92,36 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
             .read(speedSegmentsProvider.notifier)
             .initWithFullRange(_controller.videoDuration);
         _controller.video.addListener(_onVideoPositionChanged);
+
+        // 타임라인 썸네일 비동기 생성
+        _generateThumbnails();
       }
     });
   }
 
+  Future<void> _generateThumbnails() async {
+    final thumbs = await generateTimelineThumbnails(
+      videoPath: widget.videoPath,
+      totalDuration: _controller.videoDuration,
+    );
+    if (mounted && thumbs.isNotEmpty) {
+      setState(() => _timelineThumbnails = thumbs);
+    }
+  }
+
   void _onVideoPositionChanged() {
     final pos = _controller.video.value.position;
-    if (mounted && pos != _currentPosition) {
+    if (!mounted) return;
+
+    // 트림 끝 지점 또는 영상 끝에 도달하면 자동 정지
+    if (_controller.video.value.isPlaying && pos >= _controller.endTrim) {
+      _controller.video.pause();
+      _controller.video.seekTo(_controller.endTrim);
+      setState(() => _currentPosition = _controller.endTrim);
+      return;
+    }
+
+    if (pos != _currentPosition) {
       setState(() => _currentPosition = pos);
     }
   }
@@ -103,6 +131,74 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
     _controller.video.pause();
     _controller.video.seekTo(position);
     setState(() => _currentPosition = position);
+  }
+
+  void _togglePlayPause() {
+    if (_controller.video.value.isPlaying) {
+      _controller.video.pause();
+    } else {
+      _controller.video.play();
+    }
+  }
+
+  /// 약 1/30초(≈33ms) 앞으로 이동
+  void _stepForward() {
+    final newPos = _currentPosition + const Duration(milliseconds: 33);
+    final maxPos = _controller.videoDuration;
+    _seekTo(newPos > maxPos ? maxPos : newPos);
+  }
+
+  /// 약 1/30초(≈33ms) 뒤로 이동
+  void _stepBackward() {
+    final newPos = _currentPosition - const Duration(milliseconds: 33);
+    _seekTo(newPos < Duration.zero ? Duration.zero : newPos);
+  }
+
+  void _jumpToStart() => _seekTo(_controller.startTrim);
+
+  void _jumpToEnd() => _seekTo(_controller.endTrim);
+
+  // ─── Undo 래핑: 편집 전에 스냅샷 저장 ──────────────
+  void _withUndo(void Function() action) {
+    ref.read(editorHistoryProvider.notifier).saveSnapshot();
+    action();
+  }
+
+  // ─── 빠른 편집 액션 ────────────────────────────────
+  void _trimFromStart() {
+    _withUndo(() {
+      _controller.updateTrim(_currentPosition.inMilliseconds /
+          _controller.videoDuration.inMilliseconds, _controller.maxTrim);
+    });
+  }
+
+  void _trimFromHere() {
+    _withUndo(() {
+      _controller.updateTrim(_currentPosition.inMilliseconds /
+          _controller.videoDuration.inMilliseconds, _controller.maxTrim);
+    });
+  }
+
+  void _trimToHere() {
+    _withUndo(() {
+      _controller.updateTrim(_controller.minTrim,
+          _currentPosition.inMilliseconds /
+              _controller.videoDuration.inMilliseconds);
+    });
+  }
+
+  void _trimToEnd() {
+    _withUndo(() {
+      _controller.updateTrim(_controller.minTrim,
+          _currentPosition.inMilliseconds /
+              _controller.videoDuration.inMilliseconds);
+    });
+  }
+
+  void _splitAtCurrent() {
+    _withUndo(() {
+      ref.read(speedSegmentsProvider.notifier).splitAt(_currentPosition);
+    });
   }
 
   @override
@@ -278,6 +374,37 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
     );
   }
 
+  Widget _buildUndoRedo() {
+    final history = ref.watch(editorHistoryProvider);
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        IconButton(
+          onPressed: history.canUndo
+              ? () => ref.read(editorHistoryProvider.notifier).undo()
+              : null,
+          icon: Icon(
+            Icons.undo_rounded,
+            color: history.canUndo ? Colors.white70 : Colors.white24,
+            size: 20,
+          ),
+          visualDensity: VisualDensity.compact,
+        ),
+        IconButton(
+          onPressed: history.canRedo
+              ? () => ref.read(editorHistoryProvider.notifier).redo()
+              : null,
+          icon: Icon(
+            Icons.redo_rounded,
+            color: history.canRedo ? Colors.white70 : Colors.white24,
+            size: 20,
+          ),
+          visualDensity: VisualDensity.compact,
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (!_isInitialized) {
@@ -305,44 +432,49 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
             // ─── 상단 바 ──────────────────────────────
             Padding(
               padding:
-                  const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   // 뒤로가기
                   IconButton(
                     onPressed: () => Navigator.pop(context),
                     icon: const Icon(Icons.arrow_back, color: Colors.white),
+                    visualDensity: VisualDensity.compact,
                   ),
+                  // Undo/Redo
+                  _buildUndoRedo(),
+                  const Spacer(),
                   const Text(
                     '편집',
                     style: TextStyle(
                       color: Colors.white,
-                      fontSize: 18,
+                      fontSize: 16,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
+                  const Spacer(),
                   // 건너뛰기 / 내보내기
-                  Row(
-                    children: [
-                      TextButton(
-                        onPressed: _skipEditing,
-                        child: const Text(
-                          '건너뛰기',
-                          style: TextStyle(color: Colors.white70),
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      FilledButton(
-                        onPressed: _isExporting ? null : _handleExport,
-                        style: FilledButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 8),
-                        ),
-                        child: const Text('내보내기'),
-                      ),
-                    ],
+                  TextButton(
+                    onPressed: _skipEditing,
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      visualDensity: VisualDensity.compact,
+                    ),
+                    child: const Text(
+                      '건너뛰기',
+                      style: TextStyle(color: Colors.white70, fontSize: 13),
+                    ),
                   ),
+                  FilledButton(
+                    onPressed: _isExporting ? null : _handleExport,
+                    style: FilledButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 6),
+                      visualDensity: VisualDensity.compact,
+                    ),
+                    child: const Text('내보내기', style: TextStyle(fontSize: 13)),
+                  ),
+                  const SizedBox(width: 4),
                 ],
               ),
             ),
@@ -374,13 +506,7 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
                         child: AspectRatio(
                           aspectRatio: _displayAspectRatio,
                           child: GestureDetector(
-                            onTap: () {
-                              if (_controller.video.value.isPlaying) {
-                                _controller.video.pause();
-                              } else {
-                                _controller.video.play();
-                              }
-                            },
+                            onTap: _togglePlayPause,
                             child: VideoPlayer(_controller.video),
                           ),
                         ),
@@ -451,15 +577,36 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
               ),
             ),
 
+            // ─── 재생 컨트롤 바 ──────────────────────
+            PlaybackControlBar(
+              currentPosition: _currentPosition,
+              totalDuration: _controller.endTrim - _controller.startTrim,
+              isPlaying: _controller.video.value.isPlaying,
+              onPlayPause: _togglePlayPause,
+              onStepForward: _stepForward,
+              onStepBackward: _stepBackward,
+              onJumpToStart: _jumpToStart,
+              onJumpToEnd: _jumpToEnd,
+            ),
+
             // ─── 탭별 콘텐츠 ─────────────────────────
             SizedBox(
               height: 170,
               child: _buildTabContent(ref),
             ),
 
+            // ─── 빠른 편집 액션 바 ───────────────────
+            QuickActionBar(
+              onFromStart: _trimFromStart,
+              onFromHere: _trimFromHere,
+              onSplit: _splitAtCurrent,
+              onToHere: _trimToHere,
+              onToEnd: _trimToEnd,
+            ),
+
             // ─── 하단 탭 바 ──────────────────────
             const EditorTabBar(),
-            const SizedBox(height: 8),
+            const SizedBox(height: 4),
           ],
         ),
       ),
@@ -493,13 +640,12 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
       effectiveDuration: _controller.endTrim - _controller.startTrim,
       currentPosition: _currentPosition,
       activeTab: tab,
-      onSplit: () {
-        ref.read(speedSegmentsProvider.notifier).splitAt(_currentPosition);
-      },
+      onSplit: _splitAtCurrent,
       onAddText: () => _showSubtitleEditor(),
       onEditText: (sub) => _showSubtitleEditor(existingItem: sub),
       onAddSticker: _showOverlayStickers,
       onSeek: _seekTo,
+      thumbnailPaths: _timelineThumbnails,
     );
   }
 }

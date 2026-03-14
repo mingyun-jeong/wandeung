@@ -46,9 +46,9 @@ class MainShellScreen extends ConsumerWidget {
               label: '홈',
             ),
             NavigationDestination(
-              icon: Icon(Icons.calendar_month_outlined),
-              selectedIcon: Icon(Icons.calendar_month_rounded),
-              label: '캘린더',
+              icon: Icon(Icons.description_outlined),
+              selectedIcon: Icon(Icons.description_rounded),
+              label: '기록',
             ),
             NavigationDestination(
               icon: Icon(Icons.videocam_outlined),

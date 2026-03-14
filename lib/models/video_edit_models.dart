@@ -28,6 +28,45 @@ class SpeedSegment {
       Duration(milliseconds: (originalDuration.inMilliseconds / speed).round());
 }
 
+/// 크롭 줌 구간 — 영상의 특정 시간 범위에 적용할 크롭 영역
+class CropSegment {
+  final Duration start;
+  final Duration end;
+  final Rect cropRect; // 정규화 좌표 (0.0~1.0): left, top, width, height
+  final bool animateTransition; // 이전 구간에서 부드럽게 전환할지
+
+  const CropSegment({
+    required this.start,
+    required this.end,
+    this.cropRect = const Rect.fromLTWH(0, 0, 1, 1),
+    this.animateTransition = false,
+  });
+
+  CropSegment copyWith({
+    Duration? start,
+    Duration? end,
+    Rect? cropRect,
+    bool? animateTransition,
+  }) {
+    return CropSegment(
+      start: start ?? this.start,
+      end: end ?? this.end,
+      cropRect: cropRect ?? this.cropRect,
+      animateTransition: animateTransition ?? this.animateTransition,
+    );
+  }
+
+  /// 이 구간의 원본 길이
+  Duration get originalDuration => end - start;
+
+  /// 크롭이 적용되었는지 (전체 영역이 아닌지)
+  bool get hasCrop =>
+      cropRect.left != 0 ||
+      cropRect.top != 0 ||
+      cropRect.width != 1 ||
+      cropRect.height != 1;
+}
+
 /// 비디오 위 오버레이 아이템 (V-Grade 스티커 등)
 class OverlayItem {
   final String id;

@@ -8,6 +8,7 @@ import '../../models/subtitle_item.dart';
 import '../../models/video_edit_models.dart';
 import '../../providers/subtitle_provider.dart';
 import '../../providers/video_editor_provider.dart';
+import 'crop_timeline_track.dart';
 
 /// VLLO 스타일 스크롤 기반 멀티트랙 타임라인
 ///
@@ -237,6 +238,13 @@ class _VlloTimelineState extends ConsumerState<VlloTimeline> {
         // 속도 트랙
         _buildSpeedTrack(segments, effectiveMs,
             isActive: selectedTab == EditorTab.speed),
+        const SizedBox(height: _trackGap),
+        // 줌 트랙
+        CropTimelineTrack(
+          trackHeight: _trackHeight,
+          totalWidth: _totalContentWidth,
+          totalDuration: widget.effectiveDuration,
+        ),
         const SizedBox(height: _trackGap),
         // 텍스트 트랙
         _buildTextTrack(subtitles, effectiveMs,

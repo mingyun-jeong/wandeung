@@ -20,6 +20,7 @@ class FFmpegCommandBuilder {
     required Duration trimEnd,
     required Size videoResolution,
     List<SpeedSegment> speedSegments = const [],
+    List<CropSegment> cropSegments = const [],
     List<OverlayItem> overlays = const [],
     List<String> overlayImagePaths = const [],
     List<SubtitleItem> subtitles = const [],
@@ -56,6 +57,7 @@ class FFmpegCommandBuilder {
 
     final filterComplex = _buildFilterComplex(
       speedSegments: speedSegments,
+      cropSegments: cropSegments,
       overlays: overlays,
       overlayImagePaths: overlayImagePaths,
       subtitles: subtitles,
@@ -97,6 +99,7 @@ class FFmpegCommandBuilder {
 
   static String? _buildFilterComplex({
     required List<SpeedSegment> speedSegments,
+    List<CropSegment> cropSegments = const [],
     required List<OverlayItem> overlays,
     required List<String> overlayImagePaths,
     required List<SubtitleItem> subtitles,
@@ -110,9 +113,19 @@ class FFmpegCommandBuilder {
         overlays.isNotEmpty && overlayImagePaths.length == overlays.length;
     final hasSubtitleImages =
         subtitles.isNotEmpty && subtitleImagePaths.length == subtitles.length;
+    final hasCrop = cropSegments.isNotEmpty && cropSegments.any((s) => s.hasCrop);
     final hasScale = targetHeight != null;
 
-    if (!hasSpeedChange && !hasOverlayImages && !hasSubtitleImages && !hasScale) {
+    debugPrint('[FFmpeg] filterComplex flags: speed=$hasSpeedChange crop=$hasCrop '
+        'overlay=$hasOverlayImages subtitle=$hasSubtitleImages scale=$hasScale');
+    if (hasCrop) {
+      for (int i = 0; i < cropSegments.length; i++) {
+        final s = cropSegments[i];
+        debugPrint('[FFmpeg] cropSeg[$i] hasCrop=${s.hasCrop} rect=${s.cropRect}');
+      }
+    }
+
+    if (!hasSpeedChange && !hasCrop && !hasOverlayImages && !hasSubtitleImages && !hasScale) {
       return null;
     }
 
@@ -128,10 +141,41 @@ class FFmpegCommandBuilder {
       _buildMultiSegmentSpeed(filters, speedSegments);
     }
 
+    // --- 크롭 줌 처리 ---
+    // crop 후 원본 해상도로 scale-up하여 프리뷰와 동일한 확대 효과 적용
+    if (hasCrop) {
+      final cropInput = hasSpeedChange ? '[vspeed]' : '[0:v]';
+      final origW = videoResolution.width.round();
+      final origH = videoResolution.height.round();
+      // 짝수 보정 (libx264 요구)
+      final scaleW = origW % 2 == 0 ? origW : origW + 1;
+      final scaleH = origH % 2 == 0 ? origH : origH + 1;
+
+      if (cropSegments.length == 1) {
+        // 단일 크롭 구간
+        final seg = cropSegments.first;
+        if (seg.hasCrop) {
+          final cr = seg.cropRect;
+          final cw = '${cr.width.toStringAsFixed(4)}*iw';
+          final ch = '${cr.height.toStringAsFixed(4)}*ih';
+          final cx = '${cr.left.toStringAsFixed(4)}*iw';
+          final cy = '${cr.top.toStringAsFixed(4)}*ih';
+          filters.add(
+              '${cropInput}crop=$cw:$ch:$cx:$cy,scale=$scaleW:$scaleH[vcrop]');
+        }
+      } else {
+        // 다중 크롭 구간 — trim+crop per segment, then concat, then scale
+        _buildMultiSegmentCrop(
+            filters, cropSegments, cropInput, scaleW, scaleH);
+      }
+    }
+
     // --- 오버레이 스티커 (PNG 이미지 overlay) ---
     // Flutter Canvas에서 렌더링한 PNG를 overlay 필터로 합성 (drawtext 대신)
     if (hasOverlayImages) {
-      String currentLabel = hasSpeedChange ? '[vspeed]' : '[0:v]';
+      String currentLabel = hasCrop
+          ? '[vcrop]'
+          : (hasSpeedChange ? '[vspeed]' : '[0:v]');
 
       for (int i = 0; i < overlays.length; i++) {
         final isLast = i == overlays.length - 1 && !hasSubtitleImages && !hasScale;
@@ -158,10 +202,12 @@ class FFmpegCommandBuilder {
         filters.add('$overlayFilter$outputLabel');
         currentLabel = outputLabel;
       }
-    } else if (hasSpeedChange && !hasSubtitleImages && !hasScale) {
-      final lastIdx = filters.lastIndexWhere((f) => f.contains('[vspeed]'));
+    } else if ((hasSpeedChange || hasCrop) && !hasSubtitleImages && !hasScale) {
+      // 오버레이/자막/스케일 없이 배속 또는 크롭만 있는 경우 최종 출력 라벨로 변환
+      final targetLabel = hasCrop ? '[vcrop]' : '[vspeed]';
+      final lastIdx = filters.lastIndexWhere((f) => f.contains(targetLabel));
       if (lastIdx >= 0) {
-        filters[lastIdx] = filters[lastIdx].replaceAll('[vspeed]', '[vout]');
+        filters[lastIdx] = filters[lastIdx].replaceAll(targetLabel, '[vout]');
       }
     }
 
@@ -171,6 +217,8 @@ class FFmpegCommandBuilder {
       String currentLabel;
       if (hasOverlayImages) {
         currentLabel = '[vovl${overlays.length - 1}]';
+      } else if (hasCrop) {
+        currentLabel = '[vcrop]';
       } else if (hasSpeedChange) {
         currentLabel = '[vspeed]';
       } else {
@@ -209,6 +257,8 @@ class FFmpegCommandBuilder {
         scaleInput = '[vsub${subtitles.length - 1}]';
       } else if (hasOverlayImages) {
         scaleInput = '[vovl${overlays.length - 1}]';
+      } else if (hasCrop) {
+        scaleInput = '[vcrop]';
       } else if (hasSpeedChange) {
         scaleInput = '[vspeed]';
       } else {
@@ -248,6 +298,73 @@ class FFmpegCommandBuilder {
     final n = segments.length;
     filters.add('${videoLabels.join()}concat=n=$n:v=1:a=0[vspeed]');
     filters.add('${audioLabels.join()}concat=n=$n:v=0:a=1[aout]');
+  }
+
+  static void _buildMultiSegmentCrop(List<String> filters,
+      List<CropSegment> segments, String inputLabel, int scaleW, int scaleH) {
+    final cropLabels = <String>[];
+    const fps = 30;
+    const transitionDurationSec = 0.3;
+    final transitionFrames = (transitionDurationSec * fps).round(); // 9
+    final scaleUp = ',scale=$scaleW:$scaleH';
+
+    for (int i = 0; i < segments.length; i++) {
+      final seg = segments[i];
+      final startSec = seg.start.inMilliseconds / 1000.0;
+      final endSec = seg.end.inMilliseconds / 1000.0;
+
+      if (seg.animateTransition && i > 0) {
+        // 이전 구간에서 현재 구간으로 전환 애니메이션
+        final prev = segments[i - 1];
+        final prevCr = prev.cropRect;
+        final cr = seg.cropRect;
+
+        final durSec = endSec - startSec;
+        final totalFrames = (durSec * fps).round();
+        final tranFrames = transitionFrames.clamp(1, totalFrames);
+
+        final lerpLeft =
+            "'(${_lerpExpr(prevCr.left, cr.left, tranFrames)})*iw'";
+        final lerpTop =
+            "'(${_lerpExpr(prevCr.top, cr.top, tranFrames)})*ih'";
+        final lerpW =
+            "'(${_lerpExpr(prevCr.width, cr.width, tranFrames)})*iw'";
+        final lerpH =
+            "'(${_lerpExpr(prevCr.height, cr.height, tranFrames)})*ih'";
+
+        filters.add(
+          '${inputLabel}trim=start=$startSec:end=$endSec,setpts=PTS-STARTPTS,'
+          'crop=w=$lerpW:h=$lerpH:x=$lerpLeft:y=$lerpTop$scaleUp[vc$i]',
+        );
+      } else {
+        // 고정 크롭
+        final cr = seg.cropRect;
+        if (seg.hasCrop) {
+          final cw = '${cr.width.toStringAsFixed(4)}*iw';
+          final ch = '${cr.height.toStringAsFixed(4)}*ih';
+          final cx = '${cr.left.toStringAsFixed(4)}*iw';
+          final cy = '${cr.top.toStringAsFixed(4)}*ih';
+          filters.add(
+            '${inputLabel}trim=start=$startSec:end=$endSec,setpts=PTS-STARTPTS,'
+            'crop=$cw:$ch:$cx:$cy$scaleUp[vc$i]',
+          );
+        } else {
+          filters.add(
+            '${inputLabel}trim=start=$startSec:end=$endSec,setpts=PTS-STARTPTS[vc$i]',
+          );
+        }
+      }
+      cropLabels.add('[vc$i]');
+    }
+
+    final n = segments.length;
+    filters.add('${cropLabels.join()}concat=n=$n:v=1:a=0[vcrop]');
+  }
+
+  static String _lerpExpr(double from, double to, int frames) {
+    final a = from.toStringAsFixed(4);
+    final b = to.toStringAsFixed(4);
+    return '(1-min(n/$frames\\,1))*$a+min(n/$frames\\,1)*$b';
   }
 
   /// atempo 필터 체인 생성 (0.5~2.0 범위 제한 대응)

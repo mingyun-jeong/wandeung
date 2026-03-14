@@ -12,6 +12,7 @@ class EditorTabBar extends ConsumerWidget {
   static const _tabs = [
     (EditorTab.trim, '트림'),
     (EditorTab.speed, '속도'),
+    (EditorTab.zoom, '줌'),
     (EditorTab.text, '텍스트'),
     (EditorTab.sticker, '스티커'),
   ];

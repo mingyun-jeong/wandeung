@@ -7,6 +7,7 @@ import 'package:video_player/video_player.dart';
 import 'package:gal/gal.dart';
 
 import '../models/climbing_record.dart';
+import '../models/video_edit_models.dart';
 import '../models/subtitle_item.dart';
 import '../providers/editor_history_provider.dart';
 import '../providers/record_provider.dart';
@@ -26,6 +27,7 @@ import '../widgets/editor/playback_control_bar.dart';
 import '../widgets/editor/subtitle_editor_sheet.dart';
 import '../widgets/editor/subtitle_overlay_layer.dart';
 import '../widgets/editor/track_label_panel.dart';
+import '../widgets/editor/crop_overlay.dart';
 import '../widgets/editor/vllo_timeline.dart';
 import '../app.dart';
 import 'record_save_screen.dart';
@@ -59,6 +61,9 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
   double _displayAspectRatio = 16 / 9;
   bool _isRotationCorrected = false;
   List<String> _timelineThumbnails = [];
+  Size _lastVideoSize = Size.zero;
+  Rect? _zoomStartCrop;
+  Offset? _zoomStartFocal;
 
   /// 회전 보정된 영상 해상도 (FFmpeg export용)
   Size get _correctedVideoDimension {
@@ -98,6 +103,10 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
         // 배속 구간 초기화 (전체 영상, 1x)
         ref
             .read(speedSegmentsProvider.notifier)
+            .initWithFullRange(_controller.videoDuration);
+        // 크롭 줌 구간 초기화 (전체 영상, 전체 영역)
+        ref
+            .read(cropSegmentsProvider.notifier)
             .initWithFullRange(_controller.videoDuration);
         _controller.video.addListener(_onVideoPositionChanged);
 
@@ -158,6 +167,119 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
     _controller.video.pause();
     _controller.video.seekTo(position);
     setState(() => _currentPosition = position);
+  }
+
+  Widget _buildCroppedPreview() {
+    final cropSegments = ref.watch(cropSegmentsProvider);
+    final currentCrop = cropSegments
+        .where((s) => _currentPosition >= s.start && _currentPosition < s.end)
+        .firstOrNull;
+
+    if (currentCrop == null || !currentCrop.hasCrop) {
+      return VideoPlayer(_controller.video);
+    }
+
+    final cr = currentCrop.cropRect;
+    return ClipRect(
+      child: FittedBox(
+        fit: BoxFit.cover,
+        alignment: Alignment(
+          // -1 to 1 범위로 변환
+          (cr.left + cr.width / 2) * 2 - 1,
+          (cr.top + cr.height / 2) * 2 - 1,
+        ),
+        child: SizedBox(
+          width: _correctedVideoDimension.width * cr.width,
+          height: _correctedVideoDimension.height * cr.height,
+          child: Transform.scale(
+            scale: 1.0 / cr.width, // 크롭 비율의 역수로 확대
+            child: VideoPlayer(_controller.video),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// 현재 선택된 크롭 구간 인덱스 (없으면 재생 위치 기반 자동 선택)
+  int? get _currentCropIdx {
+    final segments = ref.read(cropSegmentsProvider);
+    final selected = ref.read(selectedCropSegmentProvider);
+    if (selected != null && selected < segments.length) return selected;
+    if (segments.length == 1) return 0;
+    for (int i = 0; i < segments.length; i++) {
+      if (_currentPosition >= segments[i].start &&
+          _currentPosition < segments[i].end) {
+        return i;
+      }
+    }
+    return segments.isEmpty ? null : segments.length - 1;
+  }
+
+  /// 주어진 위치에 해당하는 크롭 구간 인덱스
+  static int? _findCropSegmentAt(
+      List<CropSegment> segments, Duration position) {
+    for (int i = 0; i < segments.length; i++) {
+      if (position >= segments[i].start && position < segments[i].end) {
+        return i;
+      }
+    }
+    return null;
+  }
+
+  /// 현재 재생 위치의 크롭 구간을 자동 선택
+  void _autoSelectCropSegment() {
+    final segments = ref.read(cropSegmentsProvider);
+    for (int i = 0; i < segments.length; i++) {
+      if (_currentPosition >= segments[i].start &&
+          _currentPosition < segments[i].end) {
+        ref.read(selectedCropSegmentProvider.notifier).state = i;
+        return;
+      }
+    }
+  }
+
+  /// 핀치-줌 제스처 시작: 현재 크롭 상태 저장
+  void _onZoomScaleStart(ScaleStartDetails details) {
+    final segments = ref.read(cropSegmentsProvider);
+    final idx = _currentCropIdx;
+    debugPrint('[Zoom] scaleStart idx=$idx, segments=${segments.length}');
+    if (idx != null && idx < segments.length) {
+      _zoomStartCrop = segments[idx].cropRect;
+      _zoomStartFocal = details.localFocalPoint;
+    }
+  }
+
+  /// 핀치-줌 제스처 업데이트: 크롭 영역 실시간 갱신
+  void _onZoomScaleUpdate(ScaleUpdateDetails details) {
+    if (_zoomStartCrop == null || _zoomStartFocal == null) return;
+    final idx = _currentCropIdx;
+    if (idx == null) return;
+
+    final startCrop = _zoomStartCrop!;
+    final startFocal = _zoomStartFocal!;
+    final vw = _lastVideoSize.width;
+    final vh = _lastVideoSize.height;
+    if (vw <= 0 || vh <= 0) return;
+
+    // 제스처 시작 시 초점이 가리키는 영상 절대 좌표 (0~1)
+    final focalAbsX = startCrop.left + (startFocal.dx / vw) * startCrop.width;
+    final focalAbsY = startCrop.top + (startFocal.dy / vh) * startCrop.height;
+
+    // 크롭 크기 (줌 인 → 크롭 축소)
+    final newW = (startCrop.width / details.scale).clamp(0.1, 1.0);
+    final newH = (startCrop.height / details.scale).clamp(0.1, 1.0);
+
+    // 현재 초점 위치가 동일한 영상 좌표에 대응하도록 오프셋 계산
+    var newL = focalAbsX - (details.localFocalPoint.dx / vw) * newW;
+    var newT = focalAbsY - (details.localFocalPoint.dy / vh) * newH;
+
+    newL = newL.clamp(0.0, 1.0 - newW);
+    newT = newT.clamp(0.0, 1.0 - newH);
+
+    final newRect = Rect.fromLTWH(newL, newT, newW, newH);
+    debugPrint('[Zoom] scaleUpdate idx=$idx scale=${details.scale.toStringAsFixed(2)} '
+        'rect=$newRect');
+    ref.read(cropSegmentsProvider.notifier).updateCropRect(idx, newRect);
   }
 
   void _togglePlayPause() {
@@ -327,14 +449,23 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
 
     try {
       final segments = ref.read(speedSegmentsProvider);
+      final cropSegs = ref.read(cropSegmentsProvider);
       final overlays = ref.read(overlaysProvider);
       final subtitles = ref.read(subtitlesProvider);
+
+      debugPrint('[Export] cropSegs count: ${cropSegs.length}');
+      for (int i = 0; i < cropSegs.length; i++) {
+        final s = cropSegs[i];
+        debugPrint('[Export] cropSeg[$i] hasCrop=${s.hasCrop} '
+            'rect=${s.cropRect} start=${s.start} end=${s.end}');
+      }
 
       final result = await VideoExportService.exportVideo(
         inputPath: widget.videoPath,
         trimStart: _controller.startTrim,
         trimEnd: _controller.endTrim,
         speedSegments: segments,
+        cropSegments: cropSegs,
         overlays: overlays,
         subtitles: subtitles,
         videoResolution: _correctedVideoDimension,
@@ -504,6 +635,7 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
     // autoDispose provider를 로딩 중에도 구독하여 초기화 데이터 유지
     final segments = ref.watch(speedSegmentsProvider);
     ref.watch(overlaysProvider);
+    ref.watch(cropSegmentsProvider);
 
     if (!_isInitialized) {
       return const Scaffold(
@@ -545,18 +677,35 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
                     videoHeight = videoWidth / _displayAspectRatio;
                   }
                   final videoSize = Size(videoWidth, videoHeight);
+                  _lastVideoSize = videoSize;
 
                   return Stack(
                     alignment: Alignment.center,
                     children: [
                       Center(
-                        child: AspectRatio(
-                          aspectRatio: _displayAspectRatio,
-                          child: GestureDetector(
-                            onTap: _togglePlayPause,
-                            child: VideoPlayer(_controller.video),
-                          ),
-                        ),
+                        child: selectedTab == EditorTab.zoom
+                            // 줌 탭: 핀치-줌 → 크롭 세그먼트 직접 갱신
+                            ? GestureDetector(
+                                onScaleStart: _onZoomScaleStart,
+                                onScaleUpdate: _onZoomScaleUpdate,
+                                onTap: _togglePlayPause,
+                                child: AspectRatio(
+                                  aspectRatio: _displayAspectRatio,
+                                  child: _buildCroppedPreview(),
+                                ),
+                              )
+                            // 다른 탭: 영상 미리보기용 줌 (내보내기 무관)
+                            : InteractiveViewer(
+                                minScale: 1.0,
+                                maxScale: 5.0,
+                                child: AspectRatio(
+                                  aspectRatio: _displayAspectRatio,
+                                  child: GestureDetector(
+                                    onTap: _togglePlayPause,
+                                    child: _buildCroppedPreview(),
+                                  ),
+                                ),
+                              ),
                       ),
                       if (currentSpeed != 1.0)
                         Positioned(
@@ -579,26 +728,33 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
                             ),
                           ),
                         ),
-                      Center(
-                        child: SizedBox(
-                          width: videoWidth,
-                          height: videoHeight,
-                          child: OverlayLayer(
-                            previewSize: videoSize,
-                            currentPosition: _currentPosition,
-                            onOverlaySelected: () {
-                              ref
-                                  .read(selectedEditorTabProvider.notifier)
-                                  .state = EditorTab.sticker;
-                            },
+                      // 줌 탭에서는 오버레이/자막 레이어 터치 비활성화
+                      // (핀치-줌 제스처가 하위 GestureDetector까지 전달되도록)
+                      IgnorePointer(
+                        ignoring: selectedTab == EditorTab.zoom,
+                        child: Center(
+                          child: SizedBox(
+                            width: videoWidth,
+                            height: videoHeight,
+                            child: OverlayLayer(
+                              previewSize: videoSize,
+                              currentPosition: _currentPosition,
+                              onOverlaySelected: () {
+                                ref
+                                    .read(selectedEditorTabProvider.notifier)
+                                    .state = EditorTab.sticker;
+                              },
+                            ),
                           ),
                         ),
                       ),
-                      Center(
-                        child: SizedBox(
-                          width: videoWidth,
-                          height: videoHeight,
-                          child: SubtitleOverlayLayer(
+                      IgnorePointer(
+                        ignoring: selectedTab == EditorTab.zoom,
+                        child: Center(
+                          child: SizedBox(
+                            width: videoWidth,
+                            height: videoHeight,
+                            child: SubtitleOverlayLayer(
                             previewSize: videoSize,
                             currentPosition: _currentPosition,
                             onSubtitleTap: () {
@@ -616,7 +772,19 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
                             },
                           ),
                         ),
+                        ),
                       ),
+                      if (selectedTab == EditorTab.zoom)
+                        Center(
+                          child: IgnorePointer(
+                            child: SizedBox(
+                              width: videoWidth,
+                              height: videoHeight,
+                              child: CropOverlay(previewSize: videoSize),
+                            ),
+                          ),
+                        ),
+
                       // ─── 재생 / 최대화 버튼 (좌하단) ─────
                       Positioned(
                         left: 8,
@@ -839,11 +1007,136 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
         return _buildTrimActions();
       case EditorTab.speed:
         return _buildSpeedActions();
+      case EditorTab.zoom:
+        return _buildZoomActions();
       case EditorTab.text:
         return _buildPillAction('텍스트 추가', Icons.add, _showSubtitleEditor);
       case EditorTab.sticker:
         return _buildStickerActions();
     }
+  }
+
+  Widget _buildZoomActions() {
+    final segments = ref.watch(cropSegmentsProvider);
+    final selectedIdx = ref.watch(selectedCropSegmentProvider);
+    final idx = selectedIdx ??
+        (segments.length == 1
+            ? 0
+            : _findCropSegmentAt(segments, _currentPosition));
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      child: Row(
+        children: [
+          // 분할
+          Material(
+            color: Colors.white.withOpacity(0.12),
+            borderRadius: BorderRadius.circular(14),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(14),
+              onTap: () {
+                final segs = ref.read(cropSegmentsProvider);
+                final canSplit = segs.any((s) =>
+                    _currentPosition > s.start &&
+                    _currentPosition < s.end);
+                if (!canSplit) {
+                  debugPrint('[Zoom] 분할 불가: position=$_currentPosition, '
+                      'segments=${segs.map((s) => '${s.start}-${s.end}').join(', ')}');
+                  return;
+                }
+                _withUndo(() {
+                  ref
+                      .read(cropSegmentsProvider.notifier)
+                      .splitAt(_currentPosition);
+                });
+                // 분할 후 현재 위치 구간 자동 선택
+                _autoSelectCropSegment();
+                debugPrint('[Zoom] 분할 완료: position=$_currentPosition, '
+                    'segments=${ref.read(cropSegmentsProvider).length}개');
+              },
+              child: const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.content_cut, size: 14, color: Colors.white70),
+                    SizedBox(width: 4),
+                    Text('분할',
+                        style: TextStyle(
+                            color: Colors.white70,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600)),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 6),
+          // 전환 애니메이션 토글
+          if (idx != null && idx < segments.length && idx > 0)
+            Material(
+              color: segments[idx].animateTransition
+                  ? const Color(0xFF7C4DFF).withOpacity(0.8)
+                  : Colors.white.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(14),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(14),
+                onTap: () {
+                  _withUndo(() {
+                    ref.read(cropSegmentsProvider.notifier).toggleAnimation(
+                          idx, !segments[idx].animateTransition);
+                  });
+                },
+                child: const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.animation, size: 14, color: Colors.white70),
+                      SizedBox(width: 4),
+                      Text('전환',
+                          style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600)),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          const Spacer(),
+          // 초기화
+          if (idx != null && idx < segments.length && segments[idx].hasCrop)
+            Material(
+              color: Colors.white.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(14),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(14),
+                onTap: () {
+                  _withUndo(() {
+                    ref.read(cropSegmentsProvider.notifier).resetCrop(idx);
+                  });
+                },
+                child: const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.refresh, size: 14, color: Colors.white70),
+                      SizedBox(width: 4),
+                      Text('초기화',
+                          style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600)),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
   }
 
   Widget _buildStickerActions() {

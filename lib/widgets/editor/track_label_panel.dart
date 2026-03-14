@@ -26,6 +26,7 @@ class TrackLabelPanel extends ConsumerWidget {
   static const _tracks = [
     (EditorTab.trim, Icons.movie_outlined, '미디어'),
     (EditorTab.speed, Icons.speed, '속도'),
+    (EditorTab.zoom, Icons.crop, '줌'),
     (EditorTab.text, Icons.title, '텍스트'),
     (EditorTab.sticker, Icons.emoji_emotions_outlined, '스티커'),
   ];

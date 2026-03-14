@@ -44,13 +44,6 @@ class _CameraTabScreenState extends ConsumerState<CameraTabScreen>
     WidgetsBinding.instance.addObserver(this);
   }
 
-  void _ensureCameraInitialized() {
-    if (!_hasEverInitialized && !_isInitializing) {
-      _hasEverInitialized = true;
-      _initCamera();
-    }
-  }
-
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.inactive) {
@@ -219,7 +212,13 @@ class _CameraTabScreenState extends ConsumerState<CameraTabScreen>
   Widget build(BuildContext context) {
     final currentTab = ref.watch(bottomNavIndexProvider);
     if (currentTab == 2) {
-      _ensureCameraInitialized();
+      if (!_hasEverInitialized && !_isInitializing) {
+        _hasEverInitialized = true;
+        _initCamera();
+      } else if (_controller == null && !_isInitializing) {
+        // 탭 전환 등으로 controller가 없어진 경우 재초기화
+        _initCamera();
+      }
     }
 
     ref.listen(nearbyGymsProvider, (_, next) {

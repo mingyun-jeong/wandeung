@@ -201,6 +201,18 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
     });
   }
 
+  void _openFullscreen() {
+    _controller.video.pause();
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => _FullscreenVideoPage(
+          controller: _controller.video,
+          aspectRatio: _displayAspectRatio,
+        ),
+      ),
+    );
+  }
+
   @override
   void dispose() {
     _controller.video.removeListener(_onVideoPositionChanged);
@@ -519,6 +531,16 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
                           ),
                         ),
                       ),
+                      // ─── 재생 / 최대화 버튼 (좌하단) ─────
+                      Positioned(
+                        left: 8,
+                        bottom:
+                            (constraints.maxHeight - videoHeight) / 2 + 8,
+                        child: _VideoOverlayButton(
+                          icon: Icons.fullscreen_rounded,
+                          onTap: _openFullscreen,
+                        ),
+                      ),
                     ],
                   );
                 },
@@ -540,19 +562,17 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
             // ─── 트림 슬라이더 (트림 탭 선택 시) ─────
             // Visibility로 감싸서 GlobalKey 충돌 방지
             // (TrimSlider 내부의 GlobalKey가 트리에서 제거/재생성 시 충돌)
-            Visibility(
-              visible: selectedTab == EditorTab.trim,
-              maintainState: true,
-              maintainSize: true,
-              maintainAnimation: true,
-              child: Container(
-                margin: const EdgeInsets.symmetric(horizontal: 8),
-                child: TrimSlider(
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 8),
+              child: TrimSlider(
+                controller: _controller,
+                height: 50,
+                child: TrimTimeline(
                   controller: _controller,
-                  height: 50,
-                  child: TrimTimeline(
-                    controller: _controller,
-                    padding: const EdgeInsets.only(top: 10),
+                  padding: const EdgeInsets.only(top: 10),
+                  textStyle: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 10,
                   ),
                 ),
               ),
@@ -827,6 +847,98 @@ class _ActionPill extends StatelessWidget {
                 color: color,
                 fontSize: 9,
                 fontWeight: highlighted ? FontWeight.w700 : FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// 영상 프리뷰 위 오버레이 버튼 (재생/최대화)
+class _VideoOverlayButton extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onTap;
+
+  const _VideoOverlayButton({required this.icon, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 32,
+        height: 32,
+        decoration: BoxDecoration(
+          color: Colors.black54,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Icon(icon, color: Colors.white, size: 20),
+      ),
+    );
+  }
+}
+
+/// 전체 화면 영상 재생 페이지
+class _FullscreenVideoPage extends StatefulWidget {
+  final VideoPlayerController controller;
+  final double aspectRatio;
+
+  const _FullscreenVideoPage({
+    required this.controller,
+    required this.aspectRatio,
+  });
+
+  @override
+  State<_FullscreenVideoPage> createState() => _FullscreenVideoPageState();
+}
+
+class _FullscreenVideoPageState extends State<_FullscreenVideoPage> {
+  @override
+  void initState() {
+    super.initState();
+    widget.controller.addListener(_onChanged);
+  }
+
+  void _onChanged() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    widget.controller.removeListener(_onChanged);
+    widget.controller.pause();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: GestureDetector(
+        onTap: () {
+          if (widget.controller.value.isPlaying) {
+            widget.controller.pause();
+          } else {
+            widget.controller.play();
+          }
+        },
+        child: Stack(
+          children: [
+            Center(
+              child: AspectRatio(
+                aspectRatio: widget.aspectRatio,
+                child: VideoPlayer(widget.controller),
+              ),
+            ),
+            // 닫기 버튼
+            Positioned(
+              top: MediaQuery.of(context).padding.top + 8,
+              left: 8,
+              child: IconButton(
+                onPressed: () => Navigator.pop(context),
+                icon: const Icon(Icons.close, color: Colors.white, size: 28),
               ),
             ),
           ],

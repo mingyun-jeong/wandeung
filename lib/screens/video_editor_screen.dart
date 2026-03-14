@@ -61,9 +61,6 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
   double _displayAspectRatio = 16 / 9;
   bool _isRotationCorrected = false;
   List<String> _timelineThumbnails = [];
-  Size _lastVideoSize = Size.zero;
-  Rect? _zoomStartCrop;
-  Offset? _zoomStartFocal;
 
   /// 회전 보정된 영상 해상도 (FFmpeg export용)
   Size get _correctedVideoDimension {
@@ -200,20 +197,6 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
     );
   }
 
-  /// 현재 선택된 크롭 구간 인덱스 (없으면 재생 위치 기반 자동 선택)
-  int? get _currentCropIdx {
-    final segments = ref.read(cropSegmentsProvider);
-    final selected = ref.read(selectedCropSegmentProvider);
-    if (selected != null && selected < segments.length) return selected;
-    if (segments.length == 1) return 0;
-    for (int i = 0; i < segments.length; i++) {
-      if (_currentPosition >= segments[i].start &&
-          _currentPosition < segments[i].end) {
-        return i;
-      }
-    }
-    return segments.isEmpty ? null : segments.length - 1;
-  }
 
   /// 주어진 위치에 해당하는 크롭 구간 인덱스
   static int? _findCropSegmentAt(
@@ -238,49 +221,6 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
     }
   }
 
-  /// 핀치-줌 제스처 시작: 현재 크롭 상태 저장
-  void _onZoomScaleStart(ScaleStartDetails details) {
-    final segments = ref.read(cropSegmentsProvider);
-    final idx = _currentCropIdx;
-    debugPrint('[Zoom] scaleStart idx=$idx, segments=${segments.length}');
-    if (idx != null && idx < segments.length) {
-      _zoomStartCrop = segments[idx].cropRect;
-      _zoomStartFocal = details.localFocalPoint;
-    }
-  }
-
-  /// 핀치-줌 제스처 업데이트: 크롭 영역 실시간 갱신
-  void _onZoomScaleUpdate(ScaleUpdateDetails details) {
-    if (_zoomStartCrop == null || _zoomStartFocal == null) return;
-    final idx = _currentCropIdx;
-    if (idx == null) return;
-
-    final startCrop = _zoomStartCrop!;
-    final startFocal = _zoomStartFocal!;
-    final vw = _lastVideoSize.width;
-    final vh = _lastVideoSize.height;
-    if (vw <= 0 || vh <= 0) return;
-
-    // 제스처 시작 시 초점이 가리키는 영상 절대 좌표 (0~1)
-    final focalAbsX = startCrop.left + (startFocal.dx / vw) * startCrop.width;
-    final focalAbsY = startCrop.top + (startFocal.dy / vh) * startCrop.height;
-
-    // 크롭 크기 (줌 인 → 크롭 축소)
-    final newW = (startCrop.width / details.scale).clamp(0.1, 1.0);
-    final newH = (startCrop.height / details.scale).clamp(0.1, 1.0);
-
-    // 현재 초점 위치가 동일한 영상 좌표에 대응하도록 오프셋 계산
-    var newL = focalAbsX - (details.localFocalPoint.dx / vw) * newW;
-    var newT = focalAbsY - (details.localFocalPoint.dy / vh) * newH;
-
-    newL = newL.clamp(0.0, 1.0 - newW);
-    newT = newT.clamp(0.0, 1.0 - newH);
-
-    final newRect = Rect.fromLTWH(newL, newT, newW, newH);
-    debugPrint('[Zoom] scaleUpdate idx=$idx scale=${details.scale.toStringAsFixed(2)} '
-        'rect=$newRect');
-    ref.read(cropSegmentsProvider.notifier).updateCropRect(idx, newRect);
-  }
 
   void _togglePlayPause() {
     if (_controller.video.value.isPlaying) {
@@ -677,22 +617,16 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
                     videoHeight = videoWidth / _displayAspectRatio;
                   }
                   final videoSize = Size(videoWidth, videoHeight);
-                  _lastVideoSize = videoSize;
 
                   return Stack(
                     alignment: Alignment.center,
                     children: [
                       Center(
                         child: selectedTab == EditorTab.zoom
-                            // 줌 탭: 핀치-줌 → 크롭 세그먼트 직접 갱신
-                            ? GestureDetector(
-                                onScaleStart: _onZoomScaleStart,
-                                onScaleUpdate: _onZoomScaleUpdate,
-                                onTap: _togglePlayPause,
-                                child: AspectRatio(
-                                  aspectRatio: _displayAspectRatio,
-                                  child: _buildCroppedPreview(),
-                                ),
+                            // 줌 탭: 제스처는 CropOverlay가 처리
+                            ? AspectRatio(
+                                aspectRatio: _displayAspectRatio,
+                                child: _buildCroppedPreview(),
                               )
                             // 다른 탭: 영상 미리보기용 줌 (내보내기 무관)
                             : InteractiveViewer(
@@ -776,11 +710,12 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
                       ),
                       if (selectedTab == EditorTab.zoom)
                         Center(
-                          child: IgnorePointer(
-                            child: SizedBox(
-                              width: videoWidth,
-                              height: videoHeight,
-                              child: CropOverlay(previewSize: videoSize),
+                          child: SizedBox(
+                            width: videoWidth,
+                            height: videoHeight,
+                            child: CropOverlay(
+                              previewSize: videoSize,
+                              onTap: _togglePlayPause,
                             ),
                           ),
                         ),

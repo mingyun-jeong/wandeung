@@ -3,11 +3,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../providers/video_editor_provider.dart';
 
-/// 크롭 줌 오버레이 — 드래그 가능한 크롭 사각형 + 딤 처리
+/// 크롭 줌 오버레이 — 드래그 핸들 + 핀치 줌 + 딤 처리
+///
+/// 한 손가락: 핸들 드래그(리사이즈) 또는 크롭 영역 이동
+/// 두 손가락: 핀치 줌 (크롭 영역 확대/축소)
 class CropOverlay extends ConsumerStatefulWidget {
   final Size previewSize;
+  final VoidCallback? onTap;
 
-  const CropOverlay({super.key, required this.previewSize});
+  const CropOverlay({super.key, required this.previewSize, this.onTap});
 
   @override
   ConsumerState<CropOverlay> createState() => _CropOverlayState();
@@ -20,6 +24,10 @@ class _CropOverlayState extends ConsumerState<CropOverlay> {
   _DragHandle? _activeHandle;
   Offset? _dragStart;
   Rect? _startRect;
+  // 핀치 줌용
+  Rect? _pinchStartCropNorm;
+  Offset? _pinchStartFocal;
+  bool _isPinch = false;
 
   @override
   Widget build(BuildContext context) {
@@ -47,9 +55,10 @@ class _CropOverlayState extends ConsumerState<CropOverlay> {
       height: h,
       child: GestureDetector(
         behavior: HitTestBehavior.translucent,
-        onPanStart: (d) => _onPanStart(d, pixelRect),
-        onPanUpdate: (d) => _onPanUpdate(d, idx, w, h),
-        onPanEnd: (_) => _onPanEnd(),
+        onTap: widget.onTap,
+        onScaleStart: (d) => _onScaleStart(d, pixelRect, cropRect),
+        onScaleUpdate: (d) => _onScaleUpdate(d, idx, w, h),
+        onScaleEnd: (_) => _onScaleEnd(),
         child: CustomPaint(
           painter: _CropPainter(pixelRect: pixelRect),
           child: const SizedBox.expand(),
@@ -58,18 +67,33 @@ class _CropOverlayState extends ConsumerState<CropOverlay> {
     );
   }
 
-  void _onPanStart(DragStartDetails details, Rect pixelRect) {
-    final pos = details.localPosition;
+  void _onScaleStart(
+      ScaleStartDetails details, Rect pixelRect, Rect cropNorm) {
+    final pos = details.localFocalPoint;
     _activeHandle = _hitTestHandle(pos, pixelRect);
     _dragStart = pos;
     _startRect = pixelRect;
+    _pinchStartCropNorm = cropNorm;
+    _pinchStartFocal = details.localFocalPoint;
+    _isPinch = false;
   }
 
-  void _onPanUpdate(DragUpdateDetails details, int idx, double w, double h) {
+  void _onScaleUpdate(ScaleUpdateDetails details, int idx, double w, double h) {
     if (_startRect == null || _dragStart == null) return;
 
-    final dx = details.localPosition.dx - _dragStart!.dx;
-    final dy = details.localPosition.dy - _dragStart!.dy;
+    // 두 손가락 핀치 감지
+    if (details.scale != 1.0) {
+      _isPinch = true;
+    }
+
+    if (_isPinch && _pinchStartCropNorm != null && _pinchStartFocal != null) {
+      _handlePinchZoom(details, idx, w, h);
+      return;
+    }
+
+    // 한 손가락: 핸들 드래그 또는 영역 이동
+    final dx = details.localFocalPoint.dx - _dragStart!.dx;
+    final dy = details.localFocalPoint.dy - _dragStart!.dy;
     final sr = _startRect!;
 
     Rect newPixelRect;
@@ -93,10 +117,39 @@ class _CropOverlayState extends ConsumerState<CropOverlay> {
     ref.read(cropSegmentsProvider.notifier).updateCropRect(idx, normalized);
   }
 
-  void _onPanEnd() {
+  /// 핀치 줌: 크롭 영역을 확대/축소
+  void _handlePinchZoom(
+      ScaleUpdateDetails details, int idx, double w, double h) {
+    final startCrop = _pinchStartCropNorm!;
+    final startFocal = _pinchStartFocal!;
+
+    // 핀치 아웃(scale>1) → 크롭 확대(줌 아웃), 핀치 인(scale<1) → 크롭 축소(줌 인)
+    final newW = (startCrop.width * details.scale).clamp(0.1, 1.0);
+    final newH = (startCrop.height * details.scale).clamp(0.1, 1.0);
+
+    // 초점이 가리키는 영상 절대 좌표 (0~1)
+    final focalAbsX = startCrop.left + (startFocal.dx / w) * startCrop.width;
+    final focalAbsY = startCrop.top + (startFocal.dy / h) * startCrop.height;
+
+    // 현재 초점이 동일 좌표에 대응하도록 오프셋 계산
+    var newL = focalAbsX - (details.localFocalPoint.dx / w) * newW;
+    var newT = focalAbsY - (details.localFocalPoint.dy / h) * newH;
+
+    newL = newL.clamp(0.0, 1.0 - newW);
+    newT = newT.clamp(0.0, 1.0 - newH);
+
+    ref
+        .read(cropSegmentsProvider.notifier)
+        .updateCropRect(idx, Rect.fromLTWH(newL, newT, newW, newH));
+  }
+
+  void _onScaleEnd() {
     _activeHandle = null;
     _dragStart = null;
     _startRect = null;
+    _pinchStartCropNorm = null;
+    _pinchStartFocal = null;
+    _isPinch = false;
   }
 
   Rect _resizeRect(
@@ -155,7 +208,16 @@ class _CropOverlayState extends ConsumerState<CropOverlay> {
   }
 }
 
-enum _DragHandle { topLeft, top, topRight, right, bottomRight, bottom, bottomLeft, left }
+enum _DragHandle {
+  topLeft,
+  top,
+  topRight,
+  right,
+  bottomRight,
+  bottom,
+  bottomLeft,
+  left
+}
 
 class _CropPainter extends CustomPainter {
   final Rect pixelRect;
@@ -189,9 +251,11 @@ class _CropPainter extends CustomPainter {
       ..strokeWidth = 0.5;
     for (int i = 1; i < 3; i++) {
       final x = pixelRect.left + pixelRect.width * i / 3;
-      canvas.drawLine(Offset(x, pixelRect.top), Offset(x, pixelRect.bottom), gridPaint);
+      canvas.drawLine(
+          Offset(x, pixelRect.top), Offset(x, pixelRect.bottom), gridPaint);
       final y = pixelRect.top + pixelRect.height * i / 3;
-      canvas.drawLine(Offset(pixelRect.left, y), Offset(pixelRect.right, y), gridPaint);
+      canvas.drawLine(
+          Offset(pixelRect.left, y), Offset(pixelRect.right, y), gridPaint);
     }
 
     // 8개 핸들

@@ -543,7 +543,7 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
             Visibility(
               visible: selectedTab == EditorTab.trim,
               maintainState: true,
-              maintainSize: false,
+              maintainSize: true,
               maintainAnimation: true,
               child: Container(
                 margin: const EdgeInsets.symmetric(horizontal: 8),
@@ -585,8 +585,11 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
               ),
             ),
 
-            // ─── 탭별 컨텍스트 액션 바 ───────────────
-            _buildContextActionBar(selectedTab),
+            // ─── 탭별 컨텍스트 액션 바 (고정 높이) ────
+            SizedBox(
+              height: 40,
+              child: _buildContextActionBar(selectedTab),
+            ),
 
             // ─── VLLO 스타일 하단 필 버튼 탭 ─────────
             const EditorTabBar(),

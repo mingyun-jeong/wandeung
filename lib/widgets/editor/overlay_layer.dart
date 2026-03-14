@@ -171,7 +171,18 @@ class _OverlaySticker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bgColor = item.backgroundColor ?? Colors.black54;
+    final bgColor = item.backgroundColor;
+
+    // 배경색이 없으면 이모지 전용: 배경/그림자 없이 텍스트만 표시
+    if (bgColor == null) {
+      return Text(
+        item.text,
+        style: TextStyle(
+          fontSize: item.fontSize,
+        ),
+      );
+    }
+
     final isLight = bgColor == const Color(0xFFFFFFFF) ||
         bgColor.computeLuminance() > 0.7;
 

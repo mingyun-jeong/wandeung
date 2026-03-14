@@ -126,10 +126,10 @@ class _VlloTimelineState extends ConsumerState<VlloTimeline> {
 
   // ─── 배속 색상 ──────────────────────────────────────
   static Color _speedColor(double speed) {
-    if (speed <= 0.5) return const Color(0xFF42A5F5);
-    if (speed <= 1.0) return const Color(0xFF66BB6A);
-    if (speed <= 2.0) return const Color(0xFFFFA726);
-    return const Color(0xFFEF5350);
+    if (speed <= 0.5) return const Color(0x5542A5F5);
+    if (speed <= 1.0) return const Color(0x5566BB6A);
+    if (speed <= 2.0) return const Color(0x55FFA726);
+    return const Color(0x55EF5350);
   }
 
   @override
@@ -351,8 +351,7 @@ class _VlloTimelineState extends ConsumerState<VlloTimeline> {
                 },
                 child: Container(
                   decoration: BoxDecoration(
-                    color: _speedColor(seg.speed)
-                        .withOpacity(isSelected ? 0.9 : 0.5),
+                    color: _speedColor(seg.speed),
                     borderRadius: BorderRadius.circular(3),
                     border: isSelected
                         ? Border.all(color: Colors.white, width: 1.5)

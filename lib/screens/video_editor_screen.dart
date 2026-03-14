@@ -123,6 +123,25 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
 
     if (pos != _currentPosition) {
       setState(() => _currentPosition = pos);
+      // 재생 중 구간 배속 실시간 적용
+      if (_controller.video.value.isPlaying) {
+        _applyPlaybackSpeed(pos);
+      }
+    }
+  }
+
+  /// 현재 위치의 구간 배속을 VideoPlayer에 적용
+  double _lastAppliedSpeed = 1.0;
+  void _applyPlaybackSpeed(Duration pos) {
+    final segments = ref.read(speedSegmentsProvider);
+    final speed = segments
+            .where((s) => pos >= s.start && pos < s.end)
+            .firstOrNull
+            ?.speed ??
+        1.0;
+    if (speed != _lastAppliedSpeed) {
+      _lastAppliedSpeed = speed;
+      _controller.video.setPlaybackSpeed(speed);
     }
   }
 
@@ -136,7 +155,12 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
   void _togglePlayPause() {
     if (_controller.video.value.isPlaying) {
       _controller.video.pause();
+      // 일시정지 시 배속 리셋
+      _controller.video.setPlaybackSpeed(1.0);
+      _lastAppliedSpeed = 1.0;
     } else {
+      // 재생 시작 시 현재 구간 배속 적용
+      _applyPlaybackSpeed(_currentPosition);
       _controller.video.play();
     }
   }
@@ -196,8 +220,26 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
   }
 
   void _splitAtCurrent() {
+    final segments = ref.read(speedSegmentsProvider);
+    final pos = _currentPosition;
+    final canSplit = segments.any((seg) =>
+        pos > seg.start && pos < seg.end);
+    if (!canSplit) {
+      // 디버그: 현재 위치와 구간 정보 표시
+      final segInfo = segments.map((s) =>
+          '${s.start.inMilliseconds}~${s.end.inMilliseconds}ms').join(', ');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '분할 불가: 현재 ${pos.inMilliseconds}ms / 구간: $segInfo'),
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 4),
+        ),
+      );
+      return;
+    }
     _withUndo(() {
-      ref.read(speedSegmentsProvider.notifier).splitAt(_currentPosition);
+      ref.read(speedSegmentsProvider.notifier).splitAt(pos);
     });
   }
 
@@ -422,6 +464,10 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // autoDispose provider를 로딩 중에도 구독하여 초기화 데이터 유지
+    final segments = ref.watch(speedSegmentsProvider);
+    ref.watch(overlaysProvider);
+
     if (!_isInitialized) {
       return const Scaffold(
         backgroundColor: Colors.black,
@@ -430,8 +476,6 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
         ),
       );
     }
-
-    final segments = ref.watch(speedSegmentsProvider);
     final currentSpeed = segments
             .where((s) =>
                 _currentPosition >= s.start && _currentPosition < s.end)
@@ -809,7 +853,7 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
 
     const speedOptions = [0.5, 1.0, 2.0, 4.0];
 
-    return Container(
+    return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       child: Row(
         children: [
@@ -817,34 +861,36 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
             final isActive = selectedIdx != null &&
                 selectedIdx < segments.length &&
                 (segments[selectedIdx].speed - speed).abs() < 0.01;
+            final enabled = selectedIdx != null;
             return Padding(
               padding: const EdgeInsets.only(right: 6),
-              child: GestureDetector(
-                onTap: selectedIdx != null
-                    ? () => ref
-                        .read(speedSegmentsProvider.notifier)
-                        .updateSpeedAndMerge(selectedIdx, speed)
-                    : null,
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: isActive
-                        ? _speedColor(speed)
-                        : Colors.white
-                            .withOpacity(selectedIdx != null ? 0.12 : 0.05),
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: Text(
-                    '${speed}x',
-                    style: TextStyle(
-                      color: isActive
-                          ? Colors.white
-                          : (selectedIdx != null
-                              ? Colors.white70
-                              : Colors.white24),
-                      fontWeight: FontWeight.w700,
-                      fontSize: 12,
+              child: Material(
+                color: isActive
+                    ? _speedColor(speed)
+                    : Colors.white
+                        .withOpacity(enabled ? 0.12 : 0.05),
+                borderRadius: BorderRadius.circular(14),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(14),
+                  onTap: enabled
+                      ? () => ref
+                          .read(speedSegmentsProvider.notifier)
+                          .updateSpeedAndMerge(selectedIdx, speed)
+                      : null,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 4),
+                    child: Text(
+                      '${speed}x',
+                      style: TextStyle(
+                        color: isActive
+                            ? Colors.white
+                            : (enabled
+                                ? Colors.white70
+                                : Colors.white24),
+                        fontWeight: FontWeight.w700,
+                        fontSize: 12,
+                      ),
                     ),
                   ),
                 ),
@@ -852,26 +898,26 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
             );
           }),
           const Spacer(),
-          GestureDetector(
-            onTap: _splitAtCurrent,
-            child: Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.12),
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: const Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.content_cut, size: 14, color: Colors.white70),
-                  SizedBox(width: 4),
-                  Text('분할',
-                      style: TextStyle(
-                          color: Colors.white70,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600)),
-                ],
+          Material(
+            color: Colors.white.withOpacity(0.12),
+            borderRadius: BorderRadius.circular(14),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(14),
+              onTap: _splitAtCurrent,
+              child: const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.content_cut, size: 14, color: Colors.white70),
+                    SizedBox(width: 4),
+                    Text('분할',
+                        style: TextStyle(
+                            color: Colors.white70,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600)),
+                  ],
+                ),
               ),
             ),
           ),
@@ -914,10 +960,10 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
   }
 
   static Color _speedColor(double speed) {
-    if (speed <= 0.5) return const Color(0xFF42A5F5);
-    if (speed <= 1.0) return const Color(0xFF66BB6A);
-    if (speed <= 2.0) return const Color(0xFFFFA726);
-    return const Color(0xFFEF5350);
+    if (speed <= 0.5) return const Color(0x5542A5F5);
+    if (speed <= 1.0) return const Color(0x5566BB6A);
+    if (speed <= 2.0) return const Color(0x55FFA726);
+    return const Color(0x55EF5350);
   }
 }
 

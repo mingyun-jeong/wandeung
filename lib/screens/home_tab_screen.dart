@@ -1,11 +1,17 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../app.dart';
 import '../models/climbing_gym.dart';
+import '../models/gym_color_scale.dart';
 import '../models/user_climbing_stats.dart';
 import '../providers/camera_settings_provider.dart';
+import '../providers/gym_color_scale_provider.dart';
 import '../providers/record_provider.dart';
 import '../screens/gym_detail_screen.dart';
+import '../screens/gym_grades_tab_screen.dart';
+import '../utils/constants.dart';
 import '../widgets/record_card.dart';
 import '../widgets/wandeung_app_bar.dart';
 
@@ -27,6 +33,7 @@ class HomeTabScreen extends ConsumerWidget {
           ref.invalidate(userStatsProvider);
           ref.invalidate(recentRecordsProvider);
           ref.invalidate(recentGymsProvider);
+          ref.invalidate(allColorScalesProvider);
         },
         child: CustomScrollView(
           slivers: [
@@ -62,6 +69,16 @@ class HomeTabScreen extends ConsumerWidget {
                   const SizedBox.shrink(),
             ),
 
+            // 난이도 미리보기 (랜덤 1개)
+            SliverToBoxAdapter(
+              child: ref.watch(allColorScalesProvider).whenOrNull(
+                    data: (scales) => scales.isNotEmpty
+                        ? _RandomGradeSection(scales: scales)
+                        : null,
+                  ) ??
+                  const SizedBox.shrink(),
+            ),
+
             // 최근 기록 헤더
             SliverToBoxAdapter(
               child: Padding(
@@ -84,7 +101,7 @@ class HomeTabScreen extends ConsumerWidget {
                                     ref
                                         .read(
                                             bottomNavIndexProvider.notifier)
-                                        .state = 3;
+                                        .state = 1;
                                   },
                                   style: TextButton.styleFrom(
                                     padding: const EdgeInsets.symmetric(
@@ -500,6 +517,154 @@ class _RecentGymsSectionState extends State<_RecentGymsSection>
                           ),
                   )
                 : _buildChipRow(colorScheme),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── 난이도 미리보기 (랜덤 1개) ──────────────────────────────────────────────
+
+class _RandomGradeSection extends StatelessWidget {
+  final List<GymColorScale> scales;
+  const _RandomGradeSection({required this.scales});
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final randomScale = scales[Random().nextInt(scales.length)];
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(left: 4, bottom: 10),
+            child: Row(
+              children: [
+                Text(
+                  '암장별 난이도 색상표',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: colorScheme.onSurface,
+                  ),
+                ),
+                const Spacer(),
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const GymGradesTabScreen(),
+                      ),
+                    );
+                  },
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        '더보기',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                          color: colorScheme.primary,
+                        ),
+                      ),
+                      Icon(
+                        Icons.chevron_right_rounded,
+                        size: 18,
+                        color: colorScheme.primary,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // 랜덤 브랜드 카드
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: WandeungColors.border),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      Icons.location_on_rounded,
+                      size: 18,
+                      color: colorScheme.primary,
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        randomScale.brandName,
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    Text(
+                      '${randomScale.levels.length}단계',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: colorScheme.onSurface.withOpacity(0.5),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: randomScale.levels.map((level) {
+                    final dc = level.color;
+                    if (dc == DifficultyColor.star) {
+                      return const Icon(Icons.star_rounded,
+                          color: Color(0xFFFFD700), size: 20);
+                    }
+                    return Container(
+                      width: 20,
+                      height: 20,
+                      decoration: BoxDecoration(
+                        color: dc == DifficultyColor.rainbow
+                            ? null
+                            : Color(dc.colorValue),
+                        gradient: dc == DifficultyColor.rainbow
+                            ? const LinearGradient(colors: [
+                                Colors.red,
+                                Colors.orange,
+                                Colors.yellow,
+                                Colors.green,
+                                Colors.blue,
+                                Colors.purple,
+                              ])
+                            : null,
+                        shape: BoxShape.circle,
+                        border: dc.needsDarkIcon
+                            ? Border.all(
+                                color: const Color(0xFFE0E0E0),
+                                width: 0.5)
+                            : null,
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ],
+            ),
           ),
         ],
       ),

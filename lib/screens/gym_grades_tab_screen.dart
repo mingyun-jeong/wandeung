@@ -31,7 +31,8 @@ class _GymGradesTabScreenState extends ConsumerState<GymGradesTabScreen> {
           ),
         ],
       ),
-      body: Column(
+      body: SafeArea(
+        child: Column(
         children: [
           // 검색바
           Padding(
@@ -127,6 +128,7 @@ class _GymGradesTabScreenState extends ConsumerState<GymGradesTabScreen> {
             ),
           ),
         ],
+        ),
       ),
     );
   }

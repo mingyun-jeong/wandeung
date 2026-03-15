@@ -357,7 +357,7 @@ class _CameraTabScreenState extends ConsumerState<CameraTabScreen>
                   // X 버튼 → 기록 탭으로 전환
                   GestureDetector(
                     onTap: () {
-                      ref.read(bottomNavIndexProvider.notifier).state = 3;
+                      ref.read(bottomNavIndexProvider.notifier).state = 1;
                     },
                     child: Container(
                       width: 40,

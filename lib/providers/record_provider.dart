@@ -330,7 +330,7 @@ class RecordService {
 
   /// Google Place ID로 기존 gym 찾거나 새로 생성
   /// [scales] 전달 시 브랜드 자동매칭으로 brand_name 설정
-  static Future<String> _findOrCreateGym(
+  static Future<String> findOrCreateGym(
     ClimbingGym gym, {
     List<GymColorScale>? scales,
   }) async {
@@ -382,7 +382,7 @@ class RecordService {
 
     String? resolvedGymId;
     if (gym != null) {
-      resolvedGymId = await _findOrCreateGym(gym, scales: scales);
+      resolvedGymId = await findOrCreateGym(gym, scales: scales);
     }
 
     final record = ClimbingRecord(
@@ -421,7 +421,7 @@ class RecordService {
   }) async {
     String? resolvedGymId;
     if (gym != null) {
-      resolvedGymId = await _findOrCreateGym(gym, scales: scales);
+      resolvedGymId = await findOrCreateGym(gym, scales: scales);
     }
 
     final response = await _supabase

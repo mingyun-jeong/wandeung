@@ -10,7 +10,9 @@ import '../providers/upload_queue_provider.dart';
 import '../utils/constants.dart';
 import '../utils/video_download_cache.dart';
 import '../widgets/wandeung_app_bar.dart';
+import 'video_compare_screen.dart';
 import 'video_editor_screen.dart';
+import '../widgets/record_select_bottom_sheet.dart';
 import '../app.dart';
 
 class RecordDetailScreen extends ConsumerStatefulWidget {
@@ -124,6 +126,27 @@ class _RecordDetailScreenState extends ConsumerState<RecordDetailScreen> {
         title: record.gymName ?? '등반 기록',
         showBackButton: true,
         extraActions: [
+          if (record.videoPath != null)
+            TextButton.icon(
+              onPressed: () async {
+                final selectedRecord = await showRecordSelectBottomSheet(
+                  context,
+                  excludeRecordId: record.id,
+                );
+                if (selectedRecord == null || !context.mounted) return;
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => VideoCompareScreen(
+                      record1: record,
+                      record2: selectedRecord,
+                    ),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.compare_arrows, size: 18),
+              label: const Text('비교모드', style: TextStyle(fontSize: 13)),
+            ),
           if (record.videoPath != null)
             IconButton(
               onPressed: () async {

@@ -30,7 +30,9 @@ import '../utils/cache_cleanup.dart';
 import '../utils/video_download_cache.dart';
 import '../utils/thumbnail_utils.dart';
 import 'records_tab_screen.dart';
+import 'video_compare_screen.dart';
 import 'video_editor_screen.dart';
+import '../widgets/record_select_bottom_sheet.dart';
 import '../app.dart';
 
 class RecordSaveScreen extends ConsumerStatefulWidget {
@@ -513,6 +515,29 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
       appBar: WandeungAppBar(
         title: _isEditMode ? '기록 편집' : '기록 저장',
         showBackButton: true,
+        extraActions: [
+          if (_isEditMode && _hasVideo)
+            TextButton.icon(
+              onPressed: () async {
+                final selectedRecord = await showRecordSelectBottomSheet(
+                  context,
+                  excludeRecordId: widget.existingRecord!.id,
+                );
+                if (selectedRecord == null || !context.mounted) return;
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => VideoCompareScreen(
+                      record1: widget.existingRecord!,
+                      record2: selectedRecord,
+                    ),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.compare_arrows, size: 18),
+              label: const Text('비교모드', style: TextStyle(fontSize: 13)),
+            ),
+        ],
       ),
       body: Column(
         children: [

@@ -284,6 +284,27 @@ final userAllTagsProvider = FutureProvider<List<String>>((ref) async {
   return tags;
 });
 
+/// 영상이 있는 기록 목록 (비교 기능용)
+final recordsWithVideoProvider =
+    FutureProvider.family<List<ClimbingRecord>, String?>((ref, excludeId) async {
+  final userId = _watchUserId(ref);
+  if (userId == null) return [];
+
+  final response = await SupabaseConfig.client
+      .from('climbing_records')
+      .select(_selectWithGym)
+      .eq('user_id', userId)
+      .isFilter('parent_record_id', null)
+      .not('video_path', 'is', null)
+      .order('recorded_at', ascending: false)
+      .limit(50);
+
+  return (response as List)
+      .map((e) => ClimbingRecord.fromMap(e))
+      .where((r) => r.id != excludeId)
+      .toList();
+});
+
 /// 서버에 업로드되지 않은 로컬 전용 영상 레코드 조회
 final localOnlyRecordsProvider =
     FutureProvider<List<ClimbingRecord>>((ref) async {

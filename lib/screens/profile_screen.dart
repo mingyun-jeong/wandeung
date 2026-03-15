@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../models/climbing_gym.dart';
 import '../providers/auth_provider.dart';
+import '../providers/favorite_gym_provider.dart';
 import '../providers/user_grade_provider.dart';
 import '../utils/constants.dart';
+import '../widgets/favorite_gym_sheet.dart';
 import 'login_screen.dart';
 
 class ProfileScreen extends ConsumerWidget {
@@ -150,6 +153,11 @@ class ProfileScreen extends ConsumerWidget {
           ),
 
           const SizedBox(height: 40),
+
+          // ── 내 암장 섹션 ──
+          const _FavoriteGymsSection(),
+
+          const SizedBox(height: 24),
 
           // ── 계정 섹션 ──
           Padding(
@@ -429,5 +437,131 @@ class ProfileScreen extends ConsumerWidget {
         );
       }
     }
+  }
+}
+
+class _FavoriteGymsSection extends ConsumerWidget {
+  const _FavoriteGymsSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final favoriteGyms = ref.watch(favoriteGymsProvider);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // 헤더: "내 암장" + 추가 버튼
+          Padding(
+            padding: const EdgeInsets.only(left: 4, bottom: 8),
+            child: Row(
+              children: [
+                Text('내 암장',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600,
+                    color: colorScheme.onSurface.withOpacity(0.4))),
+                const Spacer(),
+                GestureDetector(
+                  onTap: () => FavoriteGymSheet.show(context),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.add_rounded, size: 16,
+                        color: colorScheme.onSurface.withOpacity(0.4)),
+                      const SizedBox(width: 2),
+                      Text('추가', style: TextStyle(fontSize: 13,
+                        color: colorScheme.onSurface.withOpacity(0.4))),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // 즐겨찾기 목록 또는 빈 상태
+          Container(
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: colorScheme.surfaceContainerLowest,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: colorScheme.outlineVariant.withOpacity(0.3)),
+            ),
+            child: favoriteGyms.when(
+              data: (gyms) {
+                if (gyms.isEmpty) {
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 20),
+                    child: Center(
+                      child: Text('자주 가는 암장을 추가해보세요',
+                        style: TextStyle(fontSize: 13,
+                          color: colorScheme.onSurface.withOpacity(0.3))),
+                    ),
+                  );
+                }
+                return Column(
+                  children: [
+                    for (int i = 0; i < gyms.length; i++) ...[
+                      _FavoriteGymTile(gym: gyms[i]),
+                      if (i < gyms.length - 1)
+                        Divider(height: 1, indent: 16, endIndent: 16,
+                          color: colorScheme.outlineVariant.withOpacity(0.2)),
+                    ],
+                  ],
+                );
+              },
+              loading: () => const Padding(
+                padding: EdgeInsets.symmetric(vertical: 16),
+                child: Center(child: SizedBox(width: 20, height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2))),
+              ),
+              error: (_, __) => const SizedBox.shrink(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FavoriteGymTile extends ConsumerWidget {
+  final ClimbingGym gym;
+  const _FavoriteGymTile({required this.gym});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Row(
+        children: [
+          Icon(Icons.location_on_outlined, size: 18,
+            color: colorScheme.onSurface.withOpacity(0.4)),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(gym.name, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                  overflow: TextOverflow.ellipsis),
+                if (gym.address != null)
+                  Text(gym.address!, style: TextStyle(fontSize: 11,
+                    color: colorScheme.onSurface.withOpacity(0.35)),
+                    overflow: TextOverflow.ellipsis),
+              ],
+            ),
+          ),
+          GestureDetector(
+            onTap: () async {
+              if (gym.id == null) return;
+              await FavoriteGymService.removeFavorite(gym.id!);
+              ref.invalidate(favoriteGymsProvider);
+              ref.invalidate(recommendedGymsProvider);
+            },
+            child: Icon(Icons.close_rounded, size: 16,
+              color: colorScheme.onSurface.withOpacity(0.25)),
+          ),
+        ],
+      ),
+    );
   }
 }

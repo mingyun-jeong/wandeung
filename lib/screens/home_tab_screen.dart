@@ -5,10 +5,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../app.dart';
 import '../models/climbing_gym.dart';
 import '../models/gym_color_scale.dart';
+import '../models/gym_setting_schedule.dart';
 import '../models/user_climbing_stats.dart';
 import '../providers/camera_settings_provider.dart';
 import '../providers/gym_color_scale_provider.dart';
 import '../providers/record_provider.dart';
+import '../providers/setting_schedule_provider.dart';
 import '../screens/gym_detail_screen.dart';
 import '../screens/gym_grades_tab_screen.dart';
 import '../utils/constants.dart';
@@ -34,6 +36,7 @@ class HomeTabScreen extends ConsumerWidget {
           ref.invalidate(recentRecordsProvider);
           ref.invalidate(recentGymsProvider);
           ref.invalidate(allColorScalesProvider);
+          ref.invalidate(weeklySettingSchedulesProvider);
         },
         child: CustomScrollView(
           slivers: [
@@ -56,6 +59,15 @@ class HomeTabScreen extends ConsumerWidget {
             SliverToBoxAdapter(
               child: statsAsync.whenOrNull(
                     data: (stats) => const _WeeklyHeatmap(),
+                  ) ??
+                  const SizedBox.shrink(),
+            ),
+
+            // 이번 주 세팅일정
+            SliverToBoxAdapter(
+              child: ref.watch(weeklySettingSchedulesProvider).whenOrNull(
+                    data: (entries) =>
+                        entries.isNotEmpty ? _WeeklySettingSection(entries: entries) : null,
                   ) ??
                   const SizedBox.shrink(),
             ),
@@ -357,6 +369,165 @@ class _DayDot extends StatelessWidget {
               : null,
         ),
       ],
+    );
+  }
+}
+
+// ─── 이번 주 세팅일정 ─────────────────────────────────────────────────────────
+
+class _WeeklySettingSection extends ConsumerWidget {
+  final List<({GymSettingSchedule schedule, List<SettingSector> sectors, String dateStr})> entries;
+  const _WeeklySettingSection({required this.entries});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(left: 4, bottom: 10),
+            child: Row(
+              children: [
+                Text(
+                  '이번 주 세팅일정',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: colorScheme.onSurface,
+                  ),
+                ),
+                const Spacer(),
+                TextButton(
+                  onPressed: () {
+                    ref.read(bottomNavIndexProvider.notifier).state = 3;
+                  },
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        '더보기',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                          color: colorScheme.primary,
+                        ),
+                      ),
+                      Icon(
+                        Icons.chevron_right_rounded,
+                        size: 18,
+                        color: colorScheme.primary,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          ...entries.map((entry) => _WeeklySettingCard(
+                gymName: entry.schedule.gymName ?? '',
+                sectors: entry.sectors,
+                dateStr: entry.dateStr,
+              )),
+        ],
+      ),
+    );
+  }
+}
+
+class _WeeklySettingCard extends StatelessWidget {
+  final String gymName;
+  final List<SettingSector> sectors;
+  final String dateStr;
+  const _WeeklySettingCard({
+    required this.gymName,
+    required this.sectors,
+    required this.dateStr,
+  });
+
+  String _formatDate(String dateStr) {
+    final date = DateTime.parse(dateStr);
+    final weekdays = ['월', '화', '수', '목', '금', '토', '일'];
+    return '${date.month}/${date.day} (${weekdays[date.weekday - 1]})';
+  }
+
+  bool _isToday(String dateStr) {
+    final now = DateTime.now();
+    final today = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+    return dateStr == today;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final sectorNames = sectors.map((s) => s.name).join(', ');
+    final isToday = _isToday(dateStr);
+
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: isToday ? WandeungColors.accent.withOpacity(0.4) : WandeungColors.border,
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: isToday
+                  ? WandeungColors.accent.withOpacity(0.1)
+                  : WandeungColors.border.withOpacity(0.5),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Text(
+              _formatDate(dateStr),
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: isToday ? WandeungColors.accent : WandeungColors.textSecondary,
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  gymName,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: WandeungColors.textPrimary,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '$sectorNames 세팅',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: WandeungColors.textSecondary,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

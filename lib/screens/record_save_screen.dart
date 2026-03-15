@@ -18,6 +18,7 @@ import '../services/video_upload_service.dart';
 import '../models/climbing_gym.dart';
 import '../models/climbing_record.dart';
 import '../providers/camera_settings_provider.dart';
+import '../providers/favorite_gym_provider.dart';
 import '../providers/record_provider.dart';
 import '../utils/constants.dart';
 import '../models/gym_color_scale.dart';
@@ -378,6 +379,16 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
       // 캐시 정리 (camera, FFmpeg, video_player 등이 남긴 임시 파일)
       await CacheCleanup.clearAppCache();
 
+      // 암장이 있으면 자동으로 내 암장(즐겨찾기)에 등록
+      final autoFavoriteGym = _isEditMode ? _editGym : ref.read(cameraSettingsProvider).selectedGym;
+      if (autoFavoriteGym != null) {
+        try {
+          final scales = ref.read(allColorScalesProvider).valueOrNull;
+          final gymId = await RecordService.findOrCreateGym(autoFavoriteGym, scales: scales);
+          await FavoriteGymService.addFavorite(gymId);
+        } catch (_) {}
+      }
+
       if (mounted) {
         final selectedDate = ref.read(selectedDateProvider);
         final focusedMonth = ref.read(focusedMonthProvider);
@@ -387,6 +398,7 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
         ref.invalidate(recentRecordsProvider);
         ref.invalidate(recentGymsProvider);
         ref.invalidate(userVisitedGymsProvider);
+        ref.invalidate(favoriteGymsProvider);
         Navigator.pop(context, true);
       }
     } on PathAccessException catch (e) {

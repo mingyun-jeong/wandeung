@@ -59,10 +59,10 @@ class FavoriteGymService {
 
   static Future<void> addFavorite(String gymId) async {
     final userId = _supabase.auth.currentUser!.id;
-    await _supabase.from('user_favorite_gyms').insert({
-      'user_id': userId,
-      'gym_id': gymId,
-    });
+    await _supabase.from('user_favorite_gyms').upsert(
+      {'user_id': userId, 'gym_id': gymId},
+      onConflict: 'user_id, gym_id',
+    );
   }
 
   static Future<void> removeFavorite(String gymId) async {

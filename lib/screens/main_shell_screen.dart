@@ -6,6 +6,7 @@ import '../providers/user_grade_provider.dart';
 import 'camera_tab_screen.dart';
 import 'home_tab_screen.dart';
 import 'records_tab_screen.dart';
+import 'setting_schedule_tab_screen.dart';
 import 'stats_tab_screen.dart';
 
 class MainShellScreen extends ConsumerWidget {
@@ -23,6 +24,7 @@ class MainShellScreen extends ConsumerWidget {
           HomeTabScreen(),
           RecordsTabScreen(),
           CameraTabScreen(),
+          SettingScheduleTabScreen(),
           StatsTabScreen(),
         ],
       ),
@@ -52,6 +54,19 @@ class MainShellScreen extends ConsumerWidget {
               icon: Icon(Icons.videocam_outlined),
               selectedIcon: Icon(Icons.videocam_rounded),
               label: '촬영',
+            ),
+            NavigationDestination(
+              icon: Badge(
+                label: Text('Beta', style: TextStyle(fontSize: 8)),
+                backgroundColor: WandeungColors.accent,
+                child: Icon(Icons.calendar_month_outlined),
+              ),
+              selectedIcon: Badge(
+                label: Text('Beta', style: TextStyle(fontSize: 8)),
+                backgroundColor: WandeungColors.accent,
+                child: Icon(Icons.calendar_month_rounded),
+              ),
+              label: '세팅일정',
             ),
             NavigationDestination(
               icon: Icon(Icons.insights_outlined),

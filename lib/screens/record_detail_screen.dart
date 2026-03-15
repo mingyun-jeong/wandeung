@@ -191,7 +191,7 @@ class _RecordDetailScreenState extends ConsumerState<RecordDetailScreen> {
               icon: const Icon(Icons.compare_arrows, size: 18),
               label: const Text('비교모드', style: TextStyle(fontSize: 13)),
             ),
-          if (record.videoPath != null)
+          if (record.videoPath != null && !record.isLocalVideo && !record.localOnly)
             IconButton(
               onPressed: _saving
                   ? null
@@ -523,7 +523,9 @@ class _ExportedVideosSection extends ConsumerWidget {
                 ),
               ),
               const SizedBox(height: 8),
-              ...exports.map((export) {
+              ...exports
+                  .where((export) => !export.isLocalVideo && !export.localOnly)
+                  .map((export) {
                 final hasVideo = export.videoPath != null;
                 final label = export.memo ?? '내보내기 영상';
                 return Padding(

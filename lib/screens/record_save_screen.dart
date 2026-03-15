@@ -11,6 +11,7 @@ import 'package:ffmpeg_kit_flutter_new/ffmpeg_kit_config.dart';
 import 'package:ffmpeg_kit_flutter_new/ffprobe_kit.dart';
 import '../config/r2_config.dart';
 import '../config/supabase_config.dart';
+import '../providers/connectivity_provider.dart';
 import '../providers/upload_queue_provider.dart';
 import '../services/video_export_service.dart';
 import '../services/video_upload_service.dart';
@@ -316,6 +317,7 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
         final durationSeconds = await _getVideoDuration(persistentPath);
         final videoQuality =
             widget.videoQuality ?? await _detectVideoQuality(persistentPath);
+        final cloudEnabled = await ref.read(cloudUploadEnabledProvider.notifier).getValue();
         final savedRecord = await RecordService.saveRecord(
           videoPath: persistentPath,
           grade: settings.grade!.name,
@@ -329,6 +331,7 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
           videoDurationSeconds: durationSeconds,
           scales: ref.read(allColorScalesProvider).valueOrNull,
           videoQuality: videoQuality,
+          localOnly: !cloudEnabled,
         );
 
         // 썸네일 즉시 R2 업로드 (작은 파일이므로 네트워크 종류 무관)
@@ -344,20 +347,22 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
           }
         }
 
-        // 업로드용 압축 후 큐에 등록
-        String uploadPath = persistentPath;
-        try {
-          uploadPath = await VideoExportService.compressForUpload(
-            inputPath: persistentPath,
+        // 클라우드 업로드 설정이 켜져 있을 때만 압축 + 큐 등록
+        if (cloudEnabled) {
+          String uploadPath = persistentPath;
+          try {
+            uploadPath = await VideoExportService.compressForUpload(
+              inputPath: persistentPath,
+            );
+            debugPrint('업로드 압축 완료: $uploadPath');
+          } catch (e) {
+            debugPrint('업로드 압축 실패, 원본 사용: $e');
+          }
+          ref.read(uploadQueueProvider.notifier).enqueue(
+            recordId: savedRecord.id!,
+            localVideoPath: uploadPath,
           );
-          debugPrint('업로드 압축 완료: $uploadPath');
-        } catch (e) {
-          debugPrint('업로드 압축 실패, 원본 사용: $e');
         }
-        ref.read(uploadQueueProvider.notifier).enqueue(
-          recordId: savedRecord.id!,
-          localVideoPath: uploadPath,
-        );
       }
 
       // 편집 원본 파일 정리 (편집 후 저장 시 원본은 더 이상 불필요)
@@ -384,6 +389,16 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
         ref.invalidate(userVisitedGymsProvider);
         Navigator.pop(context, true);
       }
+    } on PathAccessException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('저장 경로에 접근할 수 없습니다. 저장소 권한을 확인해주세요.'),
+            backgroundColor: Color(0xFFEF4444),
+          ),
+        );
+      }
+      debugPrint('PathAccessException: $e');
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

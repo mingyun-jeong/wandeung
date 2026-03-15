@@ -315,6 +315,7 @@ final localOnlyRecordsProvider =
       .from('climbing_records')
       .select(_selectWithGym)
       .eq('user_id', userId)
+      .eq('local_only', false)
       .like('video_path', '/%')
       .isFilter('parent_record_id', null)
       .order('recorded_at', ascending: false);
@@ -375,6 +376,7 @@ class RecordService {
     int? videoDurationSeconds,
     List<GymColorScale>? scales,
     String? videoQuality,
+    bool localOnly = false,
   }) async {
     final userId = _supabase.auth.currentUser!.id;
 
@@ -395,6 +397,7 @@ class RecordService {
       recordedAt: DateTime.now(),
       videoDurationSeconds: videoDurationSeconds,
       videoQuality: videoQuality,
+      localOnly: localOnly,
     );
 
     final response = await _supabase
@@ -463,6 +466,7 @@ class RecordService {
       parentRecordId: parentRecordId,
       videoDurationSeconds: videoDurationSeconds,
       videoQuality: videoQuality,
+      localOnly: parentRecord.localOnly,
     );
 
     final response = await _supabase

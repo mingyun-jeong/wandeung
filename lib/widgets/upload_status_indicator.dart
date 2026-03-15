@@ -17,18 +17,26 @@ class UploadStatusIndicator extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final status = ref.watch(uploadStatusProvider(recordId));
 
-    if (status == null && !isLocalVideo) return const SizedBox.shrink();
-    if (status == UploadStatus.uploaded) return const SizedBox.shrink();
+    // 클라우드 완료: 큐에 없고 클라우드 영상
+    if (status == null && !isLocalVideo) {
+      return const Padding(
+        padding: EdgeInsets.all(4),
+        child: Icon(Icons.cloud_done, size: 16, color: Colors.green),
+      );
+    }
 
-    // 큐에 없지만 로컬 영상인 경우: 미업로드 표시
+    if (status == UploadStatus.uploaded) {
+      return const Padding(
+        padding: EdgeInsets.all(4),
+        child: Icon(Icons.cloud_done, size: 16, color: Colors.green),
+      );
+    }
+
+    // 로컬 전용: 큐에 없고 로컬 영상
     if (status == null && isLocalVideo) {
-      return Container(
-        padding: const EdgeInsets.all(4),
-        decoration: BoxDecoration(
-          color: Colors.black54,
-          borderRadius: BorderRadius.circular(4),
-        ),
-        child: const Icon(Icons.cloud_off_outlined, size: 16, color: Colors.amber),
+      return const Padding(
+        padding: EdgeInsets.all(4),
+        child: Icon(Icons.phone_android, size: 16, color: Colors.white),
       );
     }
 
@@ -43,12 +51,8 @@ class UploadStatusIndicator extends ConsumerWidget {
       onTap: status == UploadStatus.failed
           ? () => ref.read(uploadQueueProvider.notifier).retryFailed()
           : null,
-      child: Container(
+      child: Padding(
         padding: const EdgeInsets.all(4),
-        decoration: BoxDecoration(
-          color: Colors.black54,
-          borderRadius: BorderRadius.circular(4),
-        ),
         child: showProgress
             ? SizedBox(
                 width: 16,

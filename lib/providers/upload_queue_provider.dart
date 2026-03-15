@@ -104,8 +104,10 @@ class UploadQueueNotifier extends StateNotifier<List<UploadTask>> {
     });
     processQueue();
 
-    // DB에서 로컬 전용 레코드를 발견하여 자동으로 큐에 등록
-    _autoEnqueueOrphanedRecords();
+    // 클라우드 업로드가 켜져 있을 때만 고아 레코드 자동 등록
+    if (_ref.read(cloudUploadEnabledProvider)) {
+      _autoEnqueueOrphanedRecords();
+    }
   }
 
   /// DB에서 로컬 전용(video_path가 '/'로 시작) 레코드를 조회하여
@@ -119,6 +121,7 @@ class UploadQueueNotifier extends StateNotifier<List<UploadTask>> {
           .from('climbing_records')
           .select('id, video_path')
           .eq('user_id', userId)
+          .eq('local_only', false)
           .like('video_path', '/%');
 
       int enqueued = 0;
@@ -214,6 +217,10 @@ class UploadQueueNotifier extends StateNotifier<List<UploadTask>> {
   /// 큐 순차 처리
   Future<void> processQueue() async {
     if (_isProcessing) return;
+
+    // 클라우드 업로드가 꺼져 있으면 큐 처리하지 않음
+    if (!_ref.read(cloudUploadEnabledProvider)) return;
+
     _isProcessing = true;
 
     try {

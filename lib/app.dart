@@ -97,6 +97,18 @@ class WandeungApp extends ConsumerWidget {
             ),
           ),
         ),
+        dialogTheme: const DialogTheme(
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.transparent,
+        ),
+        bottomSheetTheme: const BottomSheetThemeData(
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.transparent,
+        ),
+        popupMenuTheme: const PopupMenuThemeData(
+          color: Colors.white,
+          surfaceTintColor: Colors.transparent,
+        ),
         dividerTheme: const DividerThemeData(
           color: WandeungColors.border,
           thickness: 1,

@@ -349,14 +349,17 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
   Future<void> _handleExport() async {
     if (_isExporting) return;
 
-    // Wi-Fi 미연결 시 사용자 확인 (내보내기 후 업로드 발생)
-    final wifiConfirmed = await confirmIfNotWifi(
-      context,
-      title: '영상 내보내기',
-      message: '내보내기 후 영상이 서버에 업로드됩니다.\n\nWi-Fi에 연결되어 있지 않습니다. 모바일 데이터로 진행하시겠습니까?',
-      confirmLabel: '진행',
-    );
-    if (!wifiConfirmed || !mounted) return;
+    // 로컬 전용이 아닌 경우에만 Wi-Fi 미연결 시 사용자 확인
+    final isLocalOnly = widget.existingRecord?.localOnly ?? false;
+    if (!isLocalOnly) {
+      final wifiConfirmed = await confirmIfNotWifi(
+        context,
+        title: '영상 내보내기',
+        message: '내보내기 후 영상이 서버에 업로드됩니다.\n\nWi-Fi에 연결되어 있지 않습니다. 모바일 데이터로 진행하시겠습니까?',
+        confirmLabel: '진행',
+      );
+      if (!wifiConfirmed || !mounted) return;
+    }
 
     // 품질 선택
     final quality = await _showQualityPicker();
@@ -461,20 +464,22 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
             }
           }
 
-          // 업로드용 압축 후 큐에 등록
-          String uploadPath = result.outputPath;
-          try {
-            uploadPath = await VideoExportService.compressForUpload(
-              inputPath: result.outputPath,
+          // 로컬 전용이 아닌 경우에만 업로드 큐 등록
+          if (!isLocalOnly) {
+            String uploadPath = result.outputPath;
+            try {
+              uploadPath = await VideoExportService.compressForUpload(
+                inputPath: result.outputPath,
+              );
+              debugPrint('업로드 압축 완료: $uploadPath');
+            } catch (e) {
+              debugPrint('업로드 압축 실패, 원본 사용: $e');
+            }
+            ref.read(uploadQueueProvider.notifier).enqueue(
+              recordId: savedExport.id!,
+              localVideoPath: uploadPath,
             );
-            debugPrint('업로드 압축 완료: $uploadPath');
-          } catch (e) {
-            debugPrint('업로드 압축 실패, 원본 사용: $e');
           }
-          ref.read(uploadQueueProvider.notifier).enqueue(
-            recordId: savedExport.id!,
-            localVideoPath: uploadPath,
-          );
 
           if (mounted) {
             ref.invalidate(

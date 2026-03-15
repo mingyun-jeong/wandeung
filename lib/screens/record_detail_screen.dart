@@ -244,7 +244,9 @@ class _RecordDetailScreenState extends ConsumerState<RecordDetailScreen> {
             ),
         ],
       ),
-      body: SingleChildScrollView(
+      body: SafeArea(
+        top: false,
+        child: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -477,6 +479,7 @@ class _RecordDetailScreenState extends ConsumerState<RecordDetailScreen> {
             ),
           ],
         ),
+      ),
       ),
     );
   }

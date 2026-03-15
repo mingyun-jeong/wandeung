@@ -97,7 +97,8 @@ class _VideoPlaybackScreenState extends State<VideoPlaybackScreen> {
         foregroundColor: Colors.white,
         elevation: 0,
       ),
-      body: Center(
+      body: SafeArea(
+        child: Center(
         child: _errorMessage != null
             ? Column(
                 mainAxisSize: MainAxisSize.min,
@@ -112,6 +113,7 @@ class _VideoPlaybackScreenState extends State<VideoPlaybackScreen> {
             : _chewieController != null
                 ? Chewie(controller: _chewieController!)
                 : const CircularProgressIndicator(color: Colors.white),
+      ),
       ),
     );
   }

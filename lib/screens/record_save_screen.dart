@@ -61,6 +61,7 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
   List<String> _tags = [];
   bool _isSaving = false;
   bool _videoFileMissing = false;
+  bool _savingToGallery = false;
 
   // 편집 모드 전용 로컬 gym 상태 (카메라 탭의 자동 선택과 분리)
   ClimbingGym? _editGym;
@@ -190,7 +191,7 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
     if (videoPath.startsWith('/')) {
       if (!File(videoPath).existsSync()) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('로컬 영상 파일이 없어 편집할 수 없습니다')),
+          const SnackBar(content: Text('로컬 영상 파일이 없어 편집할 수 없습니다'), backgroundColor: Color(0xFFEF4444)),
         );
         return;
       }
@@ -270,7 +271,7 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('삭제 실패: $e')),
+          SnackBar(content: Text('삭제 실패: $e'), backgroundColor: const Color(0xFFEF4444)),
         );
       }
     } finally {
@@ -386,7 +387,7 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('저장 실패: $e')),
+          SnackBar(content: Text('저장 실패: $e'), backgroundColor: const Color(0xFFEF4444)),
         );
       }
     } finally {
@@ -439,6 +440,55 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
     try {
       await Gal.putVideo(widget.videoPath!, album: '완등');
     } catch (_) {}
+  }
+
+  Future<void> _downloadToGallery() async {
+    if (_savingToGallery) return;
+    setState(() => _savingToGallery = true);
+
+    try {
+      final record = widget.existingRecord!;
+      final videoPath = record.videoPath!;
+      String localPath;
+
+      if (record.isLocalVideo) {
+        if (!File(videoPath).existsSync()) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('영상 파일을 찾을 수 없습니다'), backgroundColor: Color(0xFFEF4444)),
+            );
+          }
+          return;
+        }
+        localPath = videoPath;
+      } else {
+        final downloaded =
+            await downloadRemoteVideoWithDialog(context, videoPath);
+        if (downloaded == null) return;
+        localPath = downloaded;
+      }
+
+      await Gal.putVideo(localPath, album: '완등');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('갤러리에 저장되었습니다'),
+            backgroundColor: Color(0xFF2196F3),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('저장에 실패했습니다'),
+            backgroundColor: Color(0xFFEF4444),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _savingToGallery = false);
+    }
   }
 
   Future<int?> _getVideoDuration(String path) async {
@@ -536,6 +586,18 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
               },
               icon: const Icon(Icons.compare_arrows, size: 18),
               label: const Text('비교모드', style: TextStyle(fontSize: 13)),
+            ),
+          if (_isEditMode && _hasVideo)
+            IconButton(
+              onPressed: _savingToGallery
+                  ? null
+                  : () => _downloadToGallery(),
+              icon: Icon(
+                _savingToGallery
+                    ? Icons.hourglass_top_rounded
+                    : Icons.download_rounded,
+              ),
+              tooltip: '갤러리에 저장',
             ),
         ],
       ),
@@ -1094,6 +1156,49 @@ class _ExportedVideoCardState extends State<_ExportedVideoCard> {
     }
   }
 
+  Future<void> _saveExportToGallery(ClimbingRecord record) async {
+    final videoPath = record.videoPath!;
+    String localPath;
+
+    if (record.isLocalVideo) {
+      if (!File(videoPath).existsSync()) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('영상 파일을 찾을 수 없습니다')),
+          );
+        }
+        return;
+      }
+      localPath = videoPath;
+    } else {
+      final downloaded =
+          await downloadRemoteVideoWithDialog(context, videoPath);
+      if (downloaded == null) return;
+      localPath = downloaded;
+    }
+
+    try {
+      await Gal.putVideo(localPath, album: '완등');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('갤러리에 저장되었습니다'),
+            backgroundColor: Color(0xFF2196F3),
+          ),
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('저장에 실패했습니다'),
+            backgroundColor: Color(0xFFEF4444),
+          ),
+        );
+      }
+    }
+  }
+
   void _startEditing() {
     setState(() => _isEditing = true);
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -1277,6 +1382,19 @@ class _ExportedVideoCardState extends State<_ExportedVideoCard> {
                   ],
                 ),
               ),
+              if (record.videoPath != null)
+                GestureDetector(
+                  onTap: () => _saveExportToGallery(record),
+                  child: Padding(
+                    padding: const EdgeInsets.all(6),
+                    child: Icon(Icons.download_rounded,
+                        size: 18,
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withOpacity(0.3)),
+                  ),
+                ),
               GestureDetector(
                 onTap: _startEditing,
                 child: Padding(

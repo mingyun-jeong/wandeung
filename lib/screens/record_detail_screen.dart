@@ -3,9 +3,11 @@ import 'package:chewie/chewie.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:gal/gal.dart';
 import 'package:video_player/video_player.dart';
 import '../config/r2_config.dart';
 import '../models/climbing_record.dart';
+import '../providers/record_provider.dart';
 import '../providers/upload_queue_provider.dart';
 import '../utils/constants.dart';
 import '../utils/video_download_cache.dart';
@@ -103,6 +105,48 @@ class _RecordDetailScreenState extends ConsumerState<RecordDetailScreen> {
     if (mounted) setState(() => _videoInitDone = true);
   }
 
+  bool _saving = false;
+
+  Future<void> _saveVideoToGallery(String videoPath, bool isLocal) async {
+    if (_saving) return;
+    setState(() => _saving = true);
+
+    try {
+      String localPath;
+      if (isLocal) {
+        if (!File(videoPath).existsSync()) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('영상 파일을 찾을 수 없습니다')),
+            );
+          }
+          return;
+        }
+        localPath = videoPath;
+      } else {
+        final downloaded =
+            await downloadRemoteVideoWithDialog(context, videoPath);
+        if (downloaded == null) return;
+        localPath = downloaded;
+      }
+
+      await Gal.putVideo(localPath, album: '완등');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('갤러리에 저장되었습니다')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('저장에 실패했습니다')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
   @override
   void dispose() {
     _chewieController?.dispose();
@@ -146,6 +190,21 @@ class _RecordDetailScreenState extends ConsumerState<RecordDetailScreen> {
               },
               icon: const Icon(Icons.compare_arrows, size: 18),
               label: const Text('비교모드', style: TextStyle(fontSize: 13)),
+            ),
+          if (record.videoPath != null)
+            IconButton(
+              onPressed: _saving
+                  ? null
+                  : () => _saveVideoToGallery(
+                        record.videoPath!,
+                        record.isLocalVideo,
+                      ),
+              icon: Icon(
+                _saving
+                    ? Icons.hourglass_top_rounded
+                    : Icons.download_rounded,
+              ),
+              tooltip: '갤러리에 저장',
             ),
           if (record.videoPath != null)
             IconButton(
@@ -276,6 +335,14 @@ class _RecordDetailScreenState extends ConsumerState<RecordDetailScreen> {
                   ),
                 );
               }),
+
+            // 내보내기 영상 목록
+            if (record.id != null)
+              _ExportedVideosSection(
+                parentRecordId: record.id!,
+                onSave: _saveVideoToGallery,
+                saving: _saving,
+              ),
 
             Padding(
               padding: const EdgeInsets.all(20),
@@ -411,6 +478,76 @@ class _RecordDetailScreenState extends ConsumerState<RecordDetailScreen> {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _ExportedVideosSection extends ConsumerWidget {
+  final String parentRecordId;
+  final Future<void> Function(String videoPath, bool isLocal) onSave;
+  final bool saving;
+
+  const _ExportedVideosSection({
+    required this.parentRecordId,
+    required this.onSave,
+    required this.saving,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final asyncExports = ref.watch(exportedRecordsProvider(parentRecordId));
+    return asyncExports.when(
+      loading: () => const SizedBox.shrink(),
+      error: (_, __) => const SizedBox.shrink(),
+      data: (exports) {
+        if (exports.isEmpty) return const SizedBox.shrink();
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 4),
+              Text(
+                '내보내기 영상',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withOpacity(0.4),
+                  letterSpacing: 0.5,
+                ),
+              ),
+              const SizedBox(height: 8),
+              ...exports.map((export) {
+                final hasVideo = export.videoPath != null;
+                final label = export.memo ?? '내보내기 영상';
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 6),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: !hasVideo || saving
+                          ? null
+                          : () => onSave(
+                                export.videoPath!,
+                                export.isLocalVideo,
+                              ),
+                      icon: const Icon(Icons.download_rounded, size: 18),
+                      label: Text(
+                        label,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ),
+                );
+              }),
+              const SizedBox(height: 4),
+            ],
+          ),
+        );
+      },
     );
   }
 }

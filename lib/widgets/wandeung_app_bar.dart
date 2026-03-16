@@ -10,16 +10,19 @@ class WandeungAppBar extends ConsumerWidget implements PreferredSizeWidget {
   final String? title;
   final bool showBackButton;
   final List<Widget>? extraActions;
+  final PreferredSizeWidget? bottom;
 
   const WandeungAppBar({
     super.key,
     this.title,
     this.showBackButton = false,
     this.extraActions,
+    this.bottom,
   });
 
   @override
-  Size get preferredSize => const Size.fromHeight(kToolbarHeight);
+  Size get preferredSize => Size.fromHeight(
+      kToolbarHeight + (bottom?.preferredSize.height ?? 0));
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -30,6 +33,7 @@ class WandeungAppBar extends ConsumerWidget implements PreferredSizeWidget {
       leading: showBackButton ? const BackButton() : null,
       automaticallyImplyLeading: showBackButton,
       titleSpacing: showBackButton ? 0 : 20,
+      bottom: bottom,
       title: title != null
           ? Text(
               title!,

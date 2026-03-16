@@ -4,16 +4,35 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/stats_provider.dart';
+import '../widgets/gym_stats_tab.dart';
 import '../widgets/wandeung_app_bar.dart';
 import '../app.dart';
 
-class StatsTabScreen extends ConsumerWidget {
+class StatsTabScreen extends ConsumerStatefulWidget {
   const StatsTabScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final period = ref.watch(statsPeriodProvider);
-    final statsAsync = ref.watch(periodStatsProvider);
+  ConsumerState<StatsTabScreen> createState() => _StatsTabScreenState();
+}
+
+class _StatsTabScreenState extends ConsumerState<StatsTabScreen>
+    with SingleTickerProviderStateMixin {
+  late final TabController _tabController;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
@@ -25,119 +44,145 @@ class StatsTabScreen extends ConsumerWidget {
             onPressed: () => ref.invalidate(periodStatsProvider),
           ),
         ],
-      ),
-      body: RefreshIndicator(
-        onRefresh: () async => ref.invalidate(periodStatsProvider),
-        child: CustomScrollView(
-          slivers: [
-            SliverToBoxAdapter(
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                child: Row(
-                  children: StatsPeriod.values.map((p) {
-                    final selected = p == period;
-                    return Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: ChoiceChip(
-                        label: Text(p.label),
-                        selected: selected,
-                        onSelected: (_) =>
-                            ref.read(statsPeriodProvider.notifier).state = p,
-                        selectedColor: colorScheme.primary,
-                        labelStyle: TextStyle(
-                          color: selected
-                              ? colorScheme.onPrimary
-                              : colorScheme.onSurface.withOpacity(0.6),
-                          fontWeight: FontWeight.w600,
-                          fontSize: 13,
-                        ),
-                        backgroundColor: Colors.white,
-                        side: BorderSide(
-                          color: selected
-                              ? colorScheme.primary
-                              : const Color(0xFFE8ECF0),
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        showCheckmark: false,
-                      ),
-                    );
-                  }).toList(),
-                ),
-              ),
-            ),
-            statsAsync.when(
-              data: (stats) {
-                if (stats.totalClimbs == 0 && stats.prevTotalClimbs == 0) {
-                  return SliverFillRemaining(
-                    child: Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Container(
-                            width: 64,
-                            height: 64,
-                            decoration: BoxDecoration(
-                              color: colorScheme.surfaceContainerHighest
-                                  .withOpacity(0.5),
-                              shape: BoxShape.circle,
-                            ),
-                            child: Icon(
-                              Icons.bar_chart_rounded,
-                              size: 32,
-                              color: colorScheme.onSurface.withOpacity(0.25),
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          Text(
-                            '아직 통계가 없어요',
-                            style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w500,
-                              color: colorScheme.onSurface.withOpacity(0.35),
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            '등반 기록을 추가해보세요!',
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: colorScheme.onSurface.withOpacity(0.25),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                }
-                return SliverList(
-                  delegate: SliverChildListDelegate([
-                    _SummarySection(stats: stats, period: period),
-                    _InsightCard(stats: stats, period: period),
-                    if (stats.gymBreakdown
-                        .where((g) => g.total > 0)
-                        .isNotEmpty)
-                      _GymSection(stats: stats),
-                    _DailyClimbChartSection(stats: stats, period: period),
-                    _ColorTrendSection(stats: stats, period: period),
-                    const SizedBox(height: 24),
-                  ]),
-                );
-              },
-              loading: () => const SliverFillRemaining(
-                child: Center(child: CircularProgressIndicator()),
-              ),
-              error: (e, _) => const SliverToBoxAdapter(
-                child: Padding(
-                  padding: EdgeInsets.all(20),
-                  child: Text('통계를 불러올 수 없습니다'),
-                ),
-              ),
-            ),
+        bottom: TabBar(
+          controller: _tabController,
+          labelColor: colorScheme.primary,
+          unselectedLabelColor: colorScheme.onSurface.withOpacity(0.5),
+          indicatorColor: colorScheme.primary,
+          labelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+          unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500, fontSize: 14),
+          tabs: const [
+            Tab(text: '내 통계'),
+            Tab(text: '암장 통계'),
           ],
         ),
+      ),
+      body: TabBarView(
+        controller: _tabController,
+        children: [
+          _buildMyStatsTab(),
+          const GymStatsTab(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMyStatsTab() {
+    final period = ref.watch(statsPeriodProvider);
+    final statsAsync = ref.watch(periodStatsProvider);
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return RefreshIndicator(
+      onRefresh: () async => ref.invalidate(periodStatsProvider),
+      child: CustomScrollView(
+        slivers: [
+          SliverToBoxAdapter(
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+              child: Row(
+                children: StatsPeriod.values.map((p) {
+                  final selected = p == period;
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: ChoiceChip(
+                      label: Text(p.label),
+                      selected: selected,
+                      onSelected: (_) =>
+                          ref.read(statsPeriodProvider.notifier).state = p,
+                      selectedColor: colorScheme.primary,
+                      labelStyle: TextStyle(
+                        color: selected
+                            ? colorScheme.onPrimary
+                            : colorScheme.onSurface.withOpacity(0.6),
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                      ),
+                      backgroundColor: Colors.white,
+                      side: BorderSide(
+                        color: selected
+                            ? colorScheme.primary
+                            : const Color(0xFFE8ECF0),
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      showCheckmark: false,
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+          ),
+          statsAsync.when(
+            data: (stats) {
+              if (stats.totalClimbs == 0 && stats.prevTotalClimbs == 0) {
+                return SliverFillRemaining(
+                  child: Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 64,
+                          height: 64,
+                          decoration: BoxDecoration(
+                            color: colorScheme.surfaceContainerHighest
+                                .withOpacity(0.5),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            Icons.bar_chart_rounded,
+                            size: 32,
+                            color: colorScheme.onSurface.withOpacity(0.25),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          '아직 통계가 없어요',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w500,
+                            color: colorScheme.onSurface.withOpacity(0.35),
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '등반 기록을 추가해보세요!',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: colorScheme.onSurface.withOpacity(0.25),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }
+              return SliverList(
+                delegate: SliverChildListDelegate([
+                  _SummarySection(stats: stats, period: period),
+                  _InsightCard(stats: stats, period: period),
+                  if (stats.gymBreakdown
+                      .where((g) => g.total > 0)
+                      .isNotEmpty)
+                    _GymSection(stats: stats),
+                  _DailyClimbChartSection(stats: stats, period: period),
+                  _ColorTrendSection(stats: stats, period: period),
+                  const SizedBox(height: 24),
+                ]),
+              );
+            },
+            loading: () => const SliverFillRemaining(
+              child: Center(child: CircularProgressIndicator()),
+            ),
+            error: (e, _) => const SliverToBoxAdapter(
+              child: Padding(
+                padding: EdgeInsets.all(20),
+                child: Text('통계를 불러올 수 없습니다'),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -149,6 +149,7 @@ class RecordCard extends StatelessWidget {
                   child: UploadStatusIndicator(
                     recordId: record.id!,
                     isLocalVideo: record.isLocalVideo,
+                    localOnly: record.localOnly,
                   ),
                 ),
               if (record.videoQuality != null)

@@ -315,18 +315,10 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
         final tier = ref.read(subscriptionTierProvider);
         final isPro = tier == SubscriptionTier.pro;
 
-        // 로컬 모드: 갤러리 저장 / 클라우드 모드: 갤러리 저장 안 함
-        if (!isCloudMode) {
-          await _saveToGallery();
-        }
-
-        // 캐시 → 영구 저장소로 이동 (저장 확정 시에만)
+        // 캐시 → 영구 저장소로 이동 (rename은 거의 즉시)
         final persistentPath = await _moveToPersistentStorage(widget.videoPath!);
 
-        final thumbnailPath = await generateThumbnail(persistentPath);
-        final durationSeconds = await _getVideoDuration(persistentPath);
-        final videoQuality =
-            widget.videoQuality ?? await _detectVideoQuality(persistentPath);
+        // DB insert (썸네일·길이·화질은 백그라운드에서 패치)
         final savedRecord = await RecordService.saveRecord(
           videoPath: persistentPath,
           grade: settings.grade!.name,
@@ -335,48 +327,40 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
               ? 'completed'
               : 'in_progress',
           gym: settings.selectedGym,
-          thumbnailPath: thumbnailPath,
           tags: _tags,
-          videoDurationSeconds: durationSeconds,
           scales: ref.read(allColorScalesProvider).valueOrNull,
-          videoQuality: videoQuality,
           localOnly: !isCloudMode,
         );
 
-        if (isCloudMode) {
-          // 썸네일 즉시 R2 업로드 (작은 파일이므로 네트워크 종류 무관)
-          if (thumbnailPath != null) {
-            try {
-              await VideoUploadService.uploadThumbnailAndUpdateRecord(
-                recordId: savedRecord.id!,
-                localThumbnailPath: thumbnailPath,
-                userId: savedRecord.userId,
-              );
-            } catch (e) {
-              debugPrint('썸네일 업로드 실패: $e');
-            }
-          }
+        // 백그라운드 작업에 필요한 값을 pop 전에 캡처
+        final capturedVideoPath = persistentPath;
+        final capturedVideoQuality = widget.videoQuality;
+        final capturedRecordId = savedRecord.id!;
+        final capturedUserId = savedRecord.userId;
+        final capturedIsCloudMode = isCloudMode;
+        final capturedIsPro = isPro;
+        final capturedOriginalVideoPath = widget.originalVideoPath;
+        final capturedGym = settings.selectedGym;
+        final capturedScales = ref.read(allColorScalesProvider).valueOrNull;
+        final uploadQueueNotifier = ref.read(uploadQueueProvider.notifier);
 
-          // 클라우드 모드: 티어에 따라 압축 + 큐 등록
-          String uploadPath = persistentPath;
-          try {
-            uploadPath = await VideoExportService.compressForUpload(
-              inputPath: persistentPath,
-              isPro: isPro,
-            );
-            debugPrint('업로드 준비 완료: $uploadPath (Pro=$isPro)');
-          } catch (e) {
-            debugPrint('업로드 압축 실패, 원본 사용: $e');
-          }
-          ref.read(uploadQueueProvider.notifier).enqueue(
-            recordId: savedRecord.id!,
-            localVideoPath: uploadPath,
-          );
-        }
+        // 무거운 작업은 백그라운드에서 (pop 이후에도 계속 실행)
+        _runPostSaveWork(
+          videoPath: capturedVideoPath,
+          videoQualityHint: capturedVideoQuality,
+          recordId: capturedRecordId,
+          userId: capturedUserId,
+          isCloudMode: capturedIsCloudMode,
+          isPro: capturedIsPro,
+          originalVideoPath: capturedOriginalVideoPath,
+          gym: capturedGym,
+          scales: capturedScales,
+          uploadQueueNotifier: uploadQueueNotifier,
+        );
       }
 
-      // 편집 원본 파일 정리 (편집 후 저장 시 원본은 더 이상 불필요)
-      if (widget.originalVideoPath != null) {
+      // 편집 모드: 원본 파일 정리
+      if (_isEditMode && widget.originalVideoPath != null) {
         try {
           final originalFile = File(widget.originalVideoPath!);
           if (await originalFile.exists()) {
@@ -384,9 +368,6 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
           }
         } catch (_) {}
       }
-
-      // 캐시 정리 (camera, FFmpeg, video_player 등이 남긴 임시 파일)
-      await CacheCleanup.clearAppCache();
 
       // 암장이 있으면 자동으로 내 암장(즐겨찾기)에 등록
       final autoFavoriteGym = _isEditMode ? _editGym : ref.read(cameraSettingsProvider).selectedGym;
@@ -399,16 +380,7 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
       }
 
       if (mounted) {
-        final selectedDate = ref.read(selectedDateProvider);
-        final focusedMonth = ref.read(focusedMonthProvider);
-        ref.invalidate(recordsByDateProvider(selectedDate));
-        ref.invalidate(recordCountsByDateProvider(focusedMonth));
-        ref.invalidate(userStatsProvider);
-        ref.invalidate(recentRecordsProvider);
-        ref.invalidate(recentGymsProvider);
-        ref.invalidate(userVisitedGymsProvider);
-        ref.invalidate(favoriteGymsProvider);
-        Navigator.pop(context, true);
+        _invalidateAndPop();
       }
     } on PathAccessException catch (e) {
       if (mounted) {
@@ -428,6 +400,122 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
       }
     } finally {
       if (mounted) setState(() => _isSaving = false);
+    }
+  }
+
+  void _invalidateAndPop() {
+    final selectedDate = ref.read(selectedDateProvider);
+    final focusedMonth = ref.read(focusedMonthProvider);
+    ref.invalidate(recordsByDateProvider(selectedDate));
+    ref.invalidate(recordCountsByDateProvider(focusedMonth));
+    ref.invalidate(userStatsProvider);
+    ref.invalidate(recentRecordsProvider);
+    ref.invalidate(recentGymsProvider);
+    ref.invalidate(userVisitedGymsProvider);
+    ref.invalidate(favoriteGymsProvider);
+    Navigator.pop(context, true);
+  }
+
+  /// 저장 후 무거운 작업을 백그라운드에서 실행 (화면 pop 이후에도 계속)
+  static Future<void> _runPostSaveWork({
+    required String videoPath,
+    required String? videoQualityHint,
+    required String recordId,
+    required String userId,
+    required bool isCloudMode,
+    required bool isPro,
+    required String? originalVideoPath,
+    required ClimbingGym? gym,
+    required List<GymColorScale>? scales,
+    required UploadQueueNotifier uploadQueueNotifier,
+  }) async {
+    try {
+      // 1) 편집 원본 파일 정리
+      if (originalVideoPath != null) {
+        try {
+          final originalFile = File(originalVideoPath);
+          if (await originalFile.exists()) await originalFile.delete();
+        } catch (_) {}
+      }
+
+      // 2) 로컬 모드: 갤러리 저장
+      if (!isCloudMode) {
+        try {
+          await Gal.putVideo(videoPath, album: '클링');
+        } catch (_) {}
+      }
+
+      // 3) 썸네일 생성
+      final thumbnailPath = await generateThumbnail(videoPath);
+
+      // 4) FFprobe 1회로 duration + quality 동시 조회
+      int? durationSeconds;
+      String? videoQuality = videoQualityHint;
+      try {
+        final session = await FFprobeKit.getMediaInformation(videoPath);
+        final info = session.getMediaInformation();
+        await FFmpegKitConfig.clearSessions();
+        if (info != null) {
+          final durationStr = info.getDuration();
+          if (durationStr != null) {
+            durationSeconds = (double.parse(durationStr)).round();
+          }
+          if (videoQuality == null) {
+            for (final stream in info.getStreams()) {
+              final height = stream.getHeight();
+              if (height != null && height > 0) {
+                videoQuality = _qualityLabelFromHeight(height);
+                break;
+              }
+            }
+          }
+        }
+      } catch (e) {
+        debugPrint('FFprobe 조회 실패: $e');
+      }
+
+      // 5) DB 패치 (썸네일·길이·화질)
+      await RecordService.patchMediaInfo(
+        recordId: recordId,
+        thumbnailPath: thumbnailPath,
+        videoDurationSeconds: durationSeconds,
+        videoQuality: videoQuality,
+      );
+
+      // 6) 클라우드 모드: 썸네일 R2 업로드 + 압축 + 업로드 큐 등록
+      if (isCloudMode) {
+        if (thumbnailPath != null) {
+          try {
+            await VideoUploadService.uploadThumbnailAndUpdateRecord(
+              recordId: recordId,
+              localThumbnailPath: thumbnailPath,
+              userId: userId,
+            );
+          } catch (e) {
+            debugPrint('썸네일 업로드 실패: $e');
+          }
+        }
+
+        String uploadPath = videoPath;
+        try {
+          uploadPath = await VideoExportService.compressForUpload(
+            inputPath: videoPath,
+            isPro: isPro,
+          );
+          debugPrint('업로드 준비 완료: $uploadPath (Pro=$isPro)');
+        } catch (e) {
+          debugPrint('업로드 압축 실패, 원본 사용: $e');
+        }
+        uploadQueueNotifier.enqueue(
+          recordId: recordId,
+          localVideoPath: uploadPath,
+        );
+      }
+
+      // 7) 캐시 정리
+      await CacheCleanup.clearAppCache();
+    } catch (e) {
+      debugPrint('백그라운드 후처리 실패: $e');
     }
   }
 
@@ -470,12 +558,6 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
       await sourceFile.delete();
     }
     return persistentPath;
-  }
-
-  Future<void> _saveToGallery() async {
-    try {
-      await Gal.putVideo(widget.videoPath!, album: '클링');
-    } catch (_) {}
   }
 
   Future<void> _downloadToGallery() async {
@@ -527,29 +609,6 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
     }
   }
 
-  Future<int?> _getVideoDuration(String path) async {
-    try {
-      final session = await FFprobeKit.getMediaInformation(path);
-      final info = session.getMediaInformation();
-      // FFprobe 세션 캐시 즉시 정리
-      await FFmpegKitConfig.clearSessions();
-      if (info != null) {
-        final durationStr = info.getDuration();
-        if (durationStr != null) {
-          final durationMs = (double.parse(durationStr) * 1000).round();
-          return (durationMs / 1000).round();
-        }
-      }
-    } catch (e) {
-      debugPrint('FFprobe duration 조회 실패: $e');
-    }
-    // fallback to VideoPlayerController
-    if (_videoController?.value.isInitialized == true) {
-      return _videoController!.value.duration.inSeconds;
-    }
-    return null;
-  }
-
   /// 영상 높이로부터 화질 라벨 추출 (720p, 1080p, 4K 등)
   static String _qualityLabelFromHeight(int height) {
     if (height >= 2160) return '4K';
@@ -557,31 +616,6 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
     if (height >= 720) return '720p';
     if (height >= 480) return '480p';
     return '${height}p';
-  }
-
-  Future<String?> _detectVideoQuality(String path) async {
-    try {
-      final session = await FFprobeKit.getMediaInformation(path);
-      final info = session.getMediaInformation();
-      await FFmpegKitConfig.clearSessions();
-      if (info != null) {
-        final streams = info.getStreams();
-        for (final stream in streams) {
-          final height = stream.getHeight();
-          if (height != null && height > 0) {
-            return _qualityLabelFromHeight(height);
-          }
-        }
-      }
-    } catch (e) {
-      debugPrint('FFprobe 해상도 조회 실패: $e');
-    }
-    // fallback to VideoPlayerController
-    if (_videoController?.value.isInitialized == true) {
-      final h = _videoController!.value.size.height.toInt();
-      if (h > 0) return _qualityLabelFromHeight(h);
-    }
-    return null;
   }
 
   @override

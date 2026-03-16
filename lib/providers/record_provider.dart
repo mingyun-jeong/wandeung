@@ -440,6 +440,27 @@ class RecordService {
     return ClimbingRecord.fromMap(response);
   }
 
+  /// 저장 후 백그라운드에서 미디어 정보(썸네일, 길이, 화질)를 패치
+  static Future<void> patchMediaInfo({
+    required String recordId,
+    String? thumbnailPath,
+    int? videoDurationSeconds,
+    String? videoQuality,
+  }) async {
+    final updates = <String, dynamic>{};
+    if (thumbnailPath != null) updates['thumbnail_path'] = thumbnailPath;
+    if (videoDurationSeconds != null) {
+      updates['video_duration_seconds'] = videoDurationSeconds;
+    }
+    if (videoQuality != null) updates['video_quality'] = videoQuality;
+    if (updates.isEmpty) return;
+
+    await _supabase
+        .from('climbing_records')
+        .update(updates)
+        .eq('id', recordId);
+  }
+
   /// 내보내기 영상 저장 (원본 기록의 메타데이터를 복사)
   static Future<ClimbingRecord> saveExport({
     required String parentRecordId,

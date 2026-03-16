@@ -62,7 +62,7 @@ enum DifficultyColor {
   yellow('노랑', 0xFFFFEB3B),
   orange('주황', 0xFFFF9800),
   red('빨강', 0xFFF44336),
-  pink('분홍', 0xFFE91E63),
+  pink('분홍', 0xFFF48FB1),
   white('흰색', 0xFFFFFFFF),
   rainbow('무지개', 0xFF000000),
   star('별', 0xFFFFD700);
@@ -73,7 +73,7 @@ enum DifficultyColor {
 
   /// 체크 아이콘에 밝은색 사용해야 하는지
   bool get needsDarkIcon =>
-      this == white || this == yellow || this == star || this == skyBlue;
+      this == white || this == yellow || this == star || this == skyBlue || this == pink;
 }
 
 /// 완등 상태

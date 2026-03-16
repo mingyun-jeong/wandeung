@@ -6,11 +6,13 @@ import '../providers/upload_queue_provider.dart';
 class UploadStatusIndicator extends ConsumerWidget {
   final String recordId;
   final bool isLocalVideo;
+  final bool localOnly;
 
   const UploadStatusIndicator({
     super.key,
     required this.recordId,
     this.isLocalVideo = false,
+    this.localOnly = false,
   });
 
   @override
@@ -32,11 +34,19 @@ class UploadStatusIndicator extends ConsumerWidget {
       );
     }
 
-    // 로컬 전용: 큐에 없고 로컬 영상
-    if (status == null && isLocalVideo) {
+    // 로컬 전용 모드: 로컬 아이콘
+    if (status == null && isLocalVideo && localOnly) {
       return const Padding(
         padding: EdgeInsets.all(4),
         child: Icon(Icons.phone_android, size: 16, color: Colors.white),
+      );
+    }
+
+    // 클라우드 모드인데 아직 업로드 큐에 없음 (백그라운드 준비 중)
+    if (status == null && isLocalVideo && !localOnly) {
+      return const Padding(
+        padding: EdgeInsets.all(4),
+        child: Icon(Icons.cloud_queue, size: 16, color: Colors.grey),
       );
     }
 

@@ -298,14 +298,6 @@ class _PlanBadge extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 4),
-            Text(
-              '1080p',
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.amber.withOpacity(0.7),
-              ),
-            ),
-            const SizedBox(width: 4),
             Icon(Icons.chevron_right_rounded,
                 size: 16,
                 color: Colors.amber.withOpacity(0.5)),
@@ -336,14 +328,6 @@ class _PlanBadge extends StatelessWidget {
               fontSize: 14,
               fontWeight: FontWeight.w700,
               color: colorScheme.primary,
-            ),
-          ),
-          const SizedBox(width: 4),
-          Text(
-            '720p',
-            style: TextStyle(
-              fontSize: 12,
-              color: colorScheme.primary.withOpacity(0.6),
             ),
           ),
           const SizedBox(width: 4),

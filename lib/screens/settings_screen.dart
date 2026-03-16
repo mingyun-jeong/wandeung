@@ -371,7 +371,7 @@ class _CloudCard extends ConsumerWidget {
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  isPro ? 'Pro (1080p 원본)' : 'Free (720p 압축)',
+                  isPro ? 'Pro' : 'Free',
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
@@ -464,32 +464,8 @@ class _CloudCard extends ConsumerWidget {
             ),
           ],
 
-          // Pro 업그레이드 (Free만)
-          if (!isPro)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
-              child: SizedBox(
-                width: double.infinity,
-                child: OutlinedButton.icon(
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 10),
-                    side: BorderSide(
-                      color: colorScheme.primary.withOpacity(0.3),
-                    ),
-                  ),
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('준비 중인 기능입니다')),
-                    );
-                  },
-                  icon: const Icon(Icons.star_rounded, size: 16),
-                  label: const Text('Pro로 업그레이드',
-                      style: TextStyle(fontSize: 13)),
-                ),
-              ),
-            )
-          else
-            const SizedBox(height: 8),
+          // Pro 업그레이드 — 히든 (추후 활성화)
+          const SizedBox(height: 8),
         ],
       ),
     );

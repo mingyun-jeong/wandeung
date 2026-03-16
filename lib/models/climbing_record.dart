@@ -16,6 +16,7 @@ class ClimbingRecord {
   final int? videoDurationSeconds;
   final String? videoQuality;
   final bool localOnly;
+  final int? fileSize;
 
   bool get isLocalVideo => videoPath != null && videoPath!.startsWith('/');
 
@@ -37,6 +38,7 @@ class ClimbingRecord {
     this.videoDurationSeconds,
     this.videoQuality,
     this.localOnly = false,
+    this.fileSize,
   });
 
   Map<String, dynamic> toInsertMap() => {
@@ -77,5 +79,6 @@ class ClimbingRecord {
         videoDurationSeconds: map['video_duration_seconds'],
         videoQuality: map['video_quality'],
         localOnly: map['local_only'] ?? false,
+        fileSize: map['file_size_bytes'],
       );
 }

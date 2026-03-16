@@ -11,7 +11,8 @@ import 'package:ffmpeg_kit_flutter_new/ffmpeg_kit_config.dart';
 import 'package:ffmpeg_kit_flutter_new/ffprobe_kit.dart';
 import '../config/r2_config.dart';
 import '../config/supabase_config.dart';
-import '../providers/connectivity_provider.dart';
+import '../models/user_subscription.dart';
+import '../providers/subscription_provider.dart';
 import '../providers/upload_queue_provider.dart';
 import '../services/video_export_service.dart';
 import '../services/video_upload_service.dart';
@@ -309,7 +310,15 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
         );
       } else {
         final settings = ref.read(cameraSettingsProvider);
-        await _saveToGallery();
+        final storageMode = await ref.read(storageModeProvider.notifier).getValue();
+        final isCloudMode = storageMode == StorageMode.cloud;
+        final tier = ref.read(subscriptionTierProvider);
+        final isPro = tier == SubscriptionTier.pro;
+
+        // 로컬 모드: 갤러리 저장 / 클라우드 모드: 갤러리 저장 안 함
+        if (!isCloudMode) {
+          await _saveToGallery();
+        }
 
         // 캐시 → 영구 저장소로 이동 (저장 확정 시에만)
         final persistentPath = await _moveToPersistentStorage(widget.videoPath!);
@@ -318,7 +327,6 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
         final durationSeconds = await _getVideoDuration(persistentPath);
         final videoQuality =
             widget.videoQuality ?? await _detectVideoQuality(persistentPath);
-        final cloudEnabled = await ref.read(cloudUploadEnabledProvider.notifier).getValue();
         final savedRecord = await RecordService.saveRecord(
           videoPath: persistentPath,
           grade: settings.grade!.name,
@@ -332,30 +340,31 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
           videoDurationSeconds: durationSeconds,
           scales: ref.read(allColorScalesProvider).valueOrNull,
           videoQuality: videoQuality,
-          localOnly: !cloudEnabled,
+          localOnly: !isCloudMode,
         );
 
-        // 썸네일 즉시 R2 업로드 (작은 파일이므로 네트워크 종류 무관)
-        if (thumbnailPath != null) {
-          try {
-            await VideoUploadService.uploadThumbnailAndUpdateRecord(
-              recordId: savedRecord.id!,
-              localThumbnailPath: thumbnailPath,
-              userId: savedRecord.userId,
-            );
-          } catch (e) {
-            debugPrint('썸네일 업로드 실패: $e');
+        if (isCloudMode) {
+          // 썸네일 즉시 R2 업로드 (작은 파일이므로 네트워크 종류 무관)
+          if (thumbnailPath != null) {
+            try {
+              await VideoUploadService.uploadThumbnailAndUpdateRecord(
+                recordId: savedRecord.id!,
+                localThumbnailPath: thumbnailPath,
+                userId: savedRecord.userId,
+              );
+            } catch (e) {
+              debugPrint('썸네일 업로드 실패: $e');
+            }
           }
-        }
 
-        // 클라우드 업로드 설정이 켜져 있을 때만 압축 + 큐 등록
-        if (cloudEnabled) {
+          // 클라우드 모드: 티어에 따라 압축 + 큐 등록
           String uploadPath = persistentPath;
           try {
             uploadPath = await VideoExportService.compressForUpload(
               inputPath: persistentPath,
+              isPro: isPro,
             );
-            debugPrint('업로드 압축 완료: $uploadPath');
+            debugPrint('업로드 준비 완료: $uploadPath (Pro=$isPro)');
           } catch (e) {
             debugPrint('업로드 압축 실패, 원본 사용: $e');
           }
@@ -465,7 +474,7 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
 
   Future<void> _saveToGallery() async {
     try {
-      await Gal.putVideo(widget.videoPath!, album: '완등');
+      await Gal.putVideo(widget.videoPath!, album: '클링');
     } catch (_) {}
   }
 
@@ -495,7 +504,7 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
         localPath = downloaded;
       }
 
-      await Gal.putVideo(localPath, album: '완등');
+      await Gal.putVideo(localPath, album: '클링');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -1205,7 +1214,7 @@ class _ExportedVideoCardState extends State<_ExportedVideoCard> {
     }
 
     try {
-      await Gal.putVideo(localPath, album: '완등');
+      await Gal.putVideo(localPath, album: '클링');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(

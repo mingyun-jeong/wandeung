@@ -52,7 +52,7 @@ class WandeungAppBar extends ConsumerWidget implements PreferredSizeWidget {
                 ),
                 const SizedBox(width: 10),
                 const Text(
-                  '완등',
+                  '클링',
                   style: TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.w800,

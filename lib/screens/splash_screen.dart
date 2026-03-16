@@ -175,13 +175,13 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
               ),
               const SizedBox(height: 32),
 
-              // App name "완등"
+              // App name "클링"
               SlideTransition(
                 position: _textSlide,
                 child: FadeTransition(
                   opacity: _textOpacity,
                   child: const Text(
-                    '완등',
+                    '클링',
                     style: TextStyle(
                       fontSize: 36,
                       fontWeight: FontWeight.w800,

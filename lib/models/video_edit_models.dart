@@ -129,10 +129,7 @@ class OverlayItem {
 /// 내보내기 품질 설정
 enum ExportQuality {
   /// 1080p (Full HD) — 일반 내보내기용
-  fullHd(1080, 20, '1080p'),
-
-  /// 4K (Ultra HD) — 고화질 내보내기용
-  uhd4k(2160, 18, '4K');
+  fullHd(1080, 20, '1080p');
 
   final int targetHeight;
   final int crf;
@@ -141,13 +138,23 @@ enum ExportQuality {
   const ExportQuality(this.targetHeight, this.crf, this.label);
 }
 
-/// 업로드용 압축 설정 (720p, CRF 28)
+/// 업로드용 압축 설정 — 티어에 따라 다른 설정 적용
 class UploadCompression {
   UploadCompression._();
 
-  static const int targetHeight = 720;
-  static const int crf = 28;
   static const String preset = 'fast';
+
+  /// Free 티어: 720p CRF 28 압축
+  static const int freeTargetHeight = 720;
+  static const int freeCrf = 28;
+
+  /// Pro 티어: 1080p 원본 그대로 (재인코딩 없음)
+  static const int proTargetHeight = 1080;
+  static const int proCrf = 20;
+
+  /// 하위 호환용 기본값 (Free 기준)
+  static const int targetHeight = freeTargetHeight;
+  static const int crf = freeCrf;
 }
 
 /// 비디오 내보내기 결과

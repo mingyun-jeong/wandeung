@@ -437,7 +437,7 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
         if (widget.existingRecord != null) {
           // 기존 기록 편집 → 내보내기 영상을 자식 레코드로 저장
           try {
-            await Gal.putVideo(result.outputPath, album: '완등');
+            await Gal.putVideo(result.outputPath, album: '클링');
           } catch (_) {}
           final thumbnailPath = await generateThumbnail(result.outputPath);
           final exportTitle = _title == '제목 없음' ? null : _title;
@@ -1539,7 +1539,6 @@ class _ExportQualitySheetState extends State<_ExportQualitySheet> {
 
   Widget _buildQualityCard(ExportQuality q) {
     final isSelected = _selected == q;
-    final is4K = q == ExportQuality.uhd4k;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
@@ -1572,7 +1571,7 @@ class _ExportQualitySheetState extends State<_ExportQualitySheet> {
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(
-                  is4K ? Icons.four_k : Icons.hd,
+                  Icons.hd,
                   size: 22,
                   color: isSelected
                       ? WandeungColors.accent
@@ -1585,39 +1584,16 @@ class _ExportQualitySheetState extends State<_ExportQualitySheet> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      children: [
-                        Text(
-                          q.label,
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight:
-                                isSelected ? FontWeight.w700 : FontWeight.w600,
-                            color: isSelected
-                                ? WandeungColors.accent
-                                : WandeungColors.textPrimary,
-                          ),
-                        ),
-                        if (is4K) ...[
-                          const SizedBox(width: 6),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: WandeungColors.inProgress.withOpacity(0.15),
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: const Text(
-                              '고화질',
-                              style: TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w700,
-                                color: WandeungColors.inProgress,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ],
+                    Text(
+                      q.label,
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight:
+                            isSelected ? FontWeight.w700 : FontWeight.w600,
+                        color: isSelected
+                            ? WandeungColors.accent
+                            : WandeungColors.textPrimary,
+                      ),
                     ),
                     const SizedBox(height: 2),
                     Text(

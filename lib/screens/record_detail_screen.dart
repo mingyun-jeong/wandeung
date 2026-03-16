@@ -130,7 +130,7 @@ class _RecordDetailScreenState extends ConsumerState<RecordDetailScreen> {
         localPath = downloaded;
       }
 
-      await Gal.putVideo(localPath, album: '완등');
+      await Gal.putVideo(localPath, album: '클링');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('갤러리에 저장되었습니다')),

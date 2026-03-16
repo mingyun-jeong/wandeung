@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/climbing_gym.dart';
+import '../models/user_subscription.dart';
 import '../providers/auth_provider.dart';
 import '../providers/favorite_gym_provider.dart';
-import '../providers/user_grade_provider.dart';
-import '../utils/constants.dart';
+import '../providers/subscription_provider.dart';
 import '../widgets/favorite_gym_sheet.dart';
 import 'login_screen.dart';
+import 'settings_screen.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -22,10 +23,10 @@ class ProfileScreen extends ConsumerWidget {
     final email = user?.email ?? '';
     final photoUrl = metadata?['picture'] as String? ??
         metadata?['avatar_url'] as String?;
-    final userGrade = ref.watch(userGradeProvider);
-    final gradeColor = userGrade != null
-        ? Color(userGrade.defaultColor.colorValue)
-        : null;
+    final tier = ref.watch(subscriptionTierProvider);
+    final isPro = tier == SubscriptionTier.pro;
+    final storageMode = ref.watch(storageModeProvider);
+    final isCloudMode = storageMode == StorageMode.cloud;
 
     return Scaffold(
       appBar: AppBar(
@@ -38,15 +39,17 @@ class ProfileScreen extends ConsumerWidget {
         children: [
           const SizedBox(height: 36),
 
-          // ── 아바타 + 등급 색상 링 ──
+          // ── 아바타 ──
           Center(
             child: Container(
               padding: const EdgeInsets.all(4),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: gradeColor ?? colorScheme.outlineVariant,
-                  width: gradeColor != null ? 3.5 : 2,
+                  color: isPro
+                      ? Colors.amber
+                      : colorScheme.outlineVariant,
+                  width: isPro ? 3.5 : 2,
                 ),
               ),
               child: CircleAvatar(
@@ -86,68 +89,17 @@ class ProfileScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 14),
 
-          // ── 등급 뱃지 (탭하면 바텀시트) ──
+          // ── 플랜 뱃지 (탭하면 설정 화면) ──
           Center(
             child: GestureDetector(
-              onTap: () => _showGradeSheet(context, ref),
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                decoration: BoxDecoration(
-                  color: gradeColor != null
-                      ? gradeColor.withOpacity(0.1)
-                      : colorScheme.surfaceContainerHighest.withOpacity(0.5),
-                  borderRadius: BorderRadius.circular(24),
-                  border: Border.all(
-                    color: gradeColor != null
-                        ? gradeColor.withOpacity(0.3)
-                        : colorScheme.outlineVariant.withOpacity(0.4),
-                  ),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 18,
-                      height: 18,
-                      decoration: BoxDecoration(
-                        color: gradeColor ?? Colors.grey[300],
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: Colors.black.withOpacity(0.08),
-                          width: 1,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      userGrade != null ? userGrade.label : '등급 선택',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: userGrade != null
-                            ? colorScheme.onSurface
-                            : colorScheme.onSurface.withOpacity(0.4),
-                      ),
-                    ),
-                    if (userGrade != null) ...[
-                      const SizedBox(width: 4),
-                      Text(
-                        userGrade.defaultColor.korean,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: colorScheme.onSurface.withOpacity(0.4),
-                        ),
-                      ),
-                    ],
-                    const SizedBox(width: 4),
-                    Icon(
-                      Icons.edit_rounded,
-                      size: 14,
-                      color: colorScheme.onSurface.withOpacity(0.3),
-                    ),
-                  ],
-                ),
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (_) => const SettingsScreen()),
+              ),
+              child: _PlanBadge(
+                isPro: isPro,
+                isCloudMode: isCloudMode,
               ),
             ),
           ),
@@ -221,175 +173,6 @@ class ProfileScreen extends ConsumerWidget {
     );
   }
 
-  // ── 등급 선택 바텀시트 (그리드) ──
-  void _showGradeSheet(BuildContext context, WidgetRef ref) {
-    final grades =
-        ClimbingGrade.values.where((g) => g.sortIndex <= 10).toList();
-    final colorScheme = Theme.of(context).colorScheme;
-
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.white,
-      isScrollControlled: true,
-      useSafeArea: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (_) {
-        final selected = ref.read(userGradeProvider);
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // 드래그 핸들
-                Container(
-                  width: 36,
-                  height: 4,
-                  margin: const EdgeInsets.only(bottom: 20),
-                  decoration: BoxDecoration(
-                    color: Colors.grey[300],
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-                // 헤더
-                Row(
-                  children: [
-                    const Text(
-                      '내 등급 설정',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 17,
-                        letterSpacing: -0.3,
-                      ),
-                    ),
-                    const Spacer(),
-                    Text(
-                      '촬영 시 자동 적용',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: colorScheme.onSurface.withOpacity(0.4),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 20),
-                // 선택 안함 칩
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: GestureDetector(
-                    onTap: () {
-                      ref.read(userGradeProvider.notifier).setGrade(null);
-                      Navigator.pop(context);
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: selected == null
-                            ? colorScheme.primary.withOpacity(0.1)
-                            : colorScheme.surfaceContainerHighest
-                                .withOpacity(0.5),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color: selected == null
-                              ? colorScheme.primary.withOpacity(0.4)
-                              : colorScheme.outlineVariant.withOpacity(0.4),
-                        ),
-                      ),
-                      child: Text(
-                        '선택 안함',
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: selected == null
-                              ? FontWeight.w600
-                              : FontWeight.w400,
-                          color: selected == null
-                              ? colorScheme.primary
-                              : colorScheme.onSurface.withOpacity(0.4),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                // 등급 그리드
-                Wrap(
-                  spacing: 12,
-                  runSpacing: 12,
-                  children: grades.map((grade) {
-                    final isSelected = grade == selected;
-                    final color = Color(grade.defaultColor.colorValue);
-                    final needsDark = grade.defaultColor.needsDarkIcon;
-
-                    return GestureDetector(
-                      onTap: () {
-                        ref
-                            .read(userGradeProvider.notifier)
-                            .setGrade(grade);
-                        Navigator.pop(context);
-                      },
-                      child: Column(
-                        children: [
-                          AnimatedContainer(
-                            duration: const Duration(milliseconds: 180),
-                            width: 50,
-                            height: 50,
-                            decoration: BoxDecoration(
-                              color: color,
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: isSelected
-                                    ? colorScheme.primary
-                                    : Colors.black.withOpacity(0.08),
-                                width: isSelected ? 3 : 1.5,
-                              ),
-                              boxShadow: isSelected
-                                  ? [
-                                      BoxShadow(
-                                        color: color.withOpacity(0.4),
-                                        blurRadius: 8,
-                                        offset: const Offset(0, 2),
-                                      ),
-                                    ]
-                                  : null,
-                            ),
-                            child: isSelected
-                                ? Icon(Icons.check_rounded,
-                                    color: needsDark
-                                        ? Colors.black87
-                                        : Colors.white,
-                                    size: 22)
-                                : null,
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            grade.label,
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: isSelected
-                                  ? FontWeight.w700
-                                  : FontWeight.w500,
-                              color: isSelected
-                                  ? colorScheme.primary
-                                  : colorScheme.onSurface.withOpacity(0.6),
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  }).toList(),
-                ),
-                const SizedBox(height: 8),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
   void _showDeleteAccountDialog(BuildContext context, WidgetRef ref) {
     showDialog(
       context: context,
@@ -437,6 +220,139 @@ class ProfileScreen extends ConsumerWidget {
         );
       }
     }
+  }
+}
+
+// ── 플랜 뱃지 ──
+class _PlanBadge extends StatelessWidget {
+  final bool isPro;
+  final bool isCloudMode;
+
+  const _PlanBadge({required this.isPro, required this.isCloudMode});
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    if (!isCloudMode) {
+      // 로컬 모드
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: colorScheme.surfaceContainerHighest.withOpacity(0.5),
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(
+            color: colorScheme.outlineVariant.withOpacity(0.4),
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.phone_android_outlined,
+                size: 16,
+                color: colorScheme.onSurface.withOpacity(0.5)),
+            const SizedBox(width: 6),
+            Text(
+              '로컬 모드',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: colorScheme.onSurface.withOpacity(0.6),
+              ),
+            ),
+            const SizedBox(width: 4),
+            Icon(Icons.chevron_right_rounded,
+                size: 16,
+                color: colorScheme.onSurface.withOpacity(0.25)),
+          ],
+        ),
+      );
+    }
+
+    if (isPro) {
+      // Pro
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              Colors.amber.withOpacity(0.15),
+              Colors.orange.withOpacity(0.1),
+            ],
+          ),
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: Colors.amber.withOpacity(0.4)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.star_rounded,
+                size: 16, color: Colors.amber),
+            const SizedBox(width: 6),
+            const Text(
+              'Pro',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: Colors.amber,
+              ),
+            ),
+            const SizedBox(width: 4),
+            Text(
+              '1080p',
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.amber.withOpacity(0.7),
+              ),
+            ),
+            const SizedBox(width: 4),
+            Icon(Icons.chevron_right_rounded,
+                size: 16,
+                color: Colors.amber.withOpacity(0.5)),
+          ],
+        ),
+      );
+    }
+
+    // Free
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      decoration: BoxDecoration(
+        color: colorScheme.primary.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: colorScheme.primary.withOpacity(0.25),
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.cloud_outlined,
+              size: 16, color: colorScheme.primary),
+          const SizedBox(width: 6),
+          Text(
+            'Free',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              color: colorScheme.primary,
+            ),
+          ),
+          const SizedBox(width: 4),
+          Text(
+            '720p',
+            style: TextStyle(
+              fontSize: 12,
+              color: colorScheme.primary.withOpacity(0.6),
+            ),
+          ),
+          const SizedBox(width: 4),
+          Icon(Icons.chevron_right_rounded,
+              size: 16,
+              color: colorScheme.primary.withOpacity(0.4)),
+        ],
+      ),
+    );
   }
 }
 

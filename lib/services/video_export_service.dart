@@ -298,11 +298,17 @@ class VideoExportService {
 
   /// 업로드용 압축 영상 생성
   ///
-  /// 내보낸 고화질 영상을 720p + CRF 28로 재인코딩하여 업로드 용량 절감
+  /// 티어에 따라 다른 압축 설정 적용:
+  /// - Free: 720p CRF 28 (용량 절감)
+  /// - Pro: 압축 없이 원본 그대로 반환
   static Future<String> compressForUpload({
     required String inputPath,
+    bool isPro = false,
     void Function(double progress)? onProgress,
   }) async {
+    // Pro 티어는 압축 없이 원본 반환
+    if (isPro) return inputPath;
+
     final appDir = await getApplicationDocumentsDirectory();
     final timestamp = DateTime.now().millisecondsSinceEpoch;
     final outputPath = '${appDir.path}/upload_$timestamp.mp4';

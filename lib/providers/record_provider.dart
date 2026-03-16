@@ -500,7 +500,7 @@ class RecordService {
         .eq('id', recordId)
         .maybeSingle();
 
-    // 2. 자식 레코드(내보내기 영상)도 파일 정리 후 삭제
+    // 2. 자식 레코드(내보내기 영상)도 파일 정리 후 soft delete
     final children = await _supabase
         .from('climbing_records')
         .select('id, video_path, thumbnail_path')
@@ -508,7 +508,6 @@ class RecordService {
     for (final child in children as List) {
       await _deleteLocalFile(child['video_path'] as String?);
       await _deleteLocalFile(child['thumbnail_path'] as String?);
-      // 자식 레코드의 R2 파일도 삭제
       if (userId != null) {
         try {
           await VideoUploadService.deleteRemoteFiles(
@@ -521,10 +520,22 @@ class RecordService {
       }
     }
     if ((children as List).isNotEmpty) {
-      await _supabase
-          .from('climbing_records')
-          .delete()
-          .eq('parent_record_id', recordId);
+      try {
+        await _supabase
+            .from('climbing_records')
+            .update({
+              'deleted_at': DateTime.now().toUtc().toIso8601String(),
+              'video_path': null,
+              'thumbnail_path': null,
+              'file_size_bytes': null,
+            })
+            .eq('parent_record_id', recordId);
+      } catch (_) {
+        await _supabase
+            .from('climbing_records')
+            .delete()
+            .eq('parent_record_id', recordId);
+      }
     }
 
     // 3. 본인 레코드의 로컬 파일 삭제
@@ -545,11 +556,24 @@ class RecordService {
       }
     }
 
-    // 5. DB 레코드 삭제
-    await _supabase
-        .from('climbing_records')
-        .delete()
-        .eq('id', recordId);
+    // 5. soft delete → hard delete fallback
+    try {
+      await _supabase
+          .from('climbing_records')
+          .update({
+            'deleted_at': DateTime.now().toUtc().toIso8601String(),
+            'video_path': null,
+            'thumbnail_path': null,
+            'file_size_bytes': null,
+          })
+          .eq('id', recordId);
+    } catch (e) {
+      debugPrint('soft delete 실패, hard delete로 fallback: $e');
+      await _supabase
+          .from('climbing_records')
+          .delete()
+          .eq('id', recordId);
+    }
   }
 
   /// 로컬 파일 안전 삭제

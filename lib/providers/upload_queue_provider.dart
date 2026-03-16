@@ -8,8 +8,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/climbing_record.dart';
+import '../models/user_subscription.dart';
 import '../services/video_upload_service.dart';
 import 'connectivity_provider.dart';
+import 'subscription_provider.dart';
 
 // --- 모델 ---
 
@@ -104,8 +106,9 @@ class UploadQueueNotifier extends StateNotifier<List<UploadTask>> {
     });
     processQueue();
 
-    // 클라우드 업로드가 켜져 있을 때만 고아 레코드 자동 등록
-    if (_ref.read(cloudUploadEnabledProvider)) {
+    // 클라우드 모드일 때만 고아 레코드 자동 등록
+    final mode = _ref.read(storageModeProvider);
+    if (mode == StorageMode.cloud) {
       _autoEnqueueOrphanedRecords();
     }
   }
@@ -218,8 +221,9 @@ class UploadQueueNotifier extends StateNotifier<List<UploadTask>> {
   Future<void> processQueue() async {
     if (_isProcessing) return;
 
-    // 클라우드 업로드가 꺼져 있으면 큐 처리하지 않음
-    if (!_ref.read(cloudUploadEnabledProvider)) return;
+    // 로컬 모드면 큐 처리하지 않음
+    final mode = _ref.read(storageModeProvider);
+    if (mode == StorageMode.local) return;
 
     _isProcessing = true;
 

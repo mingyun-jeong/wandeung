@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'screens/splash_screen.dart';
 
-/// 완등 앱 컬러 상수
+/// 클링 앱 컬러 상수
 class WandeungColors {
   WandeungColors._();
 
@@ -26,7 +26,7 @@ class WandeungApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return MaterialApp(
-      title: '완등',
+      title: '클링',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
           seedColor: WandeungColors.accent,

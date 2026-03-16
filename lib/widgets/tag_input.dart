@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 class TagInput extends StatefulWidget {
   final List<String> tags;
   final ValueChanged<List<String>> onTagsChanged;
+  final bool showLabel;
 
   static const recommendedTags = [
     '#다이나믹',
@@ -21,6 +22,7 @@ class TagInput extends StatefulWidget {
     super.key,
     required this.tags,
     required this.onTagsChanged,
+    this.showLabel = true,
   });
 
   @override
@@ -72,13 +74,15 @@ class _TagInputState extends State<TagInput> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('태그',
-            style: TextStyle(
-              fontWeight: FontWeight.w700,
-              fontSize: 15,
-              color: Theme.of(context).colorScheme.onSurface,
-            )),
-        const SizedBox(height: 10),
+        if (widget.showLabel) ...[
+          Text('태그',
+              style: TextStyle(
+                fontWeight: FontWeight.w700,
+                fontSize: 15,
+                color: Theme.of(context).colorScheme.onSurface,
+              )),
+          const SizedBox(height: 10),
+        ],
 
         Wrap(
           spacing: 8,

@@ -102,6 +102,12 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
       if (record.gymId != null) {
         _loadGymFromRecord(record.gymId!);
       }
+    } else {
+      // 태그 유지 옵션이 켜져있으면 이전 태그를 초기값으로 사용
+      final settings = ref.read(cameraSettingsProvider);
+      if (settings.persistTags) {
+        _tags = List<String>.from(settings.tags);
+      }
     }
 
     _initVideo();
@@ -377,6 +383,11 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
           final gymId = await RecordService.findOrCreateGym(autoFavoriteGym, scales: scales);
           await FavoriteGymService.addFavorite(gymId);
         } catch (_) {}
+      }
+
+      // 태그 유지 옵션이 켜져있으면 다음 촬영을 위해 태그 저장
+      if (!_isEditMode && ref.read(cameraSettingsProvider).persistTags) {
+        ref.read(cameraSettingsProvider.notifier).setTags(_tags);
       }
 
       if (mounted) {
@@ -1048,10 +1059,60 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
                     ),
                   const SizedBox(height: 16),
 
+                  // 태그 헤더 행 (라벨 + 유지 옵션)
+                  Row(
+                    children: [
+                      Text('태그',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 15,
+                            color: Theme.of(context).colorScheme.onSurface,
+                          )),
+                      const Spacer(),
+                      if (!_isEditMode)
+                        GestureDetector(
+                          onTap: () {
+                            final notifier = ref.read(cameraSettingsProvider.notifier);
+                            final current = ref.read(cameraSettingsProvider).persistTags;
+                            notifier.setPersistTags(!current);
+                            setState(() {});
+                          },
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: Checkbox(
+                                  value: ref.watch(cameraSettingsProvider).persistTags,
+                                  onChanged: (v) {
+                                    ref.read(cameraSettingsProvider.notifier).setPersistTags(v ?? false);
+                                    setState(() {});
+                                  },
+                                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                  visualDensity: VisualDensity.compact,
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                '다음 촬영에도 태그 유지',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+
                   // 태그 입력
                   TagInput(
                     tags: _tags,
                     onTagsChanged: (tags) => setState(() => _tags = tags),
+                    showLabel: false,
                   ),
 
                   // 내보내기 영상 목록 (편집 모드에서만)

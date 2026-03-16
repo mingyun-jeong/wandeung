@@ -7,11 +7,15 @@ class CameraSettings {
   final ClimbingGrade? grade;
   final DifficultyColor? color;
   final ClimbingGym? selectedGym;
+  final bool persistTags;
+  final List<String> tags;
 
   const CameraSettings({
     this.grade,
     this.color,
     this.selectedGym,
+    this.persistTags = false,
+    this.tags = const [],
   });
 
   CameraSettings copyWith({
@@ -19,11 +23,15 @@ class CameraSettings {
     DifficultyColor? color,
     ClimbingGym? selectedGym,
     bool clearGym = false,
+    bool? persistTags,
+    List<String>? tags,
   }) {
     return CameraSettings(
       grade: grade ?? this.grade,
       color: color ?? this.color,
       selectedGym: clearGym ? null : (selectedGym ?? this.selectedGym),
+      persistTags: persistTags ?? this.persistTags,
+      tags: tags ?? this.tags,
     );
   }
 }
@@ -42,6 +50,12 @@ class CameraSettingsNotifier extends StateNotifier<CameraSettings> {
 
   void clearGym() =>
       state = state.copyWith(clearGym: true);
+
+  void setPersistTags(bool value) =>
+      state = state.copyWith(persistTags: value);
+
+  void setTags(List<String> tags) =>
+      state = state.copyWith(tags: tags);
 
   void reset() => state = const CameraSettings();
 }

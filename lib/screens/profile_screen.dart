@@ -310,11 +310,8 @@ class _PlanBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       decoration: BoxDecoration(
-        color: colorScheme.primary.withOpacity(0.08),
+        color: const Color(0xFFF0F0F0),
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-          color: colorScheme.primary.withOpacity(0.25),
-        ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

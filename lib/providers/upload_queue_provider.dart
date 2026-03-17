@@ -20,6 +20,7 @@ enum UploadStatus { pending, uploading, uploaded, failed }
 class UploadTask {
   final String recordId;
   final String localVideoPath;
+  final bool isExport;
   UploadStatus status;
   int retryCount;
   String? errorMessage;
@@ -28,6 +29,7 @@ class UploadTask {
   UploadTask({
     required this.recordId,
     required this.localVideoPath,
+    this.isExport = false,
     this.status = UploadStatus.pending,
     this.retryCount = 0,
     this.errorMessage,
@@ -37,6 +39,7 @@ class UploadTask {
   Map<String, dynamic> toJson() => {
         'recordId': recordId,
         'localVideoPath': localVideoPath,
+        'isExport': isExport,
         'status': status.name,
         'retryCount': retryCount,
         'errorMessage': errorMessage,
@@ -46,6 +49,7 @@ class UploadTask {
   factory UploadTask.fromJson(Map<String, dynamic> json) => UploadTask(
         recordId: json['recordId'] as String,
         localVideoPath: json['localVideoPath'] as String,
+        isExport: json['isExport'] as bool? ?? false,
         status: UploadStatus.values.byName(json['status'] as String),
         retryCount: json['retryCount'] as int? ?? 0,
         errorMessage: json['errorMessage'] as String?,
@@ -151,6 +155,7 @@ class UploadQueueNotifier extends StateNotifier<List<UploadTask>> {
   Future<void> enqueue({
     required String recordId,
     required String localVideoPath,
+    bool isExport = false,
   }) async {
     // 이미 큐에 있으면 무시
     if (state.any((t) => t.recordId == recordId)) return;
@@ -158,6 +163,7 @@ class UploadQueueNotifier extends StateNotifier<List<UploadTask>> {
     final task = UploadTask(
       recordId: recordId,
       localVideoPath: localVideoPath,
+      isExport: isExport,
     );
     state = [...state, task];
     await _persist();
@@ -273,10 +279,12 @@ class UploadQueueNotifier extends StateNotifier<List<UploadTask>> {
             recordId: task.recordId,
             localVideoPath: task.localVideoPath,
             userId: userId,
+            isExport: task.isExport,
           ).timeout(const Duration(minutes: 5));
 
           debugPrint('[UploadQueue] 업로드 성공: ${task.recordId}');
           task.status = UploadStatus.uploaded;
+          _ref.invalidate(cloudUsageProvider);
         } catch (e) {
           task.retryCount++;
           if (task.retryCount >= _maxRetries) {

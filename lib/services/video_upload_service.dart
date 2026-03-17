@@ -14,8 +14,8 @@ class StorageQuotaExceededException implements Exception {
 
   @override
   String toString() =>
-      '저장 공간이 가득 찼습니다 (${(usedBytes / 1024 / 1024 / 1024).toStringAsFixed(1)} GB / '
-      '${(limitBytes / 1024 / 1024 / 1024).toStringAsFixed(0)} GB)';
+      '저장 공간이 가득 찼습니다 (${(usedBytes / 1024 / 1024).toStringAsFixed(1)} MB / '
+      '${(limitBytes / 1024 / 1024).toStringAsFixed(0)} MB)';
 }
 
 class VideoUploadService {
@@ -58,13 +58,15 @@ class VideoUploadService {
     required String recordId,
     required String localVideoPath,
     required String userId,
+    bool isExport = false,
   }) async {
     final file = File(localVideoPath);
     if (!file.existsSync()) {
       throw FileSystemException('영상 파일을 찾을 수 없습니다', localVideoPath);
     }
 
-    final objectKey = 'video/$userId/$recordId.mp4';
+    final prefix = isExport ? 'export_' : '';
+    final objectKey = 'video/$userId/$prefix$recordId.mp4';
     await R2Config.uploadFile(
       objectKey: objectKey,
       file: file,

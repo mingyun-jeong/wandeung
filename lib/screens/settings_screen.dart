@@ -484,8 +484,8 @@ class _CloudUsageIndicator extends ConsumerWidget {
       error: (_, __) => const SizedBox.shrink(),
       data: (usedBytes) {
         const limitBytes = freeStorageLimitBytes;
-        final usedGB = usedBytes / 1024 / 1024 / 1024;
-        const limitGB = freeStorageLimitBytes / 1024 / 1024 / 1024;
+        final usedMB = usedBytes / 1024 / 1024;
+        const limitMB = freeStorageLimitBytes / 1024 / 1024;
         final ratio = (usedBytes / limitBytes).clamp(0.0, 1.0);
 
         return Padding(
@@ -503,7 +503,7 @@ class _CloudUsageIndicator extends ConsumerWidget {
                     ),
                   ),
                   Text(
-                    '${usedGB.toStringAsFixed(1)} GB / ${limitGB.toStringAsFixed(0)} GB',
+                    '${usedMB.toStringAsFixed(1)} MB / ${limitMB.toStringAsFixed(0)} MB',
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,

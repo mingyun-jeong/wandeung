@@ -75,7 +75,7 @@ class StorageModeNotifier extends StateNotifier<StorageMode> {
 }
 
 /// 클라우드 사용량 (바이트) — DB에서 file_size_bytes 합산
-final cloudUsageProvider = FutureProvider<int>((ref) async {
+final cloudUsageProvider = FutureProvider.autoDispose<int>((ref) async {
   final userId = Supabase.instance.client.auth.currentUser?.id;
   if (userId == null) return 0;
 
@@ -99,11 +99,11 @@ final cloudUsageProvider = FutureProvider<int>((ref) async {
   }
 });
 
-/// Free 티어 최대 용량 (3GB)
-const freeStorageLimitBytes = 3 * 1024 * 1024 * 1024; // 3 GB
+/// Free 티어 최대 용량 (500MB)
+const freeStorageLimitBytes = 500 * 1024 * 1024; // 500 MB
 
 /// 남은 용량 (바이트)
-final remainingStorageProvider = Provider<int>((ref) {
+final remainingStorageProvider = Provider.autoDispose<int>((ref) {
   final tier = ref.watch(subscriptionTierProvider);
   if (tier == SubscriptionTier.pro) return freeStorageLimitBytes; // 무제한
 

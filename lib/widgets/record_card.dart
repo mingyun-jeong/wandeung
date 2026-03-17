@@ -152,12 +152,6 @@ class RecordCard extends StatelessWidget {
                     localOnly: record.localOnly,
                   ),
                 ),
-              if (record.videoQuality != null)
-                Positioned(
-                  right: 4,
-                  top: 4,
-                  child: _QualityBadge(quality: record.videoQuality!),
-                ),
               if (record.videoDurationSeconds != null)
                 Positioned(
                   right: 4,

@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/climbing_gym.dart';
+import '../models/gym_color_scale.dart';
 import '../models/gym_stats.dart';
 import '../providers/favorite_gym_provider.dart';
+import '../providers/gym_color_scale_provider.dart';
 import '../providers/gym_stats_provider.dart';
+import '../utils/constants.dart';
 import '../widgets/gym_selection_sheet.dart';
 
 class GymStatsTab extends ConsumerWidget {
@@ -38,7 +41,7 @@ class GymStatsTab extends ConsumerWidget {
                 selectedGymName: selectedGym?.name,
               ),
               const SizedBox(height: 16),
-              _GymStatsContent(gymId: gymId),
+              _GymStatsContent(gymId: gymId, gymName: selectedGym?.name),
             ],
           ),
         );
@@ -158,7 +161,8 @@ class _GymSelector extends ConsumerWidget {
 /// 통계 내용 (요약 카드 + 차트 + 순위)
 class _GymStatsContent extends ConsumerWidget {
   final String gymId;
-  const _GymStatsContent({required this.gymId});
+  final String? gymName;
+  const _GymStatsContent({required this.gymId, this.gymName});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -183,12 +187,12 @@ class _GymStatsContent extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _SummaryCards(stats: stats, ranking: ranking),
-            const SizedBox(height: 20),
-            _GradeChart(stats: stats),
             if (ranking != null) ...[
               const SizedBox(height: 20),
               _RankingCard(ranking: ranking),
             ],
+            const SizedBox(height: 20),
+            _GradeChart(stats: stats, gymName: gymName),
           ],
         );
       },
@@ -348,16 +352,50 @@ class _StatTile extends StatelessWidget {
   }
 }
 
-/// 등급 분포 가로 바 차트
-class _GradeChart extends StatelessWidget {
+/// 등급 분포 가로 바 차트 (암장 난이도 색상 반영)
+class _GradeChart extends ConsumerWidget {
   final GymStats stats;
-  const _GradeChart({required this.stats});
+  final String? gymName;
+  const _GradeChart({required this.stats, this.gymName});
+
+  /// grade 문자열을 ClimbingGrade enum으로 변환
+  static ClimbingGrade? _parseGrade(String grade) {
+    final normalized = grade.trim().toLowerCase().replaceAll('-', '');
+    for (final g in ClimbingGrade.values) {
+      if (g.label.toLowerCase() == normalized || g.name.toLowerCase() == normalized) {
+        return g;
+      }
+    }
+    return null;
+  }
+
+  /// 등급에 해당하는 난이도 색상 결정
+  static Color _barColor(String grade, GymColorScale? colorScale) {
+    final g = _parseGrade(grade);
+    if (g == null) return Colors.grey;
+
+    if (colorScale != null) {
+      for (final level in colorScale.levels) {
+        if (g.sortIndex >= level.vMin.sortIndex &&
+            g.sortIndex <= level.vMax.sortIndex) {
+          return Color(level.color.colorValue);
+        }
+      }
+    }
+
+    // 폴백: 등급의 기본 색상
+    return Color(g.defaultColor.colorValue);
+  }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final colorScheme = Theme.of(context).colorScheme;
     final grades = stats.gradeDistribution;
     if (grades.isEmpty) return const SizedBox.shrink();
+
+    final colorScale = gymName != null
+        ? ref.watch(gymColorScaleProvider(gymName!))
+        : null;
 
     final maxCount = grades
         .map((g) => g.count)
@@ -375,40 +413,62 @@ class _GradeChart extends StatelessWidget {
         Text('최근 30일',
             style: TextStyle(fontSize: 12, color: Colors.grey.shade500)),
         const SizedBox(height: 12),
-        ...grades.map((g) => Padding(
-              padding: const EdgeInsets.only(bottom: 6),
-              child: Row(
-                children: [
-                  SizedBox(
-                    width: 48,
-                    child: Text(g.grade,
-                        style: const TextStyle(
-                            fontSize: 12, fontWeight: FontWeight.w500)),
-                  ),
-                  Expanded(
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(4),
-                      child: LinearProgressIndicator(
-                        value: maxCount > 0 ? g.count / maxCount : 0,
-                        minHeight: 18,
-                        backgroundColor:
-                            const Color(0xFFF0F0F0),
-                        valueColor: AlwaysStoppedAnimation(
-                            colorScheme.primary.withOpacity(0.7)),
-                      ),
+        ...grades.map((g) {
+          final barColor = _barColor(g.grade, colorScale);
+          // 흰색/노랑 등 밝은 색은 테두리 추가
+          final needsBorder = barColor.computeLuminance() > 0.7;
+
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 6),
+            child: Row(
+              children: [
+                SizedBox(
+                  width: 48,
+                  child: Text(g.grade,
+                      style: const TextStyle(
+                          fontSize: 12, fontWeight: FontWeight.w500)),
+                ),
+                Expanded(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: Stack(
+                      children: [
+                        LinearProgressIndicator(
+                          value: maxCount > 0 ? g.count / maxCount : 0,
+                          minHeight: 18,
+                          backgroundColor: const Color(0xFFF0F0F0),
+                          valueColor: AlwaysStoppedAnimation(barColor),
+                        ),
+                        if (needsBorder)
+                          Positioned.fill(
+                            child: FractionallySizedBox(
+                              alignment: Alignment.centerLeft,
+                              widthFactor: maxCount > 0 ? g.count / maxCount : 0,
+                              child: DecoratedBox(
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(4),
+                                  border: Border.all(
+                                      color: Colors.grey.shade400, width: 0.5),
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  SizedBox(
-                    width: 28,
-                    child: Text('${g.count}',
-                        textAlign: TextAlign.end,
-                        style: TextStyle(
-                            fontSize: 12, color: Colors.grey.shade600)),
-                  ),
-                ],
-              ),
-            )),
+                ),
+                const SizedBox(width: 8),
+                SizedBox(
+                  width: 28,
+                  child: Text('${g.count}',
+                      textAlign: TextAlign.end,
+                      style: TextStyle(
+                          fontSize: 12, color: Colors.grey.shade600)),
+                ),
+              ],
+            ),
+          );
+        }),
       ],
     );
   }

@@ -110,28 +110,27 @@ final weeklySettingSchedulesProvider =
     weekDates.add('${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}');
   }
 
-  // 즐겨찾기 암장 또는 전체 스케줄 조회
+  // 즐겨찾기 암장 또는 전체 스케줄 조회 (단일 쿼리)
   final results = <({GymSettingSchedule schedule, List<SettingSector> sectors, String dateStr})>[];
-  for (final ym in months) {
-    var query = SupabaseConfig.client
-        .from('gym_setting_schedules')
-        .select('*, climbing_gyms(name)')
-        .eq('year_month', ym)
-        .eq('status', 'approved');
 
-    if (hasFavorites) {
-      query = query.inFilter('gym_id', favoriteGymIds);
-    }
+  var query = SupabaseConfig.client
+      .from('gym_setting_schedules')
+      .select('*, climbing_gyms(name)')
+      .inFilter('year_month', months.toList())
+      .eq('status', 'approved');
 
-    final data = await query;
+  if (hasFavorites) {
+    query = query.inFilter('gym_id', favoriteGymIds);
+  }
 
-    for (final row in data as List) {
-      final schedule = GymSettingSchedule.fromMap(row);
-      for (final dateStr in weekDates) {
-        final sectors = schedule.sectorsForDate(dateStr);
-        if (sectors.isNotEmpty) {
-          results.add((schedule: schedule, sectors: sectors, dateStr: dateStr));
-        }
+  final data = await query;
+
+  for (final row in data as List) {
+    final schedule = GymSettingSchedule.fromMap(row);
+    for (final dateStr in weekDates) {
+      final sectors = schedule.sectorsForDate(dateStr);
+      if (sectors.isNotEmpty) {
+        results.add((schedule: schedule, sectors: sectors, dateStr: dateStr));
       }
     }
   }

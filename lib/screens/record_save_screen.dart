@@ -799,7 +799,7 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
               icon: const Icon(Icons.compare_arrows, size: 18),
               label: const Text('비교모드', style: TextStyle(fontSize: 13)),
             ),
-          if (_isEditMode && _hasVideo)
+          if (_isEditMode && _hasVideo && !(widget.existingRecord?.localOnly ?? false))
             IconButton(
               onPressed: _savingToGallery
                   ? null

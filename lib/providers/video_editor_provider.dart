@@ -2,7 +2,10 @@ import 'dart:ui';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:flutter/widgets.dart' show WidgetRef;
+
 import '../models/video_edit_models.dart';
+import 'subtitle_provider.dart';
 
 // ─── 배속 구간 관리 ─────────────────────────────────────────
 
@@ -123,6 +126,84 @@ final speedSegmentsProvider = StateNotifierProvider.autoDispose<
 /// 현재 선택된 속도 구간 인덱스 (null이면 없음)
 final selectedSpeedSegmentProvider =
     StateProvider.autoDispose<int?>((ref) => null);
+
+// ─── 미디어 구간 관리 (분할/삭제) ─────────────────────────────
+
+class MediaSegmentsNotifier extends StateNotifier<List<MediaSegment>> {
+  MediaSegmentsNotifier() : super([]);
+
+  int _counter = 0;
+
+  /// 전체 영상에 단일 구간 세팅
+  void initWithFullRange(Duration videoDuration) {
+    _counter = 1;
+    state = [
+      MediaSegment(
+        id: 'mseg_0',
+        start: Duration.zero,
+        end: videoDuration,
+      ),
+    ];
+  }
+
+  /// 현재 플레이헤드 위치에서 분할
+  void splitAt(Duration position) {
+    final newSegments = <MediaSegment>[];
+    for (final seg in state) {
+      if (!seg.isDeleted &&
+          position > seg.start &&
+          position < seg.end &&
+          (position - seg.start).inMilliseconds >= 200 &&
+          (seg.end - position).inMilliseconds >= 200) {
+        newSegments.add(seg.copyWith(end: position));
+        newSegments.add(MediaSegment(
+          id: 'mseg_${_counter++}',
+          start: position,
+          end: seg.end,
+          isDeleted: seg.isDeleted,
+        ));
+      } else {
+        newSegments.add(seg);
+      }
+    }
+    state = newSegments;
+  }
+
+  /// 특정 세그먼트 삭제 토글
+  void toggleDelete(String id) {
+    // 삭제되지 않은 세그먼트가 1개뿐이면 삭제 불가
+    final activeCount = state.where((s) => !s.isDeleted).length;
+    final target = state.firstWhere((s) => s.id == id);
+    if (!target.isDeleted && activeCount <= 1) return;
+
+    state = [
+      for (final seg in state)
+        if (seg.id == id) seg.copyWith(isDeleted: !seg.isDeleted) else seg,
+    ];
+  }
+
+  /// 삭제된 세그먼트 복구
+  void restore(String id) {
+    state = [
+      for (final seg in state)
+        if (seg.id == id) seg.copyWith(isDeleted: false) else seg,
+    ];
+  }
+
+  /// Undo/Redo에서 상태 복원용
+  void restoreState(List<MediaSegment> segments) => state = segments;
+
+  void reset() => state = [];
+}
+
+final mediaSegmentsProvider = StateNotifierProvider.autoDispose<
+    MediaSegmentsNotifier, List<MediaSegment>>(
+  (ref) => MediaSegmentsNotifier(),
+);
+
+/// 현재 선택된 미디어 세그먼트 ID
+final selectedMediaSegmentProvider =
+    StateProvider.autoDispose<String?>((ref) => null);
 
 // ─── 크롭 줌 구간 관리 ─────────────────────────────────────
 
@@ -313,3 +394,22 @@ final selectedEditorTabProvider =
 /// 현재 선택된 오버레이 스티커 ID (null이면 없음)
 final selectedOverlayIdProvider =
     StateProvider.autoDispose<String?>((ref) => null);
+
+/// 특정 트랙을 제외한 모든 트랙의 선택을 해제
+void clearOtherSelections(WidgetRef ref, {required EditorTab except}) {
+  if (except != EditorTab.trim) {
+    ref.read(selectedMediaSegmentProvider.notifier).state = null;
+  }
+  if (except != EditorTab.speed) {
+    ref.read(selectedSpeedSegmentProvider.notifier).state = null;
+  }
+  if (except != EditorTab.zoom) {
+    ref.read(selectedCropSegmentProvider.notifier).state = null;
+  }
+  if (except != EditorTab.text) {
+    ref.read(selectedSubtitleIdProvider.notifier).state = null;
+  }
+  if (except != EditorTab.sticker) {
+    ref.read(selectedOverlayIdProvider.notifier).state = null;
+  }
+}

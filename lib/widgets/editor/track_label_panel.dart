@@ -48,16 +48,17 @@ class TrackLabelPanel extends ConsumerWidget {
             label: _tracks[0].$3,
             height: mediaTrackHeight,
             isActive: selectedTab == _tracks[0].$1,
-            showAddButton: true,
+            onTap: () => ref.read(selectedEditorTabProvider.notifier).state = _tracks[0].$1,
           ),
           SizedBox(height: trackGap),
-          // 속도/텍스트/스티커 라벨
+          // 속도/줌/텍스트/스티커 라벨
           for (int i = 1; i < _tracks.length; i++) ...[
             _TrackLabel(
               icon: _tracks[i].$2,
               label: _tracks[i].$3,
               height: trackHeight,
               isActive: selectedTab == _tracks[i].$1,
+              onTap: () => ref.read(selectedEditorTabProvider.notifier).state = _tracks[i].$1,
             ),
             if (i < _tracks.length - 1) SizedBox(height: trackGap),
           ],
@@ -72,49 +73,45 @@ class _TrackLabel extends StatelessWidget {
   final String label;
   final double height;
   final bool isActive;
-  final bool showAddButton;
+  final VoidCallback? onTap;
 
   const _TrackLabel({
     required this.icon,
     required this.label,
     required this.height,
     required this.isActive,
-    this.showAddButton = false,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: height,
-      padding: const EdgeInsets.symmetric(horizontal: 4),
-      decoration: BoxDecoration(
-        color: isActive ? Colors.white.withOpacity(0.08) : Colors.transparent,
-        borderRadius: BorderRadius.circular(4),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (showAddButton)
-            Icon(
-              Icons.add_circle_outline,
-              size: 12,
-              color: isActive ? Colors.white54 : Colors.white24,
-            )
-          else
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        height: height,
+        padding: const EdgeInsets.symmetric(horizontal: 4),
+        decoration: BoxDecoration(
+          color: isActive ? Colors.white.withOpacity(0.08) : Colors.transparent,
+          borderRadius: BorderRadius.circular(4),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
             const SizedBox(width: 12),
-          const SizedBox(width: 2),
-          Expanded(
-            child: Text(
-              label,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: isActive ? Colors.white70 : Colors.white30,
-                fontSize: 10,
-                fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
+            const SizedBox(width: 2),
+            Expanded(
+              child: Text(
+                label,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: isActive ? Colors.white70 : Colors.white30,
+                  fontSize: 10,
+                  fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

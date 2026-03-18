@@ -25,6 +25,7 @@ class FFmpegCommandBuilder {
     List<String> overlayImagePaths = const [],
     List<SubtitleItem> subtitles = const [],
     List<String> subtitleImagePaths = const [],
+    List<MediaSegment> mediaSegments = const [],
     int? targetHeight,
     int crf = 23,
   }) {
@@ -51,8 +52,9 @@ class FFmpegCommandBuilder {
       _formatDuration(trimEnd),
     ]);
 
-    // 원본보다 작을 때만 스케일링 적용
+    // 원본보다 작을 때만 스케일링 적용 (0이면 원본 유지, 업스케일 안 함)
     final needsScale = targetHeight != null &&
+        targetHeight > 0 &&
         videoResolution.height > targetHeight;
 
     final filterComplex = _buildFilterComplex(
@@ -62,6 +64,7 @@ class FFmpegCommandBuilder {
       overlayImagePaths: overlayImagePaths,
       subtitles: subtitles,
       subtitleImagePaths: subtitleImagePaths,
+      mediaSegments: mediaSegments,
       videoResolution: videoResolution,
       targetHeight: needsScale ? targetHeight : null,
     );
@@ -104,6 +107,7 @@ class FFmpegCommandBuilder {
     required List<String> overlayImagePaths,
     required List<SubtitleItem> subtitles,
     required List<String> subtitleImagePaths,
+    List<MediaSegment> mediaSegments = const [],
     required Size videoResolution,
     int? targetHeight,
   }) {
@@ -115,9 +119,15 @@ class FFmpegCommandBuilder {
         subtitles.isNotEmpty && subtitleImagePaths.length == subtitles.length;
     final hasCrop = cropSegments.isNotEmpty && cropSegments.any((s) => s.hasCrop);
     final hasScale = targetHeight != null;
+    // 삭제된 미디어 세그먼트가 있는지 확인
+    final activeMediaSegments =
+        mediaSegments.where((s) => !s.isDeleted).toList();
+    final hasMediaCut = mediaSegments.isNotEmpty &&
+        activeMediaSegments.length < mediaSegments.length;
 
     debugPrint('[FFmpeg] filterComplex flags: speed=$hasSpeedChange crop=$hasCrop '
-        'overlay=$hasOverlayImages subtitle=$hasSubtitleImages scale=$hasScale');
+        'overlay=$hasOverlayImages subtitle=$hasSubtitleImages scale=$hasScale '
+        'mediaCut=$hasMediaCut');
     if (hasCrop) {
       for (int i = 0; i < cropSegments.length; i++) {
         final s = cropSegments[i];
@@ -125,26 +135,71 @@ class FFmpegCommandBuilder {
       }
     }
 
-    if (!hasSpeedChange && !hasCrop && !hasOverlayImages && !hasSubtitleImages && !hasScale) {
+    if (!hasSpeedChange && !hasCrop && !hasOverlayImages && !hasSubtitleImages && !hasScale && !hasMediaCut) {
       return null;
     }
 
     final filters = <String>[];
 
+    // --- 미디어 세그먼트 삭제 처리 (select 필터) ---
+    // 삭제된 구간을 제거하고 유효 구간만 concat
+    if (hasMediaCut) {
+      final videoLabels = <String>[];
+      final audioLabels = <String>[];
+
+      for (int i = 0; i < activeMediaSegments.length; i++) {
+        final seg = activeMediaSegments[i];
+        final startSec = seg.start.inMilliseconds / 1000.0;
+        final endSec = seg.end.inMilliseconds / 1000.0;
+
+        filters.add(
+          '[0:v]trim=start=$startSec:end=$endSec,setpts=PTS-STARTPTS[vm$i]',
+        );
+        videoLabels.add('[vm$i]');
+
+        filters.add(
+          '[0:a]atrim=start=$startSec:end=$endSec,asetpts=PTS-STARTPTS[am$i]',
+        );
+        audioLabels.add('[am$i]');
+      }
+
+      final n = activeMediaSegments.length;
+      if (n == 1) {
+        // 단일 구간이면 concat 불필요, 라벨만 변환
+        filters[filters.length - 2] = filters[filters.length - 2]
+            .replaceAll('[vm0]', '[vmedia]');
+        filters[filters.length - 1] = filters[filters.length - 1]
+            .replaceAll('[am0]', '[amedia]');
+      } else {
+        filters.add('${videoLabels.join()}concat=n=$n:v=1:a=0[vmedia]');
+        filters.add('${audioLabels.join()}concat=n=$n:v=0:a=1[amedia]');
+      }
+    }
+
+    // 미디어 컷 적용 시 이후 필터의 입력 라벨
+    final baseVideoLabel = hasMediaCut ? '[vmedia]' : '[0:v]';
+    final baseAudioLabel = hasMediaCut ? '[amedia]' : '[0:a]';
+
     // --- 배속 처리 ---
     if (hasSpeedChange && speedSegments.length == 1) {
       final speed = speedSegments.first.speed;
       final pts = (1.0 / speed).toStringAsFixed(4);
-      filters.add('[0:v]setpts=$pts*PTS[vspeed]');
-      filters.add('[0:a]${buildAtempoChain(speed)}[aout]');
+      filters.add('${baseVideoLabel}setpts=$pts*PTS[vspeed]');
+      filters.add('$baseAudioLabel${buildAtempoChain(speed)}[aout]');
     } else if (hasSpeedChange && speedSegments.length > 1) {
-      _buildMultiSegmentSpeed(filters, speedSegments);
+      _buildMultiSegmentSpeed(filters, speedSegments, baseVideoLabel, baseAudioLabel);
+    }
+
+    // 미디어 컷만 있고 배속/다른 필터가 없는 경우 오디오 출력 매핑
+    if (hasMediaCut && !hasSpeedChange) {
+      // amedia를 aout으로 매핑
+      filters.add('${baseAudioLabel}anull[aout]');
     }
 
     // --- 크롭 줌 처리 ---
     // crop 후 원본 해상도로 scale-up하여 프리뷰와 동일한 확대 효과 적용
     if (hasCrop) {
-      final cropInput = hasSpeedChange ? '[vspeed]' : '[0:v]';
+      final cropInput = hasSpeedChange ? '[vspeed]' : baseVideoLabel;
       final origW = videoResolution.width.round();
       final origH = videoResolution.height.round();
       // 짝수 보정 (libx264 요구)
@@ -175,7 +230,7 @@ class FFmpegCommandBuilder {
     if (hasOverlayImages) {
       String currentLabel = hasCrop
           ? '[vcrop]'
-          : (hasSpeedChange ? '[vspeed]' : '[0:v]');
+          : (hasSpeedChange ? '[vspeed]' : baseVideoLabel);
 
       for (int i = 0; i < overlays.length; i++) {
         final isLast = i == overlays.length - 1 && !hasSubtitleImages && !hasScale;
@@ -202,9 +257,9 @@ class FFmpegCommandBuilder {
         filters.add('$overlayFilter$outputLabel');
         currentLabel = outputLabel;
       }
-    } else if ((hasSpeedChange || hasCrop) && !hasSubtitleImages && !hasScale) {
-      // 오버레이/자막/스케일 없이 배속 또는 크롭만 있는 경우 최종 출력 라벨로 변환
-      final targetLabel = hasCrop ? '[vcrop]' : '[vspeed]';
+    } else if ((hasSpeedChange || hasCrop || hasMediaCut) && !hasSubtitleImages && !hasScale) {
+      // 오버레이/자막/스케일 없이 배속/크롭/미디어컷만 있는 경우 최종 출력 라벨로 변환
+      final targetLabel = hasCrop ? '[vcrop]' : (hasSpeedChange ? '[vspeed]' : '[vmedia]');
       final lastIdx = filters.lastIndexWhere((f) => f.contains(targetLabel));
       if (lastIdx >= 0) {
         filters[lastIdx] = filters[lastIdx].replaceAll(targetLabel, '[vout]');
@@ -222,7 +277,7 @@ class FFmpegCommandBuilder {
       } else if (hasSpeedChange) {
         currentLabel = '[vspeed]';
       } else {
-        currentLabel = '[0:v]';
+        currentLabel = baseVideoLabel;
       }
 
       for (int i = 0; i < subtitles.length; i++) {
@@ -262,7 +317,7 @@ class FFmpegCommandBuilder {
       } else if (hasSpeedChange) {
         scaleInput = '[vspeed]';
       } else {
-        scaleInput = '[0:v]';
+        scaleInput = baseVideoLabel;
       }
       filters.add('${scaleInput}scale=-2:$targetHeight[vout]');
     }
@@ -273,7 +328,8 @@ class FFmpegCommandBuilder {
   }
 
   static void _buildMultiSegmentSpeed(
-      List<String> filters, List<SpeedSegment> segments) {
+      List<String> filters, List<SpeedSegment> segments,
+      [String baseVideo = '[0:v]', String baseAudio = '[0:a]']) {
     final videoLabels = <String>[];
     final audioLabels = <String>[];
 
@@ -284,13 +340,13 @@ class FFmpegCommandBuilder {
       final pts = (1.0 / seg.speed).toStringAsFixed(4);
 
       filters.add(
-        '[0:v]trim=start=$startSec:end=$endSec,setpts=$pts*(PTS-STARTPTS)[v$i]',
+        '${baseVideo}trim=start=$startSec:end=$endSec,setpts=$pts*(PTS-STARTPTS)[v$i]',
       );
       videoLabels.add('[v$i]');
 
       final atempo = buildAtempoChain(seg.speed);
       filters.add(
-        '[0:a]atrim=start=$startSec:end=$endSec,asetpts=PTS-STARTPTS,$atempo[a$i]',
+        '${baseAudio}atrim=start=$startSec:end=$endSec,asetpts=PTS-STARTPTS,$atempo[a$i]',
       );
       audioLabels.add('[a$i]');
     }

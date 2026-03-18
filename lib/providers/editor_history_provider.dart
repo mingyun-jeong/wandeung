@@ -11,12 +11,14 @@ class EditorSnapshot {
   final List<SubtitleItem> subtitles;
   final List<OverlayItem> overlays;
   final List<CropSegment> cropSegments;
+  final List<MediaSegment> mediaSegments;
 
   const EditorSnapshot({
     required this.speedSegments,
     required this.subtitles,
     required this.overlays,
     required this.cropSegments,
+    required this.mediaSegments,
   });
 }
 
@@ -43,6 +45,7 @@ class EditorHistoryNotifier extends StateNotifier<EditorHistoryState> {
       subtitles: List.unmodifiable(_ref.read(subtitlesProvider)),
       overlays: List.unmodifiable(_ref.read(overlaysProvider)),
       cropSegments: List.unmodifiable(_ref.read(cropSegmentsProvider)),
+      mediaSegments: List.unmodifiable(_ref.read(mediaSegmentsProvider)),
     );
     _undoStack.add(snapshot);
     if (_undoStack.length > _maxHistory) {
@@ -84,6 +87,7 @@ class EditorHistoryNotifier extends StateNotifier<EditorHistoryState> {
       subtitles: List.unmodifiable(_ref.read(subtitlesProvider)),
       overlays: List.unmodifiable(_ref.read(overlaysProvider)),
       cropSegments: List.unmodifiable(_ref.read(cropSegmentsProvider)),
+      mediaSegments: List.unmodifiable(_ref.read(mediaSegmentsProvider)),
     );
   }
 
@@ -94,6 +98,7 @@ class EditorHistoryNotifier extends StateNotifier<EditorHistoryState> {
     _ref.read(subtitlesProvider.notifier).restoreState(snapshot.subtitles);
     _ref.read(overlaysProvider.notifier).restoreState(snapshot.overlays);
     _ref.read(cropSegmentsProvider.notifier).restoreState(snapshot.cropSegments);
+    _ref.read(mediaSegmentsProvider.notifier).restoreState(snapshot.mediaSegments);
   }
 
   void _updateState() {

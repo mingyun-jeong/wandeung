@@ -62,6 +62,10 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
   final FocusNode _titleFocusNode = FocusNode();
   Duration _currentPosition = Duration.zero;
   double _displayAspectRatio = 16 / 9;
+
+  /// 타임라인 드래그 중 seek 쓰로틀링
+  bool _isSeeking = false;
+  Duration? _pendingSeekPosition;
   bool _isRotationCorrected = false;
   List<String> _timelineThumbnails = [];
 
@@ -108,6 +112,10 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
         ref
             .read(cropSegmentsProvider.notifier)
             .initWithFullRange(_controller.videoDuration);
+        // 미디어 세그먼트 초기화 (전체 영상, 단일 구간)
+        ref
+            .read(mediaSegmentsProvider.notifier)
+            .initWithFullRange(_controller.videoDuration);
         _controller.video.addListener(_onVideoPositionChanged);
 
         // 타임라인 썸네일 비동기 생성
@@ -140,8 +148,22 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
 
     if (pos != _currentPosition) {
       setState(() => _currentPosition = pos);
-      // 재생 중 구간 배속 실시간 적용
+      // 재생 중 삭제된 미디어 구간 스킵
       if (_controller.video.value.isPlaying) {
+        final skipTo = _skipDeletedSegment(pos);
+        if (skipTo != null) {
+          // 다음 유효 구간이 트림 끝을 넘으면 정지
+          if (skipTo >= _controller.endTrim) {
+            _controller.video.pause();
+            _controller.video.seekTo(_controller.endTrim);
+            setState(() => _currentPosition = _controller.endTrim);
+            return;
+          }
+          _controller.video.seekTo(skipTo);
+          setState(() => _currentPosition = skipTo);
+          return;
+        }
+        // 재생 중 구간 배속 실시간 적용
         _applyPlaybackSpeed(pos);
       }
     }
@@ -162,11 +184,29 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
     }
   }
 
-  /// 타임라인에서 특정 위치로 seek
+  /// 타임라인에서 특정 위치로 seek (쓰로틀링 적용)
   void _seekTo(Duration position) {
     _controller.video.pause();
-    _controller.video.seekTo(position);
     setState(() => _currentPosition = position);
+
+    if (_isSeeking) {
+      // 이전 seek이 아직 진행 중이면 대기열에 저장
+      _pendingSeekPosition = position;
+      return;
+    }
+
+    _isSeeking = true;
+    _controller.video.seekTo(position).then((_) {
+      if (!mounted) return;
+      _isSeeking = false;
+
+      // 대기 중인 seek이 있으면 마지막 위치로 이동
+      if (_pendingSeekPosition != null) {
+        final pending = _pendingSeekPosition!;
+        _pendingSeekPosition = null;
+        _seekTo(pending);
+      }
+    });
   }
 
   Widget _buildCroppedPreview() {
@@ -225,6 +265,43 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
   }
 
 
+  /// "완료" 버튼 — 삭제된 구간을 확정하고 선택 해제
+  void _applyMediaEdits() {
+    // 선택 해제
+    ref.read(selectedMediaSegmentProvider.notifier).state = null;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('미디어 편집이 적용되었습니다'),
+        behavior: SnackBarBehavior.floating,
+        duration: Duration(seconds: 2),
+      ),
+    );
+  }
+
+  /// 현재 위치가 삭제된 미디어 세그먼트에 있으면 다음 유효 구간으로 점프
+  Duration? _skipDeletedSegment(Duration pos) {
+    final segments = ref.read(mediaSegmentsProvider);
+    if (segments.isEmpty) return null;
+
+    // 현재 위치가 삭제된 세그먼트인지 확인
+    for (final seg in segments) {
+      if (seg.isDeleted && pos >= seg.start && pos < seg.end) {
+        // 다음 유효(삭제되지 않은) 세그먼트 찾기
+        final nextActive = segments
+            .where((s) => !s.isDeleted && s.start >= seg.end)
+            .toList();
+        if (nextActive.isNotEmpty) {
+          return nextActive.first.start;
+        }
+        // 뒤에 유효 구간이 없으면 재생 정지 위치 반환
+        final lastActive = segments.where((s) => !s.isDeleted).lastOrNull;
+        return lastActive?.end ?? pos;
+      }
+    }
+    return null; // 스킵 불필요
+  }
+
   void _togglePlayPause() {
     if (_controller.video.value.isPlaying) {
       _controller.video.pause();
@@ -259,37 +336,6 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
   void _withUndo(void Function() action) {
     ref.read(editorHistoryProvider.notifier).saveSnapshot();
     action();
-  }
-
-  // ─── 빠른 편집 액션 ────────────────────────────────
-  void _trimFromStart() {
-    _withUndo(() {
-      _controller.updateTrim(_currentPosition.inMilliseconds /
-          _controller.videoDuration.inMilliseconds, _controller.maxTrim);
-    });
-  }
-
-  void _trimFromHere() {
-    _withUndo(() {
-      _controller.updateTrim(_currentPosition.inMilliseconds /
-          _controller.videoDuration.inMilliseconds, _controller.maxTrim);
-    });
-  }
-
-  void _trimToHere() {
-    _withUndo(() {
-      _controller.updateTrim(_controller.minTrim,
-          _currentPosition.inMilliseconds /
-              _controller.videoDuration.inMilliseconds);
-    });
-  }
-
-  void _trimToEnd() {
-    _withUndo(() {
-      _controller.updateTrim(_controller.minTrim,
-          _currentPosition.inMilliseconds /
-              _controller.videoDuration.inMilliseconds);
-    });
   }
 
   void _splitAtCurrent() {
@@ -525,6 +571,8 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
             'rect=${s.cropRect} start=${s.start} end=${s.end}');
       }
 
+      final mediaSegs = ref.read(mediaSegmentsProvider);
+
       final result = await VideoExportService.exportVideo(
         inputPath: widget.videoPath,
         trimStart: _controller.startTrim,
@@ -533,6 +581,7 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
         cropSegments: cropSegs,
         overlays: overlays,
         subtitles: subtitles,
+        mediaSegments: mediaSegs,
         videoResolution: _correctedVideoDimension,
         quality: quality,
         onProgress: (progress) {
@@ -704,6 +753,7 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
     final segments = ref.watch(speedSegmentsProvider);
     ref.watch(overlaysProvider);
     ref.watch(cropSegmentsProvider);
+    ref.watch(mediaSegmentsProvider);
 
     if (!_isInitialized) {
       return const Scaffold(
@@ -1291,18 +1341,157 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
     );
   }
 
+  void _splitMediaAtCurrent() {
+    final segments = ref.read(mediaSegmentsProvider);
+    final pos = _currentPosition;
+    final canSplit = segments.any((seg) =>
+        !seg.isDeleted && pos > seg.start && pos < seg.end &&
+        (pos - seg.start).inMilliseconds >= 200 &&
+        (seg.end - pos).inMilliseconds >= 200);
+    if (!canSplit) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('이 위치에서 분할할 수 없습니다'),
+          behavior: SnackBarBehavior.floating,
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+    _withUndo(() {
+      ref.read(mediaSegmentsProvider.notifier).splitAt(pos);
+    });
+  }
+
+  void _deleteSelectedMediaSegment() {
+    final selectedId = ref.read(selectedMediaSegmentProvider);
+    if (selectedId == null) return;
+    _withUndo(() {
+      ref.read(mediaSegmentsProvider.notifier).toggleDelete(selectedId);
+    });
+  }
+
+  void _restoreSelectedMediaSegment() {
+    final selectedId = ref.read(selectedMediaSegmentProvider);
+    if (selectedId == null) return;
+    _withUndo(() {
+      ref.read(mediaSegmentsProvider.notifier).restore(selectedId);
+    });
+  }
+
   Widget _buildTrimActions() {
-    return Container(
+    final mediaSegments = ref.watch(mediaSegmentsProvider);
+    final selectedId = ref.watch(selectedMediaSegmentProvider);
+    final selectedSeg = selectedId != null
+        ? mediaSegments.where((s) => s.id == selectedId).firstOrNull
+        : null;
+
+    return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
-          _ActionPill('처음부터', Icons.first_page_rounded, _trimFromStart),
-          _ActionPill('여기부터', Icons.arrow_right_alt_rounded, _trimFromHere),
-          _ActionPill('분할', Icons.content_cut_rounded, _splitAtCurrent,
-              highlighted: true),
-          _ActionPill('여기까지', Icons.arrow_left_rounded, _trimToHere),
-          _ActionPill('끝까지', Icons.last_page_rounded, _trimToEnd),
+          // 분할 버튼 (항상 표시)
+          Material(
+            color: Colors.white.withOpacity(0.12),
+            borderRadius: BorderRadius.circular(14),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(14),
+              onTap: _splitMediaAtCurrent,
+              child: const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.content_cut, size: 14, color: Colors.white70),
+                    SizedBox(width: 4),
+                    Text('분할',
+                        style: TextStyle(
+                            color: Colors.white70,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600)),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 6),
+          // 세그먼트 선택 시: 삭제 또는 복구
+          if (selectedSeg != null) ...[
+            if (selectedSeg.isDeleted)
+              Material(
+                color: Colors.green.withOpacity(0.3),
+                borderRadius: BorderRadius.circular(14),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(14),
+                  onTap: _restoreSelectedMediaSegment,
+                  child: const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.restore, size: 14, color: Colors.white70),
+                        SizedBox(width: 4),
+                        Text('복구',
+                            style: TextStyle(
+                                color: Colors.white70,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600)),
+                      ],
+                    ),
+                  ),
+                ),
+              )
+            else
+              Material(
+                color: Colors.redAccent.withOpacity(0.3),
+                borderRadius: BorderRadius.circular(14),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(14),
+                  onTap: _deleteSelectedMediaSegment,
+                  child: const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.delete_outline, size: 14, color: Colors.white70),
+                        SizedBox(width: 4),
+                        Text('삭제',
+                            style: TextStyle(
+                                color: Colors.white70,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600)),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+          ],
+          const Spacer(),
+          // 완료 버튼 — 삭제된 구간이 있을 때만 표시
+          if (mediaSegments.any((s) => s.isDeleted))
+            Material(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(14),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(14),
+                onTap: _applyMediaEdits,
+                child: const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.check, size: 14, color: Colors.black),
+                      SizedBox(width: 4),
+                      Text('완료',
+                          style: TextStyle(
+                              color: Colors.black,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700)),
+                    ],
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );
@@ -1430,47 +1619,6 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
   }
 }
 
-/// 컨텍스트 액션 바의 개별 버튼
-class _ActionPill extends StatelessWidget {
-  final String label;
-  final IconData icon;
-  final VoidCallback? onTap;
-  final bool highlighted;
-
-  const _ActionPill(this.label, this.icon, this.onTap,
-      {this.highlighted = false});
-
-  @override
-  Widget build(BuildContext context) {
-    final color = onTap != null
-        ? (highlighted ? Colors.white : Colors.white70)
-        : Colors.white24;
-
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, color: color, size: 16),
-            const SizedBox(height: 2),
-            Text(
-              label,
-              style: TextStyle(
-                color: color,
-                fontSize: 9,
-                fontWeight: highlighted ? FontWeight.w700 : FontWeight.w500,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 /// 영상 프리뷰 위 오버레이 버튼 (재생/최대화)
 class _VideoOverlayButton extends StatelessWidget {
   final IconData icon;
@@ -1593,7 +1741,7 @@ class _ExportQualitySheet extends StatefulWidget {
 }
 
 class _ExportQualitySheetState extends State<_ExportQualitySheet> {
-  ExportQuality _selected = ExportQuality.fullHd;
+  ExportQuality _selected = ExportQuality.original;
 
   @override
   Widget build(BuildContext context) {
@@ -1720,7 +1868,9 @@ class _ExportQualitySheetState extends State<_ExportQualitySheet> {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      '${q.targetHeight}p · 선명한 화질',
+                      q.targetHeight == 0
+                          ? '촬영된 해상도 그대로 내보내기'
+                          : '${q.targetHeight}p · 선명한 화질',
                       style: const TextStyle(
                         fontSize: 12,
                         color: WandeungColors.textTertiary,

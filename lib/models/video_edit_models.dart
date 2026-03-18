@@ -126,12 +126,38 @@ class OverlayItem {
   }
 }
 
+/// 미디어 구간 — 분할/삭제 단위
+class MediaSegment {
+  final String id;
+  final Duration start;
+  final Duration end;
+  final bool isDeleted; // true면 최종 내보내기에서 제외
+
+  const MediaSegment({
+    required this.id,
+    required this.start,
+    required this.end,
+    this.isDeleted = false,
+  });
+
+  MediaSegment copyWith({Duration? start, Duration? end, bool? isDeleted}) {
+    return MediaSegment(
+      id: id,
+      start: start ?? this.start,
+      end: end ?? this.end,
+      isDeleted: isDeleted ?? this.isDeleted,
+    );
+  }
+
+  Duration get duration => end - start;
+}
+
 /// 내보내기 품질 설정
 enum ExportQuality {
-  /// 1080p (Full HD) — 일반 내보내기용
-  fullHd(1080, 20, '1080p');
+  /// 원본 화질 — 해상도 변환 없이 내보내기
+  original(0, 20, '원본 화질');
 
-  final int targetHeight;
+  final int targetHeight; // 0이면 원본 유지
   final int crf;
   final String label;
 

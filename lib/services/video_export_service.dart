@@ -44,6 +44,7 @@ class VideoExportService {
     List<CropSegment> cropSegments = const [],
     List<OverlayItem> overlays = const [],
     List<SubtitleItem> subtitles = const [],
+    List<MediaSegment> mediaSegments = const [],
     ExportQuality? quality,
   }) async {
     final appDir = await getApplicationDocumentsDirectory();
@@ -78,6 +79,7 @@ class VideoExportService {
       videoResolution: videoResolution,
       subtitles: subtitles,
       subtitleImagePaths: subtitleImagePaths,
+      mediaSegments: mediaSegments,
       targetHeight: quality?.targetHeight,
       crf: quality?.crf ?? 23,
     );

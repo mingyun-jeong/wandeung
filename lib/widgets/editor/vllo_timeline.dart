@@ -277,33 +277,190 @@ class _VlloTimelineState extends ConsumerState<VlloTimeline> {
 
   // ─── 미디어 트랙 ──────────────────────────────────────
   Widget _buildMediaTrack() {
+    final mediaSegments = ref.watch(mediaSegmentsProvider);
+    final selectedId = ref.watch(selectedMediaSegmentProvider);
+    final selectedTab = ref.watch(selectedEditorTabProvider);
+
+    // 세그먼트가 아직 초기화되지 않았으면 기존 썸네일 Row로 폴백
+    if (mediaSegments.isEmpty) {
+      return SizedBox(
+        height: _mediaTrackHeight,
+        width: _totalContentWidth,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(4),
+          child: widget.thumbnailPaths.isEmpty
+              ? Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                )
+              : Row(
+                  children: widget.thumbnailPaths.map((path) {
+                    return Expanded(
+                      child: Image.file(
+                        File(path),
+                        fit: BoxFit.cover,
+                        height: _mediaTrackHeight,
+                        errorBuilder: (_, __, ___) => Container(
+                          color: Colors.white.withOpacity(0.05),
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+        ),
+      );
+    }
+
+    final effectiveMs = widget.effectiveDuration.inMilliseconds.toDouble();
+    if (effectiveMs <= 0) return const SizedBox.shrink();
+
     return SizedBox(
       height: _mediaTrackHeight,
       width: _totalContentWidth,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(4),
-        child: widget.thumbnailPaths.isEmpty
-            ? Container(
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.08),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-              )
-            : Row(
-                children: widget.thumbnailPaths.map((path) {
-                  return Expanded(
-                    child: Image.file(
-                      File(path),
-                      fit: BoxFit.cover,
-                      height: _mediaTrackHeight,
-                      errorBuilder: (_, __, ___) => Container(
-                        color: Colors.white.withOpacity(0.05),
-                      ),
+      child: Stack(
+        children: [
+          // 배경
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.04),
+              borderRadius: BorderRadius.circular(4),
+            ),
+          ),
+          // 각 세그먼트 블록
+          ...mediaSegments.where((seg) {
+            return seg.end > widget.effectiveStart && seg.start < _effectiveEnd;
+          }).map((seg) {
+            final cStart = seg.start < widget.effectiveStart
+                ? widget.effectiveStart
+                : seg.start;
+            final cEnd =
+                seg.end > _effectiveEnd ? _effectiveEnd : seg.end;
+            final left = _timeToX(cStart);
+            final width = (_timeToX(cEnd) - left).clamp(4.0, _totalContentWidth);
+            final isSelected = seg.id == selectedId;
+
+            // 이 세그먼트에 해당하는 썸네일 인덱스 범위 계산
+            final totalDurMs = widget.effectiveDuration.inMilliseconds;
+            final thumbCount = widget.thumbnailPaths.length;
+
+            return Positioned(
+              left: left,
+              width: width,
+              top: 0,
+              bottom: 0,
+              child: GestureDetector(
+                onTap: () {
+                  // 미디어 탭으로 자동 전환
+                  if (selectedTab != EditorTab.trim) {
+                    ref.read(selectedEditorTabProvider.notifier).state =
+                        EditorTab.trim;
+                  }
+                  clearOtherSelections(ref, except: EditorTab.trim);
+                  ref.read(selectedMediaSegmentProvider.notifier).state =
+                      isSelected ? null : seg.id;
+                },
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 150),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(4),
+                    border: isSelected
+                        ? Border.all(color: const Color(0xFFFFD600), width: 2)
+                        : Border.all(color: Colors.white.withOpacity(0.1), width: 0.5),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(isSelected ? 2 : 4),
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        // 썸네일 배경
+                        if (widget.thumbnailPaths.isNotEmpty)
+                          _buildSegmentThumbnails(
+                            seg, totalDurMs, thumbCount,
+                          )
+                        else
+                          Container(color: Colors.white.withOpacity(0.08)),
+                        // 삭제된 세그먼트 오버레이
+                        if (seg.isDeleted)
+                          Container(
+                            color: Colors.black.withOpacity(0.6),
+                            child: const Center(
+                              child: Icon(
+                                Icons.close_rounded,
+                                color: Colors.redAccent,
+                                size: 20,
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
-                  );
-                }).toList(),
+                  ),
+                ),
               ),
+            );
+          }),
+          // 세그먼트 경계선
+          ...mediaSegments.asMap().entries.where((e) {
+            return e.key < mediaSegments.length - 1 &&
+                mediaSegments[e.key].end > widget.effectiveStart &&
+                mediaSegments[e.key].end < _effectiveEnd;
+          }).map((e) {
+            final boundary = mediaSegments[e.key].end;
+            final left = _timeToX(boundary);
+            return Positioned(
+              left: left - 1,
+              width: 2,
+              top: 0,
+              bottom: 0,
+              child: IgnorePointer(
+                child: Container(
+                  color: Colors.white.withOpacity(0.4),
+                ),
+              ),
+            );
+          }),
+        ],
       ),
+    );
+  }
+
+  /// 세그먼트 범위에 해당하는 썸네일들을 렌더링
+  Widget _buildSegmentThumbnails(
+    MediaSegment seg,
+    int totalDurMs,
+    int thumbCount,
+  ) {
+    if (thumbCount == 0 || totalDurMs <= 0) {
+      return Container(color: Colors.white.withOpacity(0.08));
+    }
+
+    // 세그먼트가 커버하는 썸네일 인덱스 범위
+    final startRatio =
+        (seg.start - widget.effectiveStart).inMilliseconds / totalDurMs;
+    final endRatio =
+        (seg.end - widget.effectiveStart).inMilliseconds / totalDurMs;
+    final startIdx = (startRatio * thumbCount).floor().clamp(0, thumbCount - 1);
+    final endIdx = (endRatio * thumbCount).ceil().clamp(startIdx + 1, thumbCount);
+    final segThumbs = widget.thumbnailPaths.sublist(startIdx, endIdx);
+
+    if (segThumbs.isEmpty) {
+      return Container(color: Colors.white.withOpacity(0.08));
+    }
+
+    return Row(
+      children: segThumbs.map((path) {
+        return Expanded(
+          child: Image.file(
+            File(path),
+            fit: BoxFit.cover,
+            height: _mediaTrackHeight,
+            errorBuilder: (_, __, ___) => Container(
+              color: Colors.white.withOpacity(0.05),
+            ),
+          ),
+        );
+      }).toList(),
     );
   }
 
@@ -313,7 +470,7 @@ class _VlloTimelineState extends ConsumerState<VlloTimeline> {
       {required bool isActive}) {
     final rawSelectedIdx = ref.watch(selectedSpeedSegmentProvider);
     final selectedIdx =
-        rawSelectedIdx ?? (segments.length == 1 ? 0 : null);
+        rawSelectedIdx ?? (isActive && segments.length == 1 ? 0 : null);
 
     final visible = <(int, SpeedSegment)>[];
     for (int i = 0; i < segments.length; i++) {
@@ -354,6 +511,7 @@ class _VlloTimelineState extends ConsumerState<VlloTimeline> {
               bottom: 2,
               child: GestureDetector(
                 onTap: () {
+                  clearOtherSelections(ref, except: EditorTab.speed);
                   ref.read(selectedSpeedSegmentProvider.notifier).state =
                       (selectedIdx == i) ? null : i;
                 },
@@ -362,7 +520,7 @@ class _VlloTimelineState extends ConsumerState<VlloTimeline> {
                     color: _speedColor(seg.speed),
                     borderRadius: BorderRadius.circular(3),
                     border: isSelected
-                        ? Border.all(color: Colors.white, width: 1.5)
+                        ? Border.all(color: const Color(0xFFFFD600), width: 1.5)
                         : null,
                   ),
                   alignment: Alignment.center,
@@ -479,6 +637,7 @@ class _VlloTimelineState extends ConsumerState<VlloTimeline> {
                 color: isSelected ? Colors.blue : Colors.amber,
                 isSelected: isSelected,
                 onTap: () {
+                  clearOtherSelections(ref, except: EditorTab.text);
                   ref.read(selectedSubtitleIdProvider.notifier).state =
                       sub.id;
                   widget.onEditText(sub);
@@ -543,6 +702,7 @@ class _VlloTimelineState extends ConsumerState<VlloTimeline> {
   Widget _buildStickerTrack(
       List<OverlayItem> overlays, double effectiveMs,
       {required bool isActive}) {
+    final selectedStickerIdRaw = ref.watch(selectedOverlayIdProvider);
     final totalMs = _effectiveEnd.inMilliseconds;
     final visible = overlays.where((item) {
       final startMs = item.startTime?.inMilliseconds ?? 0;
@@ -595,8 +755,12 @@ class _VlloTimelineState extends ConsumerState<VlloTimeline> {
               child: _TimelineBlock(
                 label: item.text,
                 color: item.backgroundColor ?? Colors.purple,
-                isSelected: false,
-                onTap: () {},
+                isSelected: item.id == selectedStickerIdRaw,
+                onTap: () {
+                  clearOtherSelections(ref, except: EditorTab.sticker);
+                  ref.read(selectedOverlayIdProvider.notifier).state =
+                      item.id == selectedStickerIdRaw ? null : item.id;
+                },
                 onStartDrag: (dx) {
                   final deltaMs =
                       (dx / _pixelsPerSecond * 1000).round();
@@ -686,7 +850,7 @@ class _TimelineBlock extends StatelessWidget {
                 color: color.withOpacity(isSelected ? 0.8 : 0.6),
                 borderRadius: BorderRadius.circular(3),
                 border: isSelected
-                    ? Border.all(color: Colors.white, width: 1.5)
+                    ? Border.all(color: const Color(0xFFFFD600), width: 1.5)
                     : null,
               ),
               alignment: Alignment.center,

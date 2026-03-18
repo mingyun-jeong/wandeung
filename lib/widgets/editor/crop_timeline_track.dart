@@ -20,6 +20,7 @@ class CropTimelineTrack extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final segments = ref.watch(cropSegmentsProvider);
     final selectedIdx = ref.watch(selectedCropSegmentProvider);
+    final selectedTab = ref.watch(selectedEditorTabProvider);
     final totalMs = totalDuration.inMilliseconds.toDouble();
 
     if (segments.isEmpty || totalMs <= 0) {
@@ -44,7 +45,7 @@ class CropTimelineTrack extends ConsumerWidget {
             final leftFrac = seg.start.inMilliseconds / totalMs;
             final widthFrac = seg.originalDuration.inMilliseconds / totalMs;
             final isSelected = i == selectedIdx ||
-                (selectedIdx == null && segments.length == 1);
+                (selectedTab == EditorTab.zoom && selectedIdx == null && segments.length == 1);
             final hasCrop = seg.hasCrop;
 
             return Positioned(
@@ -55,6 +56,7 @@ class CropTimelineTrack extends ConsumerWidget {
               child: GestureDetector(
                 behavior: HitTestBehavior.opaque,
                 onTap: () {
+                  clearOtherSelections(ref, except: EditorTab.zoom);
                   ref.read(selectedCropSegmentProvider.notifier).state =
                       (selectedIdx == i) ? null : i;
                 },
@@ -66,7 +68,7 @@ class CropTimelineTrack extends ConsumerWidget {
                         .withOpacity(isSelected ? 0.9 : 0.5),
                     borderRadius: BorderRadius.circular(3),
                     border: isSelected
-                        ? Border.all(color: Colors.white, width: 1.5)
+                        ? Border.all(color: const Color(0xFFFFD600), width: 1.5)
                         : null,
                   ),
                   alignment: Alignment.center,

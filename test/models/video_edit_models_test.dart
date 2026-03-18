@@ -3,11 +3,11 @@ import 'package:cling/models/video_edit_models.dart';
 
 void main() {
   group('ExportQuality', () {
-    test('only has fullHd option (4K removed)', () {
+    test('only has original option', () {
       expect(ExportQuality.values.length, 1);
-      expect(ExportQuality.fullHd.targetHeight, 1080);
-      expect(ExportQuality.fullHd.crf, 20);
-      expect(ExportQuality.fullHd.label, '1080p');
+      expect(ExportQuality.original.targetHeight, 0);
+      expect(ExportQuality.original.crf, 20);
+      expect(ExportQuality.original.label, '원본 화질');
     });
   });
 

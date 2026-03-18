@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:wandeung/models/climbing_record.dart';
+import 'package:cling/models/climbing_record.dart';
 
 void main() {
   group('ClimbingRecord', () {

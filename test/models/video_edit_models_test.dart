@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:wandeung/models/video_edit_models.dart';
+import 'package:cling/models/video_edit_models.dart';
 
 void main() {
   group('ExportQuality', () {

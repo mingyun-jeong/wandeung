@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:wandeung/models/user_subscription.dart';
+import 'package:cling/models/user_subscription.dart';
 
 void main() {
   group('UserSubscription', () {

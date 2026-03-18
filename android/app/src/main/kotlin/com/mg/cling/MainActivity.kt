@@ -1,4 +1,4 @@
-package com.mg.wandeung
+package com.mg.cling
 
 import android.util.Log
 import io.flutter.embedding.android.FlutterActivity

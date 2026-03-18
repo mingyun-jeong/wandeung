@@ -1,8 +1,8 @@
 import 'dart:ui';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:wandeung/models/subtitle_item.dart';
-import 'package:wandeung/models/video_edit_models.dart';
-import 'package:wandeung/services/ffmpeg_command_builder.dart';
+import 'package:cling/models/subtitle_item.dart';
+import 'package:cling/models/video_edit_models.dart';
+import 'package:cling/services/ffmpeg_command_builder.dart';
 
 /// 인수 리스트를 하나의 문자열로 합쳐서 내용 검증에 사용
 String _joinArgs(List<String> args) => args.join(' ');

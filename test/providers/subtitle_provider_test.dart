@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:wandeung/models/subtitle_item.dart';
-import 'package:wandeung/providers/subtitle_provider.dart';
+import 'package:cling/models/subtitle_item.dart';
+import 'package:cling/providers/subtitle_provider.dart';
 
 void main() {
   late ProviderContainer container;

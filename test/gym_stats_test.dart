@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:wandeung/models/gym_stats.dart';
+import 'package:cling/models/gym_stats.dart';
 
 void main() {
   group('GymStats.fromMap', () {

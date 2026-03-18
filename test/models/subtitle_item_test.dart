@@ -1,6 +1,6 @@
 import 'dart:ui';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:wandeung/models/subtitle_item.dart';
+import 'package:cling/models/subtitle_item.dart';
 
 void main() {
   group('SubtitleItem', () {

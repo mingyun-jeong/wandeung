@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../app.dart';
+import '../models/climbing_gym.dart';
 import '../models/gym_color_scale.dart';
 import '../models/gym_stats.dart';
 import '../providers/favorite_gym_provider.dart';
@@ -27,10 +28,14 @@ class GymStatsTab extends ConsumerWidget {
 
         return Column(
           children: [
-            // 검색바 (고정)
-            _GymSearchBar(
-              gymName: selectedGym?.name,
-              onTap: () => _openGymSearch(context, ref),
+            // 암장 선택 (고정)
+            _GymPickerBar(
+              gyms: gyms,
+              selectedGymId: gymId,
+              onChanged: (id) => ref
+                  .read(selectedGymForStatsProvider.notifier)
+                  .state = id,
+              onSearch: () => _openGymSearch(context, ref),
             ),
 
             // 콘텐츠
@@ -113,58 +118,103 @@ class GymStatsTab extends ConsumerWidget {
   }
 }
 
-// ─── 검색바 (고정) ────────────────────────────────────────────────────────────
+// ─── 암장 선택 바 (고정) ──────────────────────────────────────────────────────
 
-class _GymSearchBar extends StatelessWidget {
-  final String? gymName;
-  final VoidCallback onTap;
-  const _GymSearchBar({this.gymName, required this.onTap});
+class _GymPickerBar extends StatelessWidget {
+  final List<ClimbingGym> gyms;
+  final String? selectedGymId;
+  final ValueChanged<String?> onChanged;
+  final VoidCallback onSearch;
+  const _GymPickerBar({
+    required this.gyms,
+    required this.selectedGymId,
+    required this.onChanged,
+    required this.onSearch,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-      child: GestureDetector(
-        onTap: onTap,
-        child: Container(
-          padding:
-              const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: WandeungColors.border),
-          ),
-          child: Row(
-            children: [
-              const Icon(
-                Icons.search_rounded,
-                size: 20,
-                color: WandeungColors.textTertiary,
+      child: Row(
+        children: [
+          // 셀렉트박스
+          Expanded(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: WandeungColors.border),
               ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  gymName ?? '암장 검색',
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: gymName != null
-                        ? FontWeight.w600
-                        : FontWeight.w400,
-                    color: gymName != null
-                        ? WandeungColors.textPrimary
-                        : WandeungColors.textTertiary,
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<String>(
+                  value: gyms.any((g) => g.id == selectedGymId)
+                      ? selectedGymId
+                      : null,
+                  hint: const Text(
+                    '내 암장 선택',
+                    style: TextStyle(
+                      fontSize: 15,
+                      color: WandeungColors.textTertiary,
+                    ),
                   ),
+                  isExpanded: true,
+                  icon: const Icon(
+                    Icons.keyboard_arrow_down_rounded,
+                    color: WandeungColors.textTertiary,
+                  ),
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: WandeungColors.textPrimary,
+                  ),
+                  items: gyms
+                      .where((g) => g.id != null)
+                      .map((gym) => DropdownMenuItem(
+                            value: gym.id,
+                            child: Row(
+                              children: [
+                                const Icon(
+                                  Icons.location_on_outlined,
+                                  size: 16,
+                                  color: WandeungColors.accent,
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    gym.name,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ))
+                      .toList(),
+                  onChanged: onChanged,
                 ),
               ),
-              if (gymName != null)
-                const Icon(
-                  Icons.swap_horiz_rounded,
-                  size: 18,
-                  color: WandeungColors.textTertiary,
-                ),
-            ],
+            ),
           ),
-        ),
+          const SizedBox(width: 10),
+          // 검색 버튼
+          GestureDetector(
+            onTap: onSearch,
+            child: Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: WandeungColors.accent,
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: const Icon(
+                Icons.search_rounded,
+                color: Colors.white,
+                size: 22,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -1,20 +1,20 @@
-import 'dart:math';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../app.dart';
+import '../config/r2_config.dart';
 import '../models/climbing_gym.dart';
-import '../models/gym_color_scale.dart';
+import '../models/climbing_record.dart';
 import '../models/gym_setting_schedule.dart';
 import '../models/user_climbing_stats.dart';
 import '../providers/camera_settings_provider.dart';
-import '../providers/gym_color_scale_provider.dart';
 import '../providers/record_provider.dart';
 import '../providers/setting_schedule_provider.dart';
 import '../screens/gym_detail_screen.dart';
-import '../screens/gym_grades_tab_screen.dart';
+import '../screens/record_save_screen.dart';
+import '../screens/video_playback_screen.dart';
 import '../utils/constants.dart';
-import '../widgets/record_card.dart';
 import '../widgets/wandeung_app_bar.dart';
 
 class HomeTabScreen extends ConsumerWidget {
@@ -25,7 +25,6 @@ class HomeTabScreen extends ConsumerWidget {
     final statsAsync = ref.watch(userStatsProvider);
     final recentAsync = ref.watch(recentRecordsProvider);
     final gymsAsync = ref.watch(recentGymsProvider);
-    final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
       appBar: const WandeungAppBar(),
@@ -35,17 +34,16 @@ class HomeTabScreen extends ConsumerWidget {
           ref.invalidate(userStatsProvider);
           ref.invalidate(recentRecordsProvider);
           ref.invalidate(recentGymsProvider);
-          ref.invalidate(allColorScalesProvider);
           ref.invalidate(weeklySettingSchedulesProvider);
         },
         child: CustomScrollView(
           slivers: [
-            // 요약 통계 (streak + 완등률)
+            // [1] 히어로 통계 카드
             SliverToBoxAdapter(
               child: statsAsync.when(
-                data: (stats) => _StatsSection(stats: stats),
+                data: (stats) => _HeroStatsCard(stats: stats),
                 loading: () => const SizedBox(
-                  height: 200,
+                  height: 260,
                   child: Center(child: CircularProgressIndicator()),
                 ),
                 error: (e, _) => const Padding(
@@ -55,54 +53,35 @@ class HomeTabScreen extends ConsumerWidget {
               ),
             ),
 
-            // 주간 활동 히트맵
+            // [2] 퀵 액션 (촬영 + 최근 암장)
             SliverToBoxAdapter(
-              child: statsAsync.whenOrNull(
-                    data: (stats) => const _WeeklyHeatmap(),
-                  ) ??
-                  const SizedBox.shrink(),
+              child: _QuickActions(
+                gyms: gymsAsync.valueOrNull ?? [],
+              ),
             ),
 
-            // 이번 주 세팅일정
+            // [3] 이번 주 세팅일정
             SliverToBoxAdapter(
               child: ref.watch(weeklySettingSchedulesProvider).whenOrNull(
-                    data: (entries) =>
-                        entries.isNotEmpty ? _WeeklySettingSection(entries: entries) : null,
-                  ) ??
+                        data: (entries) => entries.isNotEmpty
+                            ? _WeeklySettingSection(entries: entries)
+                            : null,
+                      ) ??
                   const SizedBox.shrink(),
             ),
 
-            // 최근 방문 암장
-            SliverToBoxAdapter(
-              child: gymsAsync.whenOrNull(
-                    data: (gyms) =>
-                        gyms.isNotEmpty ? _RecentGymsSection(gyms: gyms) : null,
-                  ) ??
-                  const SizedBox.shrink(),
-            ),
-
-            // 난이도 미리보기 (랜덤 1개)
-            SliverToBoxAdapter(
-              child: ref.watch(allColorScalesProvider).whenOrNull(
-                    data: (scales) => scales.isNotEmpty
-                        ? _RandomGradeSection(scales: scales)
-                        : null,
-                  ) ??
-                  const SizedBox.shrink(),
-            ),
-
-            // 최근 기록 헤더
+            // [4] 최근 기록 헤더
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 20, 12, 12),
+                padding: const EdgeInsets.fromLTRB(20, 24, 12, 0),
                 child: Row(
                   children: [
-                    Text(
+                    const Text(
                       '최근 기록',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w700,
-                        color: colorScheme.onSurface,
+                        color: WandeungColors.textPrimary,
                       ),
                     ),
                     const Spacer(),
@@ -122,7 +101,7 @@ class HomeTabScreen extends ConsumerWidget {
                                     tapTargetSize:
                                         MaterialTapTargetSize.shrinkWrap,
                                   ),
-                                  child: Row(
+                                  child: const Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
                                       Text(
@@ -130,13 +109,13 @@ class HomeTabScreen extends ConsumerWidget {
                                         style: TextStyle(
                                           fontSize: 13,
                                           fontWeight: FontWeight.w500,
-                                          color: colorScheme.primary,
+                                          color: WandeungColors.accent,
                                         ),
                                       ),
                                       Icon(
                                         Icons.chevron_right_rounded,
                                         size: 18,
-                                        color: colorScheme.primary,
+                                        color: WandeungColors.accent,
                                       ),
                                     ],
                                   ),
@@ -149,71 +128,26 @@ class HomeTabScreen extends ConsumerWidget {
               ),
             ),
 
-            // 최근 기록 리스트
+            // [5] 최근 기록 그리드
             recentAsync.when(
               data: (records) {
                 if (records.isEmpty) {
-                  return SliverToBoxAdapter(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 48),
-                      child: Center(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Container(
-                              width: 72,
-                              height: 72,
-                              decoration: BoxDecoration(
-                                color: WandeungColors.accent.withOpacity(0.08),
-                                shape: BoxShape.circle,
-                              ),
-                              child: Icon(
-                                Icons.terrain_outlined,
-                                size: 36,
-                                color: WandeungColors.accent.withOpacity(0.4),
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            const Text(
-                              '아직 기록이 없어요',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                color: WandeungColors.textSecondary,
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            const Text(
-                              '첫 등반을 기록해보세요!',
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: WandeungColors.textTertiary,
-                              ),
-                            ),
-                            const SizedBox(height: 20),
-                            FilledButton.icon(
-                              onPressed: () {
-                                ref.read(bottomNavIndexProvider.notifier).state = 2;
-                              },
-                              icon: const Icon(Icons.videocam_rounded, size: 18),
-                              label: const Text('촬영하기'),
-                              style: FilledButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 24, vertical: 12),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  );
+                  return SliverToBoxAdapter(child: _EmptyRecords());
                 }
                 return SliverPadding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  sliver: SliverList.separated(
-                    itemCount: records.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 2),
-                    itemBuilder: (_, i) => RecordCard(record: records[i]),
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                  sliver: SliverGrid(
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2,
+                      mainAxisSpacing: 10,
+                      crossAxisSpacing: 10,
+                      childAspectRatio: 0.78,
+                    ),
+                    delegate: SliverChildBuilderDelegate(
+                      (context, i) => _RecordGridCard(record: records[i]),
+                      childCount: records.length,
+                    ),
                   ),
                 );
               },
@@ -232,9 +166,7 @@ class HomeTabScreen extends ConsumerWidget {
             ),
 
             // 하단 여백
-            const SliverToBoxAdapter(
-              child: SizedBox(height: 24),
-            ),
+            const SliverToBoxAdapter(child: SizedBox(height: 32)),
           ],
         ),
       ),
@@ -242,78 +174,184 @@ class HomeTabScreen extends ConsumerWidget {
   }
 }
 
-// ─── 주간 활동 히트맵 ─────────────────────────────────────────────────────────
+// ─── [1] 히어로 통계 카드 ─────────────────────────────────────────────────────
 
-class _WeeklyHeatmap extends ConsumerWidget {
-  const _WeeklyHeatmap();
+class _HeroStatsCard extends ConsumerWidget {
+  final UserClimbingStats stats;
+  const _HeroStatsCard({required this.stats});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final completionPct = stats.completionRate;
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final monday = today.subtract(Duration(days: today.weekday - 1));
-
     final dayLabels = ['월', '화', '수', '목', '금', '토', '일'];
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: WandeungColors.border),
+          color: WandeungColors.primary,
+          borderRadius: BorderRadius.circular(20),
         ),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Row(
+            // 스트릭 + 기간
+            Row(
               children: [
-                Icon(Icons.local_fire_department_rounded,
-                    size: 16, color: WandeungColors.accent),
-                SizedBox(width: 6),
+                if (stats.currentStreak > 0) ...[
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: WandeungColors.accent.withOpacity(0.25),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.local_fire_department_rounded,
+                          size: 14,
+                          color: WandeungColors.accentLight,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${stats.currentStreak}일 연속',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: WandeungColors.accentLight,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+                const Spacer(),
                 Text(
-                  '이번 주 활동',
+                  '최근 30일',
                   style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: WandeungColors.textPrimary,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.white.withOpacity(0.5),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 12),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: List.generate(7, (i) {
-                final day = monday.add(Duration(days: i));
-                final isToday = day.isAtSameMomentAs(today);
-                final isFuture = day.isAfter(today);
+            const SizedBox(height: 20),
 
-                return ref.watch(recordsByDateProvider(day)).when(
-                      data: (records) {
-                        final hasRecord = records.isNotEmpty;
-                        return _DayDot(
+            // 원형 프로그레스 + 좌우 수치
+            Row(
+              children: [
+                // 완등 수치
+                Expanded(
+                  child: _StatColumn(
+                    value: '${stats.totalCompleted}',
+                    label: '완등',
+                    color: WandeungColors.success,
+                  ),
+                ),
+
+                // 원형 완등률
+                SizedBox(
+                  width: 100,
+                  height: 100,
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      SizedBox(
+                        width: 88,
+                        height: 88,
+                        child: CircularProgressIndicator(
+                          value: stats.totalClimbs > 0
+                              ? stats.totalCompleted / stats.totalClimbs
+                              : 0,
+                          strokeWidth: 7,
+                          backgroundColor: Colors.white.withOpacity(0.1),
+                          valueColor: const AlwaysStoppedAnimation<Color>(
+                            WandeungColors.success,
+                          ),
+                          strokeCap: StrokeCap.round,
+                        ),
+                      ),
+                      Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            '${completionPct.toStringAsFixed(0)}%',
+                            style: const TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.white,
+                              height: 1,
+                              letterSpacing: -1,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            '완등률',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: Colors.white.withOpacity(0.5),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+
+                // 도전중 수치
+                Expanded(
+                  child: _StatColumn(
+                    value: '${stats.totalInProgress}',
+                    label: '도전중',
+                    color: WandeungColors.inProgress,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+
+            // 주간 히트맵 (통합)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.08),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: List.generate(7, (i) {
+                  final day = monday.add(Duration(days: i));
+                  final isToday = day.isAtSameMomentAs(today);
+                  final isFuture = day.isAfter(today);
+
+                  return ref.watch(recordsByDateProvider(day)).when(
+                        data: (records) => _HeatmapDot(
                           label: dayLabels[i],
-                          hasRecord: hasRecord,
+                          hasRecord: records.isNotEmpty,
                           isToday: isToday,
                           isFuture: isFuture,
-                        );
-                      },
-                      loading: () => _DayDot(
-                        label: dayLabels[i],
-                        hasRecord: false,
-                        isToday: isToday,
-                        isFuture: isFuture,
-                      ),
-                      error: (_, __) => _DayDot(
-                        label: dayLabels[i],
-                        hasRecord: false,
-                        isToday: isToday,
-                        isFuture: isFuture,
-                      ),
-                    );
-              }),
+                        ),
+                        loading: () => _HeatmapDot(
+                          label: dayLabels[i],
+                          hasRecord: false,
+                          isToday: isToday,
+                          isFuture: isFuture,
+                        ),
+                        error: (_, __) => _HeatmapDot(
+                          label: dayLabels[i],
+                          hasRecord: false,
+                          isToday: isToday,
+                          isFuture: isFuture,
+                        ),
+                      );
+                }),
+              ),
             ),
           ],
         ),
@@ -322,13 +360,65 @@ class _WeeklyHeatmap extends ConsumerWidget {
   }
 }
 
-class _DayDot extends StatelessWidget {
+class _StatColumn extends StatelessWidget {
+  final String value;
+  final String label;
+  final Color color;
+  const _StatColumn({
+    required this.value,
+    required this.label,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Text(
+          value,
+          style: const TextStyle(
+            fontSize: 28,
+            fontWeight: FontWeight.w800,
+            color: Colors.white,
+            height: 1,
+            letterSpacing: -1,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 8,
+              height: 8,
+              decoration: BoxDecoration(
+                color: color,
+                shape: BoxShape.circle,
+              ),
+            ),
+            const SizedBox(width: 4),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                color: Colors.white.withOpacity(0.6),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _HeatmapDot extends StatelessWidget {
   final String label;
   final bool hasRecord;
   final bool isToday;
   final bool isFuture;
-
-  const _DayDot({
+  const _HeatmapDot({
     required this.label,
     required this.hasRecord,
     required this.isToday,
@@ -345,27 +435,30 @@ class _DayDot extends StatelessWidget {
             fontSize: 11,
             fontWeight: isToday ? FontWeight.w700 : FontWeight.w500,
             color: isToday
-                ? WandeungColors.accent
-                : WandeungColors.textTertiary,
+                ? WandeungColors.accentLight
+                : Colors.white.withOpacity(0.4),
           ),
         ),
         const SizedBox(height: 6),
         Container(
-          width: 28,
-          height: 28,
+          width: 26,
+          height: 26,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: hasRecord
-                ? WandeungColors.accent
+                ? WandeungColors.success
                 : isFuture
                     ? Colors.transparent
-                    : WandeungColors.border.withOpacity(0.5),
+                    : Colors.white.withOpacity(0.08),
             border: isToday && !hasRecord
-                ? Border.all(color: WandeungColors.accent, width: 2)
+                ? Border.all(
+                    color: WandeungColors.accentLight.withOpacity(0.6),
+                    width: 1.5)
                 : null,
           ),
           child: hasRecord
-              ? const Icon(Icons.check_rounded, size: 16, color: Colors.white)
+              ? const Icon(Icons.check_rounded,
+                  size: 14, color: Colors.white)
               : null,
         ),
       ],
@@ -373,18 +466,113 @@ class _DayDot extends StatelessWidget {
   }
 }
 
-// ─── 이번 주 세팅일정 ─────────────────────────────────────────────────────────
+// ─── [2] 퀵 액션 ─────────────────────────────────────────────────────────────
+
+class _QuickActions extends ConsumerWidget {
+  final List<ClimbingGym> gyms;
+  const _QuickActions({required this.gyms});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return SizedBox(
+      height: 44,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        children: [
+          // 촬영 CTA
+          GestureDetector(
+            onTap: () {
+              ref.read(bottomNavIndexProvider.notifier).state = 2;
+            },
+            child: Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              decoration: BoxDecoration(
+                color: WandeungColors.accent,
+                borderRadius: BorderRadius.circular(22),
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.videocam_rounded,
+                      size: 18, color: Colors.white),
+                  SizedBox(width: 6),
+                  Text(
+                    '촬영하기',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // 최근 암장 칩들
+          ...gyms.map((gym) => Padding(
+                padding: const EdgeInsets.only(left: 8),
+                child: GestureDetector(
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => GymDetailScreen(gym: gym),
+                      ),
+                    );
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(22),
+                      border: Border.all(color: WandeungColors.border),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.location_on_outlined,
+                          size: 15,
+                          color: WandeungColors.accent,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          gym.name,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                            color: WandeungColors.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              )),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── [3] 이번 주 세팅일정 ─────────────────────────────────────────────────────
 
 class _WeeklySettingSection extends ConsumerWidget {
-  final List<({GymSettingSchedule schedule, List<SettingSector> sectors, String dateStr})> entries;
+  final List<
+      ({
+        GymSettingSchedule schedule,
+        List<SettingSector> sectors,
+        String dateStr,
+      })> entries;
   const _WeeklySettingSection({required this.entries});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final colorScheme = Theme.of(context).colorScheme;
-
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+      padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -392,12 +580,12 @@ class _WeeklySettingSection extends ConsumerWidget {
             padding: const EdgeInsets.only(left: 4, bottom: 10),
             child: Row(
               children: [
-                Text(
+                const Text(
                   '이번 주 세팅일정',
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w700,
-                    color: colorScheme.onSurface,
+                    color: WandeungColors.textPrimary,
                   ),
                 ),
                 const Spacer(),
@@ -410,7 +598,7 @@ class _WeeklySettingSection extends ConsumerWidget {
                     minimumSize: Size.zero,
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   ),
-                  child: Row(
+                  child: const Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
@@ -418,13 +606,13 @@ class _WeeklySettingSection extends ConsumerWidget {
                         style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w500,
-                          color: colorScheme.primary,
+                          color: WandeungColors.accent,
                         ),
                       ),
                       Icon(
                         Icons.chevron_right_rounded,
                         size: 18,
-                        color: colorScheme.primary,
+                        color: WandeungColors.accent,
                       ),
                     ],
                   ),
@@ -461,7 +649,8 @@ class _WeeklySettingCard extends StatelessWidget {
 
   bool _isToday(String dateStr) {
     final now = DateTime.now();
-    final today = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+    final today =
+        '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
     return dateStr == today;
   }
 
@@ -478,7 +667,9 @@ class _WeeklySettingCard extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: isToday ? WandeungColors.accent.withOpacity(0.4) : WandeungColors.border,
+          color: isToday
+              ? WandeungColors.accent.withOpacity(0.4)
+              : WandeungColors.border,
         ),
       ),
       child: Row(
@@ -496,7 +687,9 @@ class _WeeklySettingCard extends StatelessWidget {
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
-                color: isToday ? WandeungColors.accent : WandeungColors.textSecondary,
+                color: isToday
+                    ? WandeungColors.accent
+                    : WandeungColors.textSecondary,
               ),
             ),
           ),
@@ -532,462 +725,212 @@ class _WeeklySettingCard extends StatelessWidget {
   }
 }
 
-// ─── 최근 방문 암장 ───────────────────────────────────────────────────────────
+// ─── [4] 기록 그리드 카드 ─────────────────────────────────────────────────────
 
-class _RecentGymsSection extends StatefulWidget {
-  final List<ClimbingGym> gyms;
-  const _RecentGymsSection({required this.gyms});
-
-  @override
-  State<_RecentGymsSection> createState() => _RecentGymsSectionState();
-}
-
-class _RecentGymsSectionState extends State<_RecentGymsSection>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _controller;
-  final GlobalKey _contentKey = GlobalKey();
-  double _contentWidth = 0;
-  bool _measured = false;
-
-  bool get _shouldMarquee => widget.gyms.length >= 2;
+class _RecordGridCard extends StatelessWidget {
+  final ClimbingRecord record;
+  const _RecordGridCard({required this.record});
 
   @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(vsync: this);
-    if (_shouldMarquee) {
-      WidgetsBinding.instance.addPostFrameCallback((_) => _measureAndStart());
-    }
-  }
+  Widget build(BuildContext context) {
+    final diffColor = DifficultyColor.values.firstWhere(
+      (c) => c.name == record.difficultyColor,
+      orElse: () => DifficultyColor.white,
+    );
+    final baseColor = Color(diffColor.colorValue);
+    final isCompleted = record.status == 'completed';
 
-  void _measureAndStart() {
-    final box =
-        _contentKey.currentContext?.findRenderObject() as RenderBox?;
-    if (box == null) return;
-    final width = box.size.width;
-    if (width > 0) {
-      setState(() {
-        _contentWidth = width;
-        _measured = true;
-      });
-      final totalScroll = _contentWidth + 8;
-      final duration = Duration(milliseconds: (totalScroll / 40 * 1000).round());
-      _controller
-        ..duration = duration
-        ..repeat();
-    }
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  Widget _buildChip(ClimbingGym gym, ColorScheme colorScheme) {
     return GestureDetector(
-      onTap: () {
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (_) => GymDetailScreen(gym: gym),
-          ),
-        );
-      },
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => RecordSaveScreen(existingRecord: record),
+        ),
+      ),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(16),
           border: Border.all(color: WandeungColors.border),
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(
-              Icons.location_on_outlined,
-              size: 15,
-              color: WandeungColors.accent,
-            ),
-            const SizedBox(width: 4),
-            Text(
-              gym.name,
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-                color: colorScheme.onSurface.withOpacity(0.7),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildChipRow(ColorScheme colorScheme) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        for (int i = 0; i < widget.gyms.length; i++) ...[
-          if (i > 0) const SizedBox(width: 8),
-          _buildChip(widget.gyms[i], colorScheme),
-        ],
-      ],
-    );
-  }
-
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.only(left: 4, bottom: 10),
-            child: Text(
-              '최근 방문 암장',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-                color: colorScheme.onSurface,
-              ),
-            ),
-          ),
-          SizedBox(
-            height: 38,
-            child: _shouldMarquee
-                ? ClipRect(
-                    child: _measured
-                        ? AnimatedBuilder(
-                            animation: _controller,
-                            builder: (context, child) {
-                              final dx =
-                                  -_controller.value * (_contentWidth + 8);
-                              return Transform.translate(
-                                offset: Offset(dx, 0),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    _buildChipRow(colorScheme),
-                                    const SizedBox(width: 8),
-                                    _buildChipRow(colorScheme),
-                                  ],
-                                ),
-                              );
-                            },
-                          )
-                        : Row(
-                            key: _contentKey,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              _buildChipRow(colorScheme),
-                            ],
-                          ),
-                  )
-                : _buildChipRow(colorScheme),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ─── 난이도 미리보기 (랜덤 1개) ──────────────────────────────────────────────
-
-class _RandomGradeSection extends StatelessWidget {
-  final List<GymColorScale> scales;
-  const _RandomGradeSection({required this.scales});
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final randomScale = scales[Random().nextInt(scales.length)];
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.only(left: 4, bottom: 10),
-            child: Row(
-              children: [
-                Text(
-                  '암장별 난이도 색상표',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                    color: colorScheme.onSurface,
-                  ),
-                ),
-                const Spacer(),
-                TextButton(
-                  onPressed: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => const GymGradesTabScreen(),
-                      ),
-                    );
-                  },
-                  style: TextButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                    minimumSize: Size.zero,
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        '더보기',
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w500,
-                          color: colorScheme.primary,
-                        ),
-                      ),
-                      Icon(
-                        Icons.chevron_right_rounded,
-                        size: 18,
-                        color: colorScheme.primary,
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          // 랜덤 브랜드 카드
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: WandeungColors.border),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Icon(
-                      Icons.location_on_rounded,
-                      size: 18,
-                      color: colorScheme.primary,
-                    ),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: Text(
-                        randomScale.brandName,
-                        style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                    Text(
-                      '${randomScale.levels.length}단계',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: colorScheme.onSurface.withOpacity(0.5),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 6,
-                  children: randomScale.levels.map((level) {
-                    final dc = level.color;
-                    if (dc == DifficultyColor.star) {
-                      return const Icon(Icons.star_rounded,
-                          color: Color(0xFFFFD700), size: 20);
-                    }
-                    return Container(
-                      width: 20,
-                      height: 20,
-                      decoration: BoxDecoration(
-                        color: dc == DifficultyColor.rainbow
-                            ? null
-                            : Color(dc.colorValue),
-                        gradient: dc == DifficultyColor.rainbow
-                            ? const LinearGradient(colors: [
-                                Colors.red,
-                                Colors.orange,
-                                Colors.yellow,
-                                Colors.green,
-                                Colors.blue,
-                                Colors.purple,
-                              ])
-                            : null,
-                        shape: BoxShape.circle,
-                        border: dc.needsDarkIcon
-                            ? Border.all(
-                                color: const Color(0xFFE0E0E0),
-                                width: 0.5)
-                            : null,
-                      ),
-                    );
-                  }).toList(),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ─── 통계 섹션 (리디자인) ─────────────────────────────────────────────────────
-
-class _StatsSection extends StatelessWidget {
-  final UserClimbingStats stats;
-  const _StatsSection({required this.stats});
-
-  @override
-  Widget build(BuildContext context) {
-    final completedRatio = stats.totalClimbs > 0
-        ? stats.totalCompleted / stats.totalClimbs
-        : 0.0;
-    final inProgressRatio = stats.totalClimbs > 0
-        ? stats.totalInProgress / stats.totalClimbs
-        : 0.0;
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(22),
-        decoration: BoxDecoration(
-          color: const Color(0xFFF0F0F0),
-          borderRadius: BorderRadius.circular(20),
-        ),
+        clipBehavior: Clip.antiAlias,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Streak 배너
-            if (stats.currentStreak > 0)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 14),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: WandeungColors.accent.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: WandeungColors.accent.withOpacity(0.3),
+            // 썸네일 영역
+            Expanded(
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  _buildThumbnail(diffColor),
+                  // 상태 뱃지 (좌상단)
+                  Positioned(
+                    left: 8,
+                    top: 8,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: isCompleted
+                            ? WandeungColors.success
+                            : WandeungColors.inProgress,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(
+                        isCompleted ? '완등' : '도전중',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                        ),
+                      ),
                     ),
                   ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(
-                        Icons.local_fire_department_rounded,
-                        size: 16,
-                        color: WandeungColors.accentLight,
+                  // 날짜 (우상단)
+                  Positioned(
+                    right: 8,
+                    top: 8,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.5),
+                        borderRadius: BorderRadius.circular(6),
                       ),
-                      const SizedBox(width: 4),
-                      Text(
-                        '연속 ${stats.currentStreak}일째 클라이밍 중!',
+                      child: Text(
+                        _formatRecordedAt(record.recordedAt),
                         style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: WandeungColors.accentLight,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                  // 재생 버튼 (우하단)
+                  if (record.videoPath != null)
+                    Positioned(
+                      right: 8,
+                      bottom: 8,
+                      child: GestureDetector(
+                        onTap: () {
+                          final path = record.videoPath!;
+                          if (path.startsWith('/') &&
+                              !File(path).existsSync()) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('영상 파일을 찾을 수 없습니다'),
+                              ),
+                            );
+                            return;
+                          }
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) =>
+                                  VideoPlaybackScreen(videoPath: path),
+                            ),
+                          );
+                        },
+                        child: Container(
+                          width: 32,
+                          height: 32,
+                          decoration: BoxDecoration(
+                            color: Colors.black.withOpacity(0.5),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.play_arrow_rounded,
+                            color: Colors.white,
+                            size: 18,
+                          ),
+                        ),
+                      ),
+                    ),
+                  // 영상 길이 (좌하단)
+                  if (record.videoDurationSeconds != null)
+                    Positioned(
+                      left: 8,
+                      bottom: 8,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 5, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(0.6),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          _formatDuration(record.videoDurationSeconds!),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+
+            // 하단 메타 정보
+            Padding(
+              padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // 난이도 컬러 + 암장명
+                  Row(
+                    children: [
+                      Container(
+                        width: 12,
+                        height: 12,
+                        decoration: BoxDecoration(
+                          color: diffColor == DifficultyColor.rainbow
+                              ? null
+                              : baseColor,
+                          gradient: diffColor == DifficultyColor.rainbow
+                              ? const LinearGradient(colors: [
+                                  Colors.red,
+                                  Colors.orange,
+                                  Colors.yellow,
+                                  Colors.green,
+                                  Colors.blue,
+                                ])
+                              : null,
+                          shape: BoxShape.circle,
+                          border: diffColor.needsDarkIcon
+                              ? Border.all(
+                                  color: const Color(0xFFE0E0E0),
+                                  width: 0.5)
+                              : null,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          record.gymName ?? '암장 미지정',
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: WandeungColors.textPrimary,
+                            letterSpacing: -0.2,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ],
                   ),
-                ),
-              ),
-
-            Row(
-              children: [
-                Text(
-                  '최근 30일',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.black.withOpacity(0.5),
-                  ),
-                ),
-                const Spacer(),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.08),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    '총 ${stats.totalClimbs}건',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.black.withOpacity(0.6),
+                  const SizedBox(height: 3),
+                  Text(
+                    '${diffColor.korean} · ${record.grade}',
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: WandeungColors.textTertiary,
                     ),
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: _RateDisplay(
-                    label: '완등',
-                    rate: stats.completionRate,
-                    count: stats.totalCompleted,
-                    color: WandeungColors.success,
-                  ),
-                ),
-                Container(
-                  width: 1,
-                  height: 48,
-                  color: Colors.black.withOpacity(0.1),
-                ),
-                Expanded(
-                  child: _RateDisplay(
-                    label: '도전중',
-                    rate: stats.inProgressRate,
-                    count: stats.totalInProgress,
-                    color: WandeungColors.inProgress,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 18),
-            // 세그먼트 프로그레스 바
-            ClipRRect(
-              borderRadius: BorderRadius.circular(4),
-              child: SizedBox(
-                height: 6,
-                child: Row(
-                  children: [
-                    if (completedRatio > 0)
-                      Expanded(
-                        flex: (completedRatio * 1000).round(),
-                        child: Container(color: WandeungColors.success),
-                      ),
-                    if (inProgressRatio > 0)
-                      Expanded(
-                        flex: (inProgressRatio * 1000).round(),
-                        child: Container(color: WandeungColors.inProgress),
-                      ),
-                    if ((1 - completedRatio - inProgressRatio) > 0)
-                      Expanded(
-                        flex: ((1 - completedRatio - inProgressRatio) * 1000).round(),
-                        child: Container(
-                          color: Colors.black.withOpacity(0.08),
-                        ),
-                      ),
-                  ],
-                ),
+                ],
               ),
             ),
           ],
@@ -995,76 +938,125 @@ class _StatsSection extends StatelessWidget {
       ),
     );
   }
+
+  Widget _buildThumbnail(DifficultyColor diffColor) {
+    final path = record.thumbnailPath;
+    final baseColor = Color(diffColor.colorValue);
+
+    Widget fallback() {
+      return Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              baseColor.withOpacity(0.8),
+              baseColor.withOpacity(0.5),
+            ],
+          ),
+        ),
+        child: Center(
+          child: Icon(
+            Icons.terrain_rounded,
+            size: 36,
+            color: Colors.white.withOpacity(0.5),
+          ),
+        ),
+      );
+    }
+
+    if (path == null) return fallback();
+
+    final isLocal = path.startsWith('/');
+    if (isLocal && !File(path).existsSync()) return fallback();
+
+    return isLocal
+        ? Image.file(
+            File(path),
+            fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => fallback(),
+          )
+        : Image.network(
+            R2Config.getPresignedUrl(path),
+            fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => fallback(),
+          );
+  }
+
+  String _formatRecordedAt(DateTime date) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final recordDate = DateTime(date.year, date.month, date.day);
+    final diff = today.difference(recordDate).inDays;
+    if (diff == 0) return '오늘';
+    if (diff == 1) return '어제';
+    if (diff < 7) return '$diff일 전';
+    return '${date.month}/${date.day}';
+  }
+
+  String _formatDuration(int seconds) {
+    final m = seconds ~/ 60;
+    final s = seconds % 60;
+    return '$m:${s.toString().padLeft(2, '0')}';
+  }
 }
 
-class _RateDisplay extends StatelessWidget {
-  final String label;
-  final double rate;
-  final int count;
-  final Color color;
+// ─── 빈 상태 ──────────────────────────────────────────────────────────────────
 
-  const _RateDisplay({
-    required this.label,
-    required this.rate,
-    required this.count,
-    required this.color,
-  });
-
+class _EmptyRecords extends ConsumerWidget {
   @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Text(
-              rate.toStringAsFixed(0),
-              style: const TextStyle(
-                fontSize: 36,
-                fontWeight: FontWeight.w800,
-                color: Colors.black87,
-                height: 1,
-                letterSpacing: -1.5,
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.only(bottom: 4, left: 1),
-              child: Text(
-                '%',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.black.withOpacity(0.4),
-                ),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 6),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 48),
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              width: 8,
-              height: 8,
+              width: 72,
+              height: 72,
               decoration: BoxDecoration(
-                color: color,
+                color: WandeungColors.accent.withOpacity(0.08),
                 shape: BoxShape.circle,
               ),
+              child: Icon(
+                Icons.terrain_outlined,
+                size: 36,
+                color: WandeungColors.accent.withOpacity(0.4),
+              ),
             ),
-            const SizedBox(width: 4),
-            Text(
-              '$label $count건',
+            const SizedBox(height: 16),
+            const Text(
+              '아직 기록이 없어요',
               style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-                color: Colors.black.withOpacity(0.5),
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: WandeungColors.textSecondary,
+              ),
+            ),
+            const SizedBox(height: 6),
+            const Text(
+              '첫 등반을 기록해보세요!',
+              style: TextStyle(
+                fontSize: 13,
+                color: WandeungColors.textTertiary,
+              ),
+            ),
+            const SizedBox(height: 20),
+            FilledButton.icon(
+              onPressed: () {
+                ref.read(bottomNavIndexProvider.notifier).state = 2;
+              },
+              icon: const Icon(Icons.videocam_rounded, size: 18),
+              label: const Text('촬영하기'),
+              style: FilledButton.styleFrom(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 24, vertical: 12),
               ),
             ),
           ],
         ),
-      ],
+      ),
     );
   }
 }

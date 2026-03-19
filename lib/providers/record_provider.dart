@@ -193,7 +193,7 @@ final userStatsProvider = FutureProvider<UserClimbingStats>((ref) async {
   );
 });
 
-/// 홈 탭 최근 기록 (최신 5개)
+/// 홈 탭 최근 기록 (최신 4개)
 final recentRecordsProvider =
     FutureProvider<List<ClimbingRecord>>((ref) async {
   final userId = _watchUserId(ref);
@@ -206,7 +206,7 @@ final recentRecordsProvider =
       .isFilter('parent_record_id', null)
       .order('recorded_at', ascending: false)
       .order('created_at', ascending: false)
-      .limit(5);
+      .limit(4);
 
   return (response as List)
       .map((e) => ClimbingRecord.fromMap(e))

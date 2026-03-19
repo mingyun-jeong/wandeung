@@ -56,10 +56,7 @@ class RecordCard extends StatelessWidget {
                       children: [
                         _StatusBadge(isCompleted: isCompleted),
                         _DifficultyBadge(color: color),
-                        ...record.tags.map((tag) => _TagBadge(
-                              tag: tag,
-                              colorScheme: colorScheme,
-                            )),
+                        ...record.tags.map((tag) => _TagBadge(tag: tag)),
                       ],
                     ),
                   ],
@@ -110,7 +107,7 @@ class RecordCard extends StatelessWidget {
 
   Widget _buildThumbnailOrBadge(DifficultyColor color) {
     final path = record.thumbnailPath;
-    if (path == null) return _GradeBadge(color: color);
+    if (path == null) return _GradeBadge(color: color, grade: record.grade);
 
     final isLocal = path.startsWith('/');
     final hasLocal = isLocal && File(path).existsSync();
@@ -123,14 +120,14 @@ class RecordCard extends StatelessWidget {
               width: 72,
               height: 72,
               fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => _GradeBadge(color: color),
+              errorBuilder: (_, __, ___) => _GradeBadge(color: color, grade: record.grade),
             )
           : Image.network(
               R2Config.getPresignedUrl(path),
               width: 72,
               height: 72,
               fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => _GradeBadge(color: color),
+              errorBuilder: (_, __, ___) => _GradeBadge(color: color, grade: record.grade),
             );
 
       return ClipRRect(
@@ -164,17 +161,23 @@ class RecordCard extends StatelessWidget {
         ),
       );
     }
-    return _GradeBadge(color: color);
+    return _GradeBadge(color: color, grade: record.grade);
   }
 }
 
 class _GradeBadge extends StatelessWidget {
   final DifficultyColor color;
-  const _GradeBadge({required this.color});
+  final String grade;
+  const _GradeBadge({required this.color, required this.grade});
 
   @override
   Widget build(BuildContext context) {
     final baseColor = Color(color.colorValue);
+    final gradeEnum = ClimbingGrade.values.firstWhere(
+      (g) => g.name == grade,
+      orElse: () => ClimbingGrade.v0,
+    );
+    final isLight = color == DifficultyColor.white || color == DifficultyColor.yellow;
     return Container(
       width: 72,
       height: 72,
@@ -196,7 +199,16 @@ class _GradeBadge extends StatelessWidget {
           ),
         ],
       ),
-      child: const SizedBox.shrink(),
+      child: Center(
+        child: Text(
+          gradeEnum.label,
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w800,
+            color: isLight ? Colors.black54 : Colors.white,
+          ),
+        ),
+      ),
     );
   }
 }
@@ -212,7 +224,7 @@ class _StatusBadge extends StatelessWidget {
       decoration: BoxDecoration(
         color: isCompleted
             ? WandeungColors.success.withOpacity(0.1)
-            : const Color(0xFFFF6B35).withOpacity(0.1),
+            : WandeungColors.inProgress.withOpacity(0.1),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Text(
@@ -222,7 +234,7 @@ class _StatusBadge extends StatelessWidget {
           fontWeight: FontWeight.w600,
           color: isCompleted
               ? WandeungColors.success
-              : const Color(0xFFE65100),
+              : WandeungColors.inProgress,
         ),
       ),
     );
@@ -275,22 +287,21 @@ class _DifficultyBadge extends StatelessWidget {
 
 class _TagBadge extends StatelessWidget {
   final String tag;
-  final ColorScheme colorScheme;
-  const _TagBadge({required this.tag, required this.colorScheme});
+  const _TagBadge({required this.tag});
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerHighest.withOpacity(0.6),
+        color: const Color(0xFFF0F0F0),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Text(
         tag,
-        style: TextStyle(
+        style: const TextStyle(
           fontSize: 11,
-          color: colorScheme.onSurface.withOpacity(0.6),
+          color: WandeungColors.textSecondary,
         ),
       ),
     );

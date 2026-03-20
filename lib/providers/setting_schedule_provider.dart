@@ -6,6 +6,7 @@ import '../config/supabase_config.dart';
 import '../models/climbing_gym.dart';
 import '../models/gym_setting_schedule.dart';
 import 'auth_provider.dart';
+import 'favorite_gym_provider.dart';
 
 // ─── State Providers ─────────────────────────────────────────────────────────
 
@@ -79,54 +80,44 @@ final settingSchedulesProvider = FutureProvider.family<
 /// 즐겨찾기 암장의 이번달 스케줄에서 이번 주 날짜에 해당하는 항목만 반환
 final weeklySettingSchedulesProvider =
     FutureProvider<List<({GymSettingSchedule schedule, List<SettingSector> sectors, String dateStr})>>((ref) async {
-  // 즐겨찾기 암장 가져오기 (import 없이 직접 조회)
-  final userId = ref.watch(authProvider).valueOrNull?.id;
-  if (userId == null) return [];
-
-  final favResponse = await SupabaseConfig.client
-      .from('user_favorite_gyms')
-      .select('gym_id')
-      .eq('user_id', userId);
-  final favoriteGymIds = (favResponse as List)
-      .map((e) => e['gym_id'] as String)
-      .toList();
-  final hasFavorites = favoriteGymIds.isNotEmpty;
-
-  // 이번 주 월~일 날짜 계산
+  // 이번 주 날짜 계산 (동기 — 네트워크 불필요)
   final now = DateTime.now();
   final today = DateTime(now.year, now.month, now.day);
   final monday = today.subtract(Duration(days: today.weekday - 1));
   final sunday = monday.add(const Duration(days: 6));
 
-  // 이번 주가 걸치는 월 목록 (월초/월말 경우 2개월)
   final months = <String>{};
   for (var d = monday; !d.isAfter(sunday); d = d.add(const Duration(days: 1))) {
     months.add('${d.year}-${d.month.toString().padLeft(2, '0')}');
   }
 
-  // 이번 주 날짜 문자열 세트
   final weekDates = <String>{};
-  for (var d = monday; !d.isAfter(sunday); d = d.add(const Duration(days: 1))) {
+  for (var d = today; !d.isAfter(sunday); d = d.add(const Duration(days: 1))) {
     weekDates.add('${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}');
   }
 
-  // 즐겨찾기 암장 또는 전체 스케줄 조회 (단일 쿼리)
-  final results = <({GymSettingSchedule schedule, List<SettingSector> sectors, String dateStr})>[];
-
-  var query = SupabaseConfig.client
+  // 즐겨찾기 + 스케줄 쿼리를 병렬 실행
+  final favoritesFuture = ref.watch(favoriteGymsProvider.future);
+  final scheduleFuture = SupabaseConfig.client
       .from('gym_setting_schedules')
       .select('*, climbing_gyms(name)')
       .inFilter('year_month', months.toList())
       .eq('status', 'approved');
 
-  if (hasFavorites) {
-    query = query.inFilter('gym_id', favoriteGymIds);
-  }
+  final (favoriteGyms, data) = await (favoritesFuture, scheduleFuture).wait;
 
-  final data = await query;
+  final favoriteGymIds = favoriteGyms
+      .map((g) => g.id)
+      .whereType<String>()
+      .toList();
+  final hasFavorites = favoriteGymIds.isNotEmpty;
 
-  for (final row in data as List) {
-    final schedule = GymSettingSchedule.fromMap(row);
+  // 즐겨찾기 암장만 필터 (클라이언트 측 — 쿼리는 이미 완료)
+  final results = <({GymSettingSchedule schedule, List<SettingSector> sectors, String dateStr})>[];
+
+  for (final row in data) {
+    final schedule = GymSettingSchedule.fromMap(row as Map<String, dynamic>);
+    if (hasFavorites && !favoriteGymIds.contains(schedule.gymId)) continue;
     for (final dateStr in weekDates) {
       final sectors = schedule.sectorsForDate(dateStr);
       if (sectors.isNotEmpty) {
@@ -135,8 +126,17 @@ final weeklySettingSchedulesProvider =
     }
   }
 
-  // 날짜순 정렬
-  results.sort((a, b) => a.dateStr.compareTo(b.dateStr));
+  // 내 암장(즐겨찾기) 우선, 날짜순 정렬
+  results.sort((a, b) {
+    final aIsFav = favoriteGymIds.contains(a.schedule.gymId) ? 0 : 1;
+    final bIsFav = favoriteGymIds.contains(b.schedule.gymId) ? 0 : 1;
+    final favCmp = aIsFav.compareTo(bIsFav);
+    if (favCmp != 0) return favCmp;
+    return a.dateStr.compareTo(b.dateStr);
+  });
+
+  // 홈 화면에서는 최대 2개만 표시
+  if (results.length > 2) return results.sublist(0, 2);
   return results;
 });
 

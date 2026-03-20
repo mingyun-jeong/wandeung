@@ -162,9 +162,9 @@ class _SelectBox extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
         decoration: BoxDecoration(
-          color: isActive ? WandeungColors.accent.withOpacity(0.1) : Colors.transparent,
+          color: isActive ? ClimpickColors.accent.withOpacity(0.1) : Colors.transparent,
           border: Border.all(
-            color: isActive ? WandeungColors.accent : colorScheme.outline.withOpacity(0.4),
+            color: isActive ? ClimpickColors.accent : colorScheme.outline.withOpacity(0.4),
             width: isActive ? 1.5 : 1.0,
           ),
           borderRadius: BorderRadius.circular(20),
@@ -182,7 +182,7 @@ class _SelectBox extends StatelessWidget {
               Icons.keyboard_arrow_down_rounded,
               size: 16,
               color: isActive
-                  ? WandeungColors.accent
+                  ? ClimpickColors.accent
                   : colorScheme.onSurface.withOpacity(0.5),
             ),
           ],
@@ -196,7 +196,7 @@ class _SelectBox extends StatelessWidget {
     final style = TextStyle(
       fontSize: 13,
       color: isActive
-          ? WandeungColors.accent
+          ? ClimpickColors.accent
           : colorScheme.onSurface.withOpacity(0.75),
       fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
     );

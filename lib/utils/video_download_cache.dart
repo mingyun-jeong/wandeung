@@ -208,7 +208,7 @@ Future<bool> confirmIfNotWifi(
                 width: 36,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: WandeungColors.border,
+                  color: ClimpickColors.border,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -217,14 +217,14 @@ Future<bool> confirmIfNotWifi(
               Row(
                 children: [
                   const Icon(Icons.wifi_off_rounded,
-                      size: 20, color: WandeungColors.textPrimary),
+                      size: 20, color: ClimpickColors.textPrimary),
                   const SizedBox(width: 8),
                   Text(
                     title,
                     style: const TextStyle(
                       fontSize: 17,
                       fontWeight: FontWeight.w700,
-                      color: WandeungColors.textPrimary,
+                      color: ClimpickColors.textPrimary,
                     ),
                   ),
                 ],
@@ -236,16 +236,16 @@ Future<bool> confirmIfNotWifi(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                 decoration: BoxDecoration(
-                  color: WandeungColors.surface,
+                  color: ClimpickColors.surface,
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: WandeungColors.border),
+                  border: Border.all(color: ClimpickColors.border),
                 ),
                 child: Text(
                   message,
                   style: const TextStyle(
                     fontSize: 14,
                     height: 1.5,
-                    color: WandeungColors.textSecondary,
+                    color: ClimpickColors.textSecondary,
                   ),
                 ),
               ),
@@ -259,8 +259,8 @@ Future<bool> confirmIfNotWifi(
                       child: OutlinedButton(
                         onPressed: () => Navigator.pop(ctx, false),
                         style: OutlinedButton.styleFrom(
-                          foregroundColor: WandeungColors.textSecondary,
-                          side: const BorderSide(color: WandeungColors.border),
+                          foregroundColor: ClimpickColors.textSecondary,
+                          side: const BorderSide(color: ClimpickColors.border),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(14),
                           ),
@@ -474,7 +474,7 @@ class _DownloadBottomSheetState extends State<_DownloadBottomSheet>
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    const teal = WandeungColors.accent;
+    const teal = ClimpickColors.accent;
 
     return Container(
       decoration: const BoxDecoration(

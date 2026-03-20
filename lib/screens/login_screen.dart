@@ -57,7 +57,7 @@ class LoginScreen extends ConsumerWidget {
                   const Spacer(flex: 3),
 
                   const Text(
-                    '클링',
+                    '클림픽',
                     style: TextStyle(
                       fontSize: 48,
                       fontWeight: FontWeight.w800,

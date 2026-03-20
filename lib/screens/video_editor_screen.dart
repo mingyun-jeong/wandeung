@@ -608,7 +608,7 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
         if (widget.existingRecord != null) {
           // 기존 기록 편집 → 내보내기 영상을 자식 레코드로 저장
           try {
-            await Gal.putVideo(result.outputPath, album: '클링');
+            await Gal.putVideo(result.outputPath, album: '클림픽');
           } catch (_) {}
           final thumbnailPath = await generateThumbnail(result.outputPath);
           final exportTitle = _title == '제목 없음' ? null : _title;
@@ -1762,7 +1762,7 @@ class _ExportQualitySheetState extends State<_ExportQualitySheet> {
                 width: 36,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: WandeungColors.border,
+                  color: ClimpickColors.border,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -1770,14 +1770,14 @@ class _ExportQualitySheetState extends State<_ExportQualitySheet> {
               // 제목
               const Row(
                 children: [
-                  Icon(Icons.tune, size: 20, color: WandeungColors.textPrimary),
+                  Icon(Icons.tune, size: 20, color: ClimpickColors.textPrimary),
                   SizedBox(width: 8),
                   Text(
                     '내보내기 품질',
                     style: TextStyle(
                       fontSize: 17,
                       fontWeight: FontWeight.w700,
-                      color: WandeungColors.textPrimary,
+                      color: ClimpickColors.textPrimary,
                     ),
                   ),
                 ],
@@ -1821,11 +1821,11 @@ class _ExportQualitySheetState extends State<_ExportQualitySheet> {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           decoration: BoxDecoration(
             color: isSelected
-                ? WandeungColors.accent.withOpacity(0.06)
-                : WandeungColors.surface,
+                ? ClimpickColors.accent.withOpacity(0.06)
+                : ClimpickColors.surface,
             borderRadius: BorderRadius.circular(14),
             border: Border.all(
-              color: isSelected ? WandeungColors.accent : WandeungColors.border,
+              color: isSelected ? ClimpickColors.accent : ClimpickColors.border,
               width: isSelected ? 1.5 : 1,
             ),
           ),
@@ -1837,16 +1837,16 @@ class _ExportQualitySheetState extends State<_ExportQualitySheet> {
                 height: 40,
                 decoration: BoxDecoration(
                   color: isSelected
-                      ? WandeungColors.accent.withOpacity(0.12)
-                      : WandeungColors.border.withOpacity(0.5),
+                      ? ClimpickColors.accent.withOpacity(0.12)
+                      : ClimpickColors.border.withOpacity(0.5),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(
                   Icons.hd,
                   size: 22,
                   color: isSelected
-                      ? WandeungColors.accent
-                      : WandeungColors.textSecondary,
+                      ? ClimpickColors.accent
+                      : ClimpickColors.textSecondary,
                 ),
               ),
               const SizedBox(width: 14),
@@ -1862,8 +1862,8 @@ class _ExportQualitySheetState extends State<_ExportQualitySheet> {
                         fontWeight:
                             isSelected ? FontWeight.w700 : FontWeight.w600,
                         color: isSelected
-                            ? WandeungColors.accent
-                            : WandeungColors.textPrimary,
+                            ? ClimpickColors.accent
+                            : ClimpickColors.textPrimary,
                       ),
                     ),
                     const SizedBox(height: 2),
@@ -1873,7 +1873,7 @@ class _ExportQualitySheetState extends State<_ExportQualitySheet> {
                           : '${q.targetHeight}p · 선명한 화질',
                       style: const TextStyle(
                         fontSize: 12,
-                        color: WandeungColors.textTertiary,
+                        color: ClimpickColors.textTertiary,
                       ),
                     ),
                   ],
@@ -1886,11 +1886,11 @@ class _ExportQualitySheetState extends State<_ExportQualitySheet> {
                 height: 22,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: isSelected ? WandeungColors.accent : Colors.transparent,
+                  color: isSelected ? ClimpickColors.accent : Colors.transparent,
                   border: Border.all(
                     color: isSelected
-                        ? WandeungColors.accent
-                        : WandeungColors.textTertiary,
+                        ? ClimpickColors.accent
+                        : ClimpickColors.textTertiary,
                     width: 1.5,
                   ),
                 ),

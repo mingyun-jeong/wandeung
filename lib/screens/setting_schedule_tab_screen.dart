@@ -9,7 +9,7 @@ import '../models/gym_setting_schedule.dart';
 import '../providers/favorite_gym_provider.dart';
 import '../providers/gym_provider.dart';
 import '../providers/setting_schedule_provider.dart';
-import '../widgets/wandeung_app_bar.dart';
+import '../widgets/climpick_app_bar.dart';
 
 class SettingScheduleTabScreen extends ConsumerStatefulWidget {
   const SettingScheduleTabScreen({super.key});
@@ -81,7 +81,7 @@ class _SettingScheduleTabScreenState
     final schedulesAsync = ref.watch(settingSchedulesProvider(yearMonth));
 
     return Scaffold(
-      appBar: const WandeungAppBar(),
+      appBar: const ClimpickAppBar(),
       body: Column(
         children: [
           // ─── 타이틀 + Beta 뱃지 ───
@@ -94,7 +94,7 @@ class _SettingScheduleTabScreenState
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.w800,
-                    color: WandeungColors.textPrimary,
+                    color: ClimpickColors.textPrimary,
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -102,7 +102,7 @@ class _SettingScheduleTabScreenState
                   padding:
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   decoration: BoxDecoration(
-                    color: WandeungColors.accent.withOpacity(0.1),
+                    color: ClimpickColors.accent.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: const Text(
@@ -110,7 +110,7 @@ class _SettingScheduleTabScreenState
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w700,
-                      color: WandeungColors.accent,
+                      color: ClimpickColors.accent,
                     ),
                   ),
                 ),
@@ -126,7 +126,7 @@ class _SettingScheduleTabScreenState
               decoration: InputDecoration(
                 hintText: '암장 검색...',
                 hintStyle: const TextStyle(
-                  color: WandeungColors.textTertiary,
+                  color: ClimpickColors.textTertiary,
                   fontSize: 14,
                 ),
                 prefixIcon: const Icon(Icons.search, size: 20),
@@ -141,16 +141,16 @@ class _SettingScheduleTabScreenState
                 contentPadding: const EdgeInsets.symmetric(vertical: 10),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: WandeungColors.border),
+                  borderSide: const BorderSide(color: ClimpickColors.border),
                 ),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: WandeungColors.border),
+                  borderSide: const BorderSide(color: ClimpickColors.border),
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                   borderSide:
-                      const BorderSide(color: WandeungColors.accent, width: 1.5),
+                      const BorderSide(color: ClimpickColors.accent, width: 1.5),
                 ),
               ),
               onChanged: (query) {
@@ -179,7 +179,7 @@ class _SettingScheduleTabScreenState
                 children: [
                   _buildCalendar(
                       focusedMonth, selectedDate, schedulesAsync),
-                  const Divider(height: 1, color: WandeungColors.border),
+                  const Divider(height: 1, color: ClimpickColors.border),
                   Expanded(
                     child: _buildScheduleList(
                         selectedDate, schedulesAsync, gymFilter),
@@ -203,13 +203,13 @@ class _SettingScheduleTabScreenState
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(Icons.search,
-                      size: 40, color: WandeungColors.textTertiary.withOpacity(0.5)),
+                      size: 40, color: ClimpickColors.textTertiary.withOpacity(0.5)),
                   const SizedBox(height: 12),
                   const Text(
                     '암장을 검색해서 세팅일정을 확인하세요',
                     style: TextStyle(
                       fontSize: 14,
-                      color: WandeungColors.textSecondary,
+                      color: ClimpickColors.textSecondary,
                     ),
                   ),
                 ],
@@ -228,7 +228,7 @@ class _SettingScheduleTabScreenState
                     style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w700,
-                      color: WandeungColors.textPrimary,
+                      color: ClimpickColors.textPrimary,
                     ),
                   ),
                 );
@@ -236,7 +236,7 @@ class _SettingScheduleTabScreenState
               final gym = gyms[i - 1];
               return ListTile(
                 leading: const Icon(Icons.location_on_outlined,
-                    color: WandeungColors.accent),
+                    color: ClimpickColors.accent),
                 title: Text(gym.name,
                     style: const TextStyle(
                         fontSize: 14, fontWeight: FontWeight.w500)),
@@ -244,7 +244,7 @@ class _SettingScheduleTabScreenState
                     ? Text(gym.address!,
                         style: const TextStyle(
                             fontSize: 12,
-                            color: WandeungColors.textTertiary),
+                            color: ClimpickColors.textTertiary),
                         overflow: TextOverflow.ellipsis)
                     : null,
                 onTap: () => _selectGym(gym),
@@ -269,7 +269,7 @@ class _SettingScheduleTabScreenState
             return const Center(
               child: Text(
                 '검색 결과가 없습니다',
-                style: TextStyle(color: WandeungColors.textSecondary),
+                style: TextStyle(color: ClimpickColors.textSecondary),
               ),
             );
           }
@@ -280,7 +280,7 @@ class _SettingScheduleTabScreenState
               final gym = gyms[i];
               return ListTile(
                 leading: const Icon(Icons.location_on_outlined,
-                    color: WandeungColors.accent),
+                    color: ClimpickColors.accent),
                 title: Text(gym.name,
                     style: const TextStyle(
                         fontSize: 14, fontWeight: FontWeight.w500)),
@@ -288,7 +288,7 @@ class _SettingScheduleTabScreenState
                     ? Text(gym.address!,
                         style: const TextStyle(
                             fontSize: 12,
-                            color: WandeungColors.textTertiary),
+                            color: ClimpickColors.textTertiary),
                         overflow: TextOverflow.ellipsis)
                     : null,
                 onTap: () => _selectGym(gym),
@@ -360,7 +360,7 @@ class _SettingScheduleTabScreenState
               width: 6,
               height: 6,
               decoration: const BoxDecoration(
-                color: WandeungColors.accent,
+                color: ClimpickColors.accent,
                 shape: BoxShape.circle,
               ),
             ),
@@ -464,7 +464,7 @@ class _SettingScheduleTabScreenState
                   style: const TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w700,
-                    color: WandeungColors.textPrimary,
+                    color: ClimpickColors.textPrimary,
                   ),
                 ),
               );
@@ -488,11 +488,11 @@ class _SettingScheduleTabScreenState
             width: 56,
             height: 56,
             decoration: BoxDecoration(
-              color: WandeungColors.accent.withOpacity(0.08),
+              color: ClimpickColors.accent.withOpacity(0.08),
               shape: BoxShape.circle,
             ),
             child: Icon(Icons.event_busy_outlined,
-                size: 28, color: WandeungColors.accent.withOpacity(0.4)),
+                size: 28, color: ClimpickColors.accent.withOpacity(0.4)),
           ),
           const SizedBox(height: 12),
           Text(
@@ -501,7 +501,7 @@ class _SettingScheduleTabScreenState
             style: const TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w500,
-              color: WandeungColors.textSecondary,
+              color: ClimpickColors.textSecondary,
             ),
           ),
         ],
@@ -518,11 +518,11 @@ class _SettingScheduleTabScreenState
             width: 56,
             height: 56,
             decoration: BoxDecoration(
-              color: WandeungColors.accent.withOpacity(0.08),
+              color: ClimpickColors.accent.withOpacity(0.08),
               shape: BoxShape.circle,
             ),
             child: Icon(Icons.event_busy_outlined,
-                size: 28, color: WandeungColors.accent.withOpacity(0.4)),
+                size: 28, color: ClimpickColors.accent.withOpacity(0.4)),
           ),
           const SizedBox(height: 12),
           const Text(
@@ -530,7 +530,7 @@ class _SettingScheduleTabScreenState
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w500,
-              color: WandeungColors.textSecondary,
+              color: ClimpickColors.textSecondary,
             ),
           ),
         ],
@@ -564,7 +564,7 @@ class _SettingCard extends StatelessWidget {
             Row(
               children: [
                 const Icon(Icons.location_on,
-                    size: 16, color: WandeungColors.accent),
+                    size: 16, color: ClimpickColors.accent),
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
@@ -572,7 +572,7 @@ class _SettingCard extends StatelessWidget {
                     style: const TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w700,
-                      color: WandeungColors.textPrimary,
+                      color: ClimpickColors.textPrimary,
                     ),
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -584,7 +584,7 @@ class _SettingCard extends StatelessWidget {
               '$sectorNames 세팅',
               style: const TextStyle(
                 fontSize: 13,
-                color: WandeungColors.textSecondary,
+                color: ClimpickColors.textSecondary,
               ),
             ),
             if (schedule.submitterDisplayName != null) ...[
@@ -593,7 +593,7 @@ class _SettingCard extends StatelessWidget {
                 '정보 공유자: ${schedule.submitterDisplayName}',
                 style: const TextStyle(
                   fontSize: 12,
-                  color: WandeungColors.textTertiary,
+                  color: ClimpickColors.textTertiary,
                 ),
               ),
             ],

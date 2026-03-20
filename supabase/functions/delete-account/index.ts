@@ -99,7 +99,7 @@ const HTML_PAGE = `<!DOCTYPE html>
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>클링 - 계정 삭제</title>
+  <title>클림픽 - 계정 삭제</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
@@ -185,8 +185,8 @@ const HTML_PAGE = `<!DOCTYPE html>
 </head>
 <body>
   <div class="container">
-    <h1>클링 계정 삭제</h1>
-    <p class="subtitle">클링 앱에서 사용하신 계정의 삭제를 요청합니다.</p>
+    <h1>클림픽 계정 삭제</h1>
+    <p class="subtitle">클림픽 앱에서 사용하신 계정의 삭제를 요청합니다.</p>
     <div class="warning">
       ⚠️ 계정을 삭제하면 모든 등반 기록, 영상, 데이터가 영구적으로 삭제되며 복구할 수 없습니다.
     </div>

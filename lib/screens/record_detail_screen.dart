@@ -11,7 +11,7 @@ import '../providers/record_provider.dart';
 import '../providers/upload_queue_provider.dart';
 import '../utils/constants.dart';
 import '../utils/video_download_cache.dart';
-import '../widgets/wandeung_app_bar.dart';
+import '../widgets/climpick_app_bar.dart';
 import 'video_compare_screen.dart';
 import 'video_editor_screen.dart';
 import '../widgets/record_select_bottom_sheet.dart';
@@ -130,7 +130,7 @@ class _RecordDetailScreenState extends ConsumerState<RecordDetailScreen> {
         localPath = downloaded;
       }
 
-      await Gal.putVideo(localPath, album: '클링');
+      await Gal.putVideo(localPath, album: '클림픽');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('갤러리에 저장되었습니다')),
@@ -166,7 +166,7 @@ class _RecordDetailScreenState extends ConsumerState<RecordDetailScreen> {
     final isCompleted = record.status == 'completed';
 
     return Scaffold(
-      appBar: WandeungAppBar(
+      appBar: ClimpickAppBar(
         title: record.gymName ?? '등반 기록',
         showBackButton: true,
         extraActions: [
@@ -396,7 +396,7 @@ class _RecordDetailScreenState extends ConsumerState<RecordDetailScreen> {
                             horizontal: 14, vertical: 7),
                         decoration: BoxDecoration(
                           color: isCompleted
-                              ? WandeungColors.success.withOpacity(0.1)
+                              ? ClimpickColors.success.withOpacity(0.1)
                               : const Color(0xFFFF6B35).withOpacity(0.1),
                           borderRadius: BorderRadius.circular(22),
                         ),
@@ -409,7 +409,7 @@ class _RecordDetailScreenState extends ConsumerState<RecordDetailScreen> {
                                   : Icons.sports_kabaddi_rounded,
                               size: 16,
                               color: isCompleted
-                                  ? WandeungColors.success
+                                  ? ClimpickColors.success
                                   : const Color(0xFFE65100),
                             ),
                             const SizedBox(width: 5),
@@ -419,7 +419,7 @@ class _RecordDetailScreenState extends ConsumerState<RecordDetailScreen> {
                                 fontSize: 13,
                                 fontWeight: FontWeight.w600,
                                 color: isCompleted
-                                    ? WandeungColors.success
+                                    ? ClimpickColors.success
                                     : const Color(0xFFE65100),
                               ),
                             ),

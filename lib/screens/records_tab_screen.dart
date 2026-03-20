@@ -7,7 +7,7 @@ import '../providers/camera_settings_provider.dart';
 import '../providers/record_provider.dart';
 import '../widgets/record_card.dart';
 import '../widgets/record_filter_bar.dart';
-import '../widgets/wandeung_app_bar.dart';
+import '../widgets/climpick_app_bar.dart';
 
 final selectedDateProvider = StateProvider<DateTime>((ref) => DateTime.now());
 final focusedMonthProvider = StateProvider<DateTime>((ref) => DateTime.now());
@@ -60,7 +60,7 @@ class RecordsTabScreen extends ConsumerWidget {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      appBar: const WandeungAppBar(),
+      appBar: const ClimpickAppBar(),
       body: Column(
         children: [
           const RecordFilterBar(),
@@ -93,7 +93,7 @@ class RecordsTabScreen extends ConsumerWidget {
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
                     decoration: BoxDecoration(
-                      color: WandeungColors.accent,
+                      color: ClimpickColors.accent,
                       borderRadius: BorderRadius.circular(8),
                     ),
                     constraints: const BoxConstraints(minWidth: 16),
@@ -184,12 +184,12 @@ class RecordsTabScreen extends ConsumerWidget {
                           width: 56,
                           height: 56,
                           decoration: BoxDecoration(
-                            color: WandeungColors.accent.withOpacity(0.08),
+                            color: ClimpickColors.accent.withOpacity(0.08),
                             shape: BoxShape.circle,
                           ),
                           child: Icon(Icons.terrain_outlined,
                               size: 28,
-                              color: WandeungColors.accent.withOpacity(0.4)),
+                              color: ClimpickColors.accent.withOpacity(0.4)),
                         ),
                         const SizedBox(height: 12),
                         const Text(
@@ -197,7 +197,7 @@ class RecordsTabScreen extends ConsumerWidget {
                           style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w500,
-                              color: WandeungColors.textSecondary),
+                              color: ClimpickColors.textSecondary),
                         ),
                         const SizedBox(height: 16),
                         FilledButton.icon(
@@ -228,13 +228,13 @@ class RecordsTabScreen extends ConsumerWidget {
                       children: [
                         const Icon(Icons.filter_list_off_rounded,
                             size: 40,
-                            color: WandeungColors.textTertiary),
+                            color: ClimpickColors.textTertiary),
                         const SizedBox(height: 10),
                         const Text(
                           '필터 조건에 맞는 기록이 없습니다',
                           style: TextStyle(
                               fontSize: 14,
-                              color: WandeungColors.textTertiary),
+                              color: ClimpickColors.textTertiary),
                         ),
                         if (hasActiveFilters) ...[
                           const SizedBox(height: 12),

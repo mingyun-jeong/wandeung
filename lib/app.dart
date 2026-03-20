@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'screens/splash_screen.dart';
 
-/// 클링 앱 컬러 상수
-class WandeungColors {
-  WandeungColors._();
+/// 클림픽 앱 컬러 상수
+class ClimpickColors {
+  ClimpickColors._();
 
   static const primary = Color(0xFF1A1A2E);       // Deep Navy
   static const accent = Color(0xFFE94560);         // Climbing Red
@@ -20,69 +20,69 @@ class WandeungColors {
   static const textTertiary = Color(0xFF9CA3AF);
 }
 
-class WandeungApp extends ConsumerWidget {
-  const WandeungApp({super.key});
+class ClimpickApp extends ConsumerWidget {
+  const ClimpickApp({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return MaterialApp(
-      title: '클링',
+      title: '클림픽',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
-          seedColor: WandeungColors.accent,
+          seedColor: ClimpickColors.accent,
           brightness: Brightness.light,
-          primary: WandeungColors.accent,
+          primary: ClimpickColors.accent,
           onPrimary: Colors.white,
-          secondary: WandeungColors.secondary,
-          surface: WandeungColors.surface,
-          onSurface: WandeungColors.textPrimary,
+          secondary: ClimpickColors.secondary,
+          surface: ClimpickColors.surface,
+          onSurface: ClimpickColors.textPrimary,
         ),
         useMaterial3: true,
-        scaffoldBackgroundColor: WandeungColors.surface,
+        scaffoldBackgroundColor: ClimpickColors.surface,
         cardTheme: CardTheme(
           elevation: 0,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
-            side: const BorderSide(color: WandeungColors.border),
+            side: const BorderSide(color: ClimpickColors.border),
           ),
-          color: WandeungColors.card,
+          color: ClimpickColors.card,
         ),
         appBarTheme: const AppBarTheme(
           scrolledUnderElevation: 0,
-          backgroundColor: WandeungColors.surface,
+          backgroundColor: ClimpickColors.surface,
           surfaceTintColor: Colors.transparent,
-          foregroundColor: WandeungColors.textPrimary,
+          foregroundColor: ClimpickColors.textPrimary,
         ),
         navigationBarTheme: NavigationBarThemeData(
           backgroundColor: Colors.white,
           surfaceTintColor: Colors.transparent,
-          indicatorColor: WandeungColors.accent.withOpacity(0.12),
+          indicatorColor: ClimpickColors.accent.withOpacity(0.12),
           elevation: 0,
           height: 64,
           iconTheme: WidgetStateProperty.resolveWith((states) {
             if (states.contains(WidgetState.selected)) {
-              return const IconThemeData(color: WandeungColors.accent);
+              return const IconThemeData(color: ClimpickColors.accent);
             }
-            return const IconThemeData(color: WandeungColors.textSecondary);
+            return const IconThemeData(color: ClimpickColors.textSecondary);
           }),
           labelTextStyle: WidgetStateProperty.resolveWith((states) {
             if (states.contains(WidgetState.selected)) {
               return const TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.w600,
-                color: WandeungColors.accent,
+                color: ClimpickColors.accent,
               );
             }
             return const TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w500,
-              color: WandeungColors.textSecondary,
+              color: ClimpickColors.textSecondary,
             );
           }),
         ),
         filledButtonTheme: FilledButtonThemeData(
           style: FilledButton.styleFrom(
-            backgroundColor: WandeungColors.accent,
+            backgroundColor: ClimpickColors.accent,
             foregroundColor: Colors.white,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(14),
@@ -91,7 +91,7 @@ class WandeungApp extends ConsumerWidget {
         ),
         outlinedButtonTheme: OutlinedButtonThemeData(
           style: OutlinedButton.styleFrom(
-            foregroundColor: WandeungColors.accent,
+            foregroundColor: ClimpickColors.accent,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(14),
             ),
@@ -110,11 +110,11 @@ class WandeungApp extends ConsumerWidget {
           surfaceTintColor: Colors.transparent,
         ),
         dividerTheme: const DividerThemeData(
-          color: WandeungColors.border,
+          color: ClimpickColors.border,
           thickness: 1,
         ),
         floatingActionButtonTheme: const FloatingActionButtonThemeData(
-          backgroundColor: WandeungColors.accent,
+          backgroundColor: ClimpickColors.accent,
           foregroundColor: Colors.white,
         ),
       ),

@@ -412,7 +412,7 @@ class _RecordSelectItem extends StatelessWidget {
                             horizontal: 6, vertical: 2),
                         decoration: BoxDecoration(
                           color: isCompleted
-                              ? WandeungColors.success.withOpacity(0.1)
+                              ? ClimpickColors.success.withOpacity(0.1)
                               : const Color(0xFFFF6B35).withOpacity(0.1),
                           borderRadius: BorderRadius.circular(10),
                         ),
@@ -422,7 +422,7 @@ class _RecordSelectItem extends StatelessWidget {
                             fontSize: 11,
                             fontWeight: FontWeight.w600,
                             color: isCompleted
-                                ? WandeungColors.success
+                                ? ClimpickColors.success
                                 : const Color(0xFFE65100),
                           ),
                         ),

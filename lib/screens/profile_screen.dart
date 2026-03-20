@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../app.dart';
 import '../models/climbing_gym.dart';
 import '../models/user_subscription.dart';
 import '../providers/auth_provider.dart';
@@ -15,7 +16,6 @@ class ProfileScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(authProvider).valueOrNull;
-    final colorScheme = Theme.of(context).colorScheme;
     final metadata = user?.userMetadata;
     final name = metadata?['full_name'] as String? ??
         metadata?['name'] as String? ??
@@ -48,7 +48,7 @@ class ProfileScreen extends ConsumerWidget {
                 border: Border.all(
                   color: isPro
                       ? Colors.amber
-                      : colorScheme.outlineVariant,
+                      : ClimpickColors.border,
                   width: isPro ? 3.5 : 2,
                 ),
               ),
@@ -81,9 +81,9 @@ class ProfileScreen extends ConsumerWidget {
           Center(
             child: Text(
               email,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 13,
-                color: colorScheme.onSurface.withOpacity(0.45),
+                color: ClimpickColors.textSecondary,
               ),
             ),
           ),
@@ -117,23 +117,23 @@ class ProfileScreen extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Padding(
-                  padding: const EdgeInsets.only(left: 4, bottom: 8),
+                const Padding(
+                  padding: EdgeInsets.only(left: 4, bottom: 8),
                   child: Text(
                     '계정',
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
-                      color: colorScheme.onSurface.withOpacity(0.4),
+                      color: ClimpickColors.textTertiary,
                     ),
                   ),
                 ),
                 Container(
                   decoration: BoxDecoration(
-                    color: colorScheme.surfaceContainerLowest,
+                    color: Colors.white,
                     borderRadius: BorderRadius.circular(14),
                     border: Border.all(
-                      color: colorScheme.outlineVariant.withOpacity(0.3),
+                      color: ClimpickColors.border,
                     ),
                   ),
                   child: InkWell(
@@ -145,21 +145,20 @@ class ProfileScreen extends ConsumerWidget {
                       child: Row(
                         children: [
                           Icon(Icons.logout_rounded,
-                              size: 20, color: colorScheme.error),
+                              size: 20, color: Colors.red.shade600),
                           const SizedBox(width: 12),
                           Text(
                             '회원탈퇴',
                             style: TextStyle(
                               fontSize: 15,
                               fontWeight: FontWeight.w500,
-                              color: colorScheme.error,
+                              color: Colors.red.shade600,
                             ),
                           ),
                           const Spacer(),
-                          Icon(Icons.chevron_right_rounded,
+                          const Icon(Icons.chevron_right_rounded,
                               size: 20,
-                              color:
-                                  colorScheme.onSurface.withOpacity(0.25)),
+                              color: ClimpickColors.textTertiary),
                         ],
                       ),
                     ),
@@ -232,38 +231,36 @@ class _PlanBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
     if (!isCloudMode) {
       // 로컬 모드
       return Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
-          color: colorScheme.surfaceContainerHighest.withOpacity(0.5),
+          color: const Color(0xFFF0F0F0),
           borderRadius: BorderRadius.circular(24),
           border: Border.all(
-            color: colorScheme.outlineVariant.withOpacity(0.4),
+            color: ClimpickColors.border,
           ),
         ),
-        child: Row(
+        child: const Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(Icons.phone_android_outlined,
                 size: 16,
-                color: colorScheme.onSurface.withOpacity(0.5)),
-            const SizedBox(width: 6),
+                color: ClimpickColors.textSecondary),
+            SizedBox(width: 6),
             Text(
               '로컬 모드',
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
-                color: colorScheme.onSurface.withOpacity(0.6),
+                color: ClimpickColors.textSecondary,
               ),
             ),
-            const SizedBox(width: 4),
+            SizedBox(width: 4),
             Icon(Icons.chevron_right_rounded,
                 size: 16,
-                color: colorScheme.onSurface.withOpacity(0.25)),
+                color: ClimpickColors.textTertiary),
           ],
         ),
       );
@@ -313,24 +310,24 @@ class _PlanBadge extends StatelessWidget {
         color: const Color(0xFFF0F0F0),
         borderRadius: BorderRadius.circular(24),
       ),
-      child: Row(
+      child: const Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(Icons.cloud_outlined,
-              size: 16, color: colorScheme.primary),
-          const SizedBox(width: 6),
+              size: 16, color: ClimpickColors.accent),
+          SizedBox(width: 6),
           Text(
             'Free',
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w700,
-              color: colorScheme.primary,
+              color: ClimpickColors.accent,
             ),
           ),
-          const SizedBox(width: 4),
+          SizedBox(width: 4),
           Icon(Icons.chevron_right_rounded,
               size: 16,
-              color: colorScheme.primary.withOpacity(0.4)),
+              color: ClimpickColors.textTertiary),
         ],
       ),
     );
@@ -342,7 +339,6 @@ class _FavoriteGymsSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final colorScheme = Theme.of(context).colorScheme;
     final favoriteGyms = ref.watch(favoriteGymsProvider);
 
     return Padding(
@@ -355,21 +351,26 @@ class _FavoriteGymsSection extends ConsumerWidget {
             padding: const EdgeInsets.only(left: 4, bottom: 8),
             child: Row(
               children: [
-                Text('내 암장',
+                const Text('내 암장',
                   style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600,
-                    color: colorScheme.onSurface.withOpacity(0.4))),
+                    color: ClimpickColors.textTertiary)),
                 const Spacer(),
-                GestureDetector(
+                InkWell(
                   onTap: () => FavoriteGymSheet.show(context),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.add_rounded, size: 16,
-                        color: colorScheme.onSurface.withOpacity(0.4)),
-                      const SizedBox(width: 2),
-                      Text('추가', style: TextStyle(fontSize: 13,
-                        color: colorScheme.onSurface.withOpacity(0.4))),
-                    ],
+                  borderRadius: BorderRadius.circular(8),
+                  child: const Padding(
+                    padding: EdgeInsets.symmetric(
+                        horizontal: 8, vertical: 6),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.add_rounded, size: 16,
+                          color: ClimpickColors.textTertiary),
+                        SizedBox(width: 2),
+                        Text('추가', style: TextStyle(fontSize: 13,
+                          color: ClimpickColors.textTertiary)),
+                      ],
+                    ),
                   ),
                 ),
               ],
@@ -379,19 +380,19 @@ class _FavoriteGymsSection extends ConsumerWidget {
           Container(
             width: double.infinity,
             decoration: BoxDecoration(
-              color: colorScheme.surfaceContainerLowest,
+              color: Colors.white,
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: colorScheme.outlineVariant.withOpacity(0.3)),
+              border: Border.all(color: ClimpickColors.border),
             ),
             child: favoriteGyms.when(
               data: (gyms) {
                 if (gyms.isEmpty) {
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 20),
+                  return const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 20),
                     child: Center(
                       child: Text('자주 가는 암장을 추가해보세요',
                         style: TextStyle(fontSize: 13,
-                          color: colorScheme.onSurface.withOpacity(0.3))),
+                          color: ClimpickColors.textTertiary)),
                     ),
                   );
                 }
@@ -400,8 +401,8 @@ class _FavoriteGymsSection extends ConsumerWidget {
                     for (int i = 0; i < gyms.length; i++) ...[
                       _FavoriteGymTile(gym: gyms[i]),
                       if (i < gyms.length - 1)
-                        Divider(height: 1, indent: 16, endIndent: 16,
-                          color: colorScheme.outlineVariant.withOpacity(0.2)),
+                        const Divider(height: 1, indent: 16, endIndent: 16,
+                          color: ClimpickColors.border),
                     ],
                   ],
                 );
@@ -411,7 +412,27 @@ class _FavoriteGymsSection extends ConsumerWidget {
                 child: Center(child: SizedBox(width: 20, height: 20,
                   child: CircularProgressIndicator(strokeWidth: 2))),
               ),
-              error: (_, __) => const SizedBox.shrink(),
+              error: (_, __) => Padding(
+                padding: const EdgeInsets.symmetric(vertical: 20),
+                child: Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text('불러오기 실패',
+                        style: TextStyle(fontSize: 13,
+                          color: ClimpickColors.textTertiary)),
+                      const SizedBox(height: 8),
+                      GestureDetector(
+                        onTap: () => ref.invalidate(favoriteGymsProvider),
+                        child: const Text('다시 시도',
+                          style: TextStyle(fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: ClimpickColors.accent)),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ),
           ),
         ],
@@ -426,13 +447,12 @@ class _FavoriteGymTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final colorScheme = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(
         children: [
-          Icon(Icons.location_on_outlined, size: 18,
-            color: colorScheme.onSurface.withOpacity(0.4)),
+          const Icon(Icons.location_on_outlined, size: 18,
+            color: ClimpickColors.textTertiary),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
@@ -441,21 +461,26 @@ class _FavoriteGymTile extends ConsumerWidget {
                 Text(gym.name, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
                   overflow: TextOverflow.ellipsis),
                 if (gym.address != null)
-                  Text(gym.address!, style: TextStyle(fontSize: 11,
-                    color: colorScheme.onSurface.withOpacity(0.35)),
+                  Text(gym.address!, style: const TextStyle(fontSize: 11,
+                    color: ClimpickColors.textTertiary),
                     overflow: TextOverflow.ellipsis),
               ],
             ),
           ),
-          GestureDetector(
-            onTap: () async {
-              if (gym.id == null) return;
-              await FavoriteGymService.removeFavorite(gym.id!);
-              ref.invalidate(favoriteGymsProvider);
-              ref.invalidate(recommendedGymsProvider);
-            },
-            child: Icon(Icons.close_rounded, size: 16,
-              color: colorScheme.onSurface.withOpacity(0.25)),
+          SizedBox(
+            width: 40,
+            height: 40,
+            child: IconButton(
+              onPressed: () async {
+                if (gym.id == null) return;
+                await FavoriteGymService.removeFavorite(gym.id!);
+                ref.invalidate(favoriteGymsProvider);
+                ref.invalidate(recommendedGymsProvider);
+              },
+              icon: const Icon(Icons.close_rounded, size: 16,
+                color: ClimpickColors.textTertiary),
+              padding: EdgeInsets.zero,
+            ),
           ),
         ],
       ),

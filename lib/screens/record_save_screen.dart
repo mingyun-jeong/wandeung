@@ -28,7 +28,7 @@ import '../widgets/difficulty_selector.dart';
 import '../widgets/gym_selection_sheet.dart';
 import '../widgets/gym_map_sheet.dart';
 import '../widgets/tag_input.dart';
-import '../widgets/wandeung_app_bar.dart';
+import '../widgets/climpick_app_bar.dart';
 import '../utils/cache_cleanup.dart';
 import '../utils/video_download_cache.dart';
 import '../utils/thumbnail_utils.dart';
@@ -583,7 +583,7 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
       // 2) 로컬 모드: 갤러리 저장
       if (!isCloudMode) {
         try {
-          await Gal.putVideo(videoPath, album: '클링');
+          await Gal.putVideo(videoPath, album: '클림픽');
         } catch (_) {}
       }
 
@@ -728,7 +728,7 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
         localPath = downloaded;
       }
 
-      await Gal.putVideo(localPath, album: '클링');
+      await Gal.putVideo(localPath, album: '클림픽');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -774,7 +774,7 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
         : null;
 
     return Scaffold(
-      appBar: WandeungAppBar(
+      appBar: ClimpickAppBar(
         title: _isEditMode ? '기록 편집' : '기록 저장',
         showBackButton: true,
         extraActions: [
@@ -964,7 +964,7 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
                       final isSelected = _status == s;
                       final isCompleted = s == ClimbingStatus.completed;
                       final activeColor = isCompleted
-                          ? WandeungColors.success
+                          ? ClimpickColors.success
                           : const Color(0xFFFF6B35);
                       return Padding(
                         padding: EdgeInsets.only(right: isCompleted ? 8 : 0),
@@ -1440,7 +1440,7 @@ class _ExportedVideoCardState extends State<_ExportedVideoCard> {
     }
 
     try {
-      await Gal.putVideo(localPath, album: '클링');
+      await Gal.putVideo(localPath, album: '클림픽');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(

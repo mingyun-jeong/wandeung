@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../app.dart';
+import '../providers/camera_settings_provider.dart';
 import '../providers/record_provider.dart';
 import 'main_shell_screen.dart';
 
@@ -70,16 +72,25 @@ class _HomeLoadingScreenState extends ConsumerState<HomeLoadingScreen>
         _progressController.forward(from: _progressController.value).then((_) {
           if (mounted) {
             Future.delayed(const Duration(milliseconds: 200), () {
-              if (mounted) setState(() => _done = true);
+              if (mounted) _applyEntryModeAndFinish();
             });
           }
         });
       } else {
         Future.delayed(const Duration(milliseconds: 200), () {
-          if (mounted) setState(() => _done = true);
+          if (mounted) _applyEntryModeAndFinish();
         });
       }
     }
+  }
+
+  Future<void> _applyEntryModeAndFinish() async {
+    final prefs = await SharedPreferences.getInstance();
+    final isCameraEntry = prefs.getBool('entry_mode_camera') ?? false;
+    if (isCameraEntry) {
+      ref.read(bottomNavIndexProvider.notifier).state = 2;
+    }
+    if (mounted) setState(() => _done = true);
   }
 
   @override

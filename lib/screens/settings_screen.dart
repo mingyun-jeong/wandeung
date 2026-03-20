@@ -1,10 +1,9 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../app.dart';
 import '../models/user_subscription.dart';
+import '../providers/camera_settings_provider.dart';
 import '../providers/connectivity_provider.dart';
-import '../providers/record_provider.dart';
 import '../providers/subscription_provider.dart';
 import '../providers/upload_queue_provider.dart';
 
@@ -235,12 +234,10 @@ class SettingsScreen extends ConsumerWidget {
 
           const SizedBox(height: 28),
 
-          // --- 로컬 영상 관리 ---
-          if (isCloudMode) ...[
-            const _SectionHeader(label: '로컬 영상'),
-            const SizedBox(height: 8),
-            _LocalVideoSection(),
-          ],
+          // --- 진입 모드 ---
+          const _SectionHeader(label: '진입 모드'),
+          const SizedBox(height: 10),
+          _EntryModeCard(),
         ],
       ),
     );
@@ -527,105 +524,39 @@ class _CloudUsageIndicator extends ConsumerWidget {
   }
 }
 
-// ─── 로컬 영상 섹션 ─────────────────────────────────────────────
-class _LocalVideoSection extends ConsumerWidget {
+// ─── 진입 모드 카드 ─────────────────────────────────────────────
+class _EntryModeCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final localRecordsAsync = ref.watch(localOnlyRecordsProvider);
+    final isCameraEntry = ref.watch(entryModeCameraProvider);
 
-    return localRecordsAsync.when(
-      loading: () => const Padding(
-        padding: EdgeInsets.all(20),
-        child: Center(child: CircularProgressIndicator()),
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: ReclimColors.border),
       ),
-      error: (e, _) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        child: Text('오류: $e',
-            style: const TextStyle(color: Colors.red, fontSize: 13)),
+      child: SwitchListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+        title: const Text(
+          '촬영 모드로 시작',
+          style: TextStyle(fontSize: 14),
+        ),
+        subtitle: const Text(
+          '앱 실행 시 바로 촬영 화면으로 진입합니다',
+          style: TextStyle(fontSize: 12),
+        ),
+        secondary: Icon(
+          Icons.videocam_rounded,
+          size: 22,
+          color: isCameraEntry
+              ? ReclimColors.accent
+              : ReclimColors.textTertiary,
+        ),
+        value: isCameraEntry,
+        onChanged: (_) =>
+            ref.read(entryModeCameraProvider.notifier).toggle(),
       ),
-      data: (records) {
-        final queue = ref.watch(uploadQueueProvider);
-        final queuedIds = queue.map((t) => t.recordId).toSet();
-        final orphaned =
-            records.where((r) => !queuedIds.contains(r.id)).toList();
-        final uploadable = orphaned
-            .where((r) =>
-                r.videoPath != null && File(r.videoPath!).existsSync())
-            .toList();
-        final missingCount = orphaned.length - uploadable.length;
-
-        if (orphaned.isEmpty) {
-          return const Row(
-            children: [
-              Icon(Icons.cloud_done, size: 16, color: Colors.green),
-              SizedBox(width: 8),
-              Text(
-                '모든 영상이 서버에 업로드되었습니다',
-                style: TextStyle(
-                  fontSize: 13,
-                  color: ReclimColors.textSecondary,
-                ),
-              ),
-            ],
-          );
-        }
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                const Icon(Icons.cloud_off_outlined,
-                    size: 16, color: Colors.amber),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    '업로드되지 않은 영상: ${orphaned.length}건',
-                    style: const TextStyle(
-                      fontSize: 13,
-                      color: ReclimColors.textSecondary,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            if (missingCount > 0)
-              Padding(
-                padding: const EdgeInsets.only(left: 24, top: 2),
-                child: Text(
-                  '${uploadable.length}건 업로드 가능 · $missingCount건 파일 없음',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: ReclimColors.textTertiary,
-                  ),
-                ),
-              ),
-            if (uploadable.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.only(top: 10),
-                child: SizedBox(
-                  width: double.infinity,
-                  child: FilledButton.icon(
-                    onPressed: () async {
-                      final count = await ref
-                          .read(uploadQueueProvider.notifier)
-                          .enqueueLocalRecords(uploadable);
-                      ref.invalidate(localOnlyRecordsProvider);
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                              content: Text('$count건 업로드 대기열에 추가됨')),
-                        );
-                      }
-                    },
-                    icon: const Icon(Icons.cloud_upload, size: 18),
-                    label: Text('모두 업로드 (${uploadable.length}건)'),
-                  ),
-                ),
-              ),
-          ],
-        );
-      },
     );
   }
 }

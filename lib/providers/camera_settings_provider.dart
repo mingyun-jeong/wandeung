@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/climbing_gym.dart';
 import '../utils/constants.dart';
 import 'user_grade_provider.dart';
@@ -68,5 +69,30 @@ final cameraSettingsProvider =
   },
 );
 
-/// 하단 네비게이션 탭 인덱스 (0=촬영, 1=캘린더)
+/// 하단 네비게이션 탭 인덱스 (0=홈, 1=기록, 2=촬영, 3=세팅일정, 4=통계)
 final bottomNavIndexProvider = StateProvider<int>((ref) => 0);
+
+/// 진입 모드 설정 — 앱 시작 시 바로 촬영 모드로 진입할지 여부
+const _entryModeKey = 'entry_mode_camera';
+
+final entryModeCameraProvider =
+    StateNotifierProvider<EntryModeCameraNotifier, bool>((ref) {
+  return EntryModeCameraNotifier();
+});
+
+class EntryModeCameraNotifier extends StateNotifier<bool> {
+  EntryModeCameraNotifier() : super(false) {
+    _load();
+  }
+
+  Future<void> _load() async {
+    final prefs = await SharedPreferences.getInstance();
+    state = prefs.getBool(_entryModeKey) ?? false;
+  }
+
+  Future<void> toggle() async {
+    state = !state;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_entryModeKey, state);
+  }
+}

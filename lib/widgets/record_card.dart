@@ -223,8 +223,8 @@ class _StatusBadge extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
         color: isCompleted
-            ? ClimpickColors.success.withOpacity(0.1)
-            : ClimpickColors.inProgress.withOpacity(0.1),
+            ? ReclimColors.success.withOpacity(0.1)
+            : ReclimColors.inProgress.withOpacity(0.1),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Text(
@@ -233,8 +233,8 @@ class _StatusBadge extends StatelessWidget {
           fontSize: 11,
           fontWeight: FontWeight.w600,
           color: isCompleted
-              ? ClimpickColors.success
-              : ClimpickColors.inProgress,
+              ? ReclimColors.success
+              : ReclimColors.inProgress,
         ),
       ),
     );
@@ -301,7 +301,7 @@ class _TagBadge extends StatelessWidget {
         tag,
         style: const TextStyle(
           fontSize: 11,
-          color: ClimpickColors.textSecondary,
+          color: ReclimColors.textSecondary,
         ),
       ),
     );

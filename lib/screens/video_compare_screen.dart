@@ -6,7 +6,7 @@ import 'package:video_player/video_player.dart';
 import '../config/r2_config.dart';
 import '../models/climbing_record.dart';
 import '../utils/constants.dart';
-import '../widgets/climpick_app_bar.dart';
+import '../widgets/reclim_app_bar.dart';
 import '../app.dart';
 
 class VideoCompareScreen extends StatefulWidget {
@@ -185,7 +185,7 @@ class _VideoCompareScreenState extends State<VideoCompareScreen> {
 
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: isLandscape ? null : const ClimpickAppBar(
+      appBar: isLandscape ? null : const ReclimAppBar(
         title: '영상 비교',
         showBackButton: true,
       ),
@@ -281,7 +281,7 @@ class _VideoPanel extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
                       color: isCompleted
-                          ? ClimpickColors.success.withOpacity(0.1)
+                          ? ReclimColors.success.withOpacity(0.1)
                           : const Color(0xFFFF6B35).withOpacity(0.1),
                       borderRadius: BorderRadius.circular(10),
                     ),
@@ -291,7 +291,7 @@ class _VideoPanel extends StatelessWidget {
                         fontSize: 10,
                         fontWeight: FontWeight.w600,
                         color: isCompleted
-                            ? ClimpickColors.success
+                            ? ReclimColors.success
                             : const Color(0xFFE65100),
                       ),
                     ),

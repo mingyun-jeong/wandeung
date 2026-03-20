@@ -48,7 +48,7 @@ class ProfileScreen extends ConsumerWidget {
                 border: Border.all(
                   color: isPro
                       ? Colors.amber
-                      : ClimpickColors.border,
+                      : ReclimColors.border,
                   width: isPro ? 3.5 : 2,
                 ),
               ),
@@ -83,7 +83,7 @@ class ProfileScreen extends ConsumerWidget {
               email,
               style: const TextStyle(
                 fontSize: 13,
-                color: ClimpickColors.textSecondary,
+                color: ReclimColors.textSecondary,
               ),
             ),
           ),
@@ -124,7 +124,7 @@ class ProfileScreen extends ConsumerWidget {
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
-                      color: ClimpickColors.textTertiary,
+                      color: ReclimColors.textTertiary,
                     ),
                   ),
                 ),
@@ -133,7 +133,7 @@ class ProfileScreen extends ConsumerWidget {
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(14),
                     border: Border.all(
-                      color: ClimpickColors.border,
+                      color: ReclimColors.border,
                     ),
                   ),
                   child: InkWell(
@@ -158,7 +158,7 @@ class ProfileScreen extends ConsumerWidget {
                           const Spacer(),
                           const Icon(Icons.chevron_right_rounded,
                               size: 20,
-                              color: ClimpickColors.textTertiary),
+                              color: ReclimColors.textTertiary),
                         ],
                       ),
                     ),
@@ -239,7 +239,7 @@ class _PlanBadge extends StatelessWidget {
           color: const Color(0xFFF0F0F0),
           borderRadius: BorderRadius.circular(24),
           border: Border.all(
-            color: ClimpickColors.border,
+            color: ReclimColors.border,
           ),
         ),
         child: const Row(
@@ -247,20 +247,20 @@ class _PlanBadge extends StatelessWidget {
           children: [
             Icon(Icons.phone_android_outlined,
                 size: 16,
-                color: ClimpickColors.textSecondary),
+                color: ReclimColors.textSecondary),
             SizedBox(width: 6),
             Text(
               '로컬 모드',
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
-                color: ClimpickColors.textSecondary,
+                color: ReclimColors.textSecondary,
               ),
             ),
             SizedBox(width: 4),
             Icon(Icons.chevron_right_rounded,
                 size: 16,
-                color: ClimpickColors.textTertiary),
+                color: ReclimColors.textTertiary),
           ],
         ),
       );
@@ -314,20 +314,20 @@ class _PlanBadge extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(Icons.cloud_outlined,
-              size: 16, color: ClimpickColors.accent),
+              size: 16, color: ReclimColors.accent),
           SizedBox(width: 6),
           Text(
             'Free',
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w700,
-              color: ClimpickColors.accent,
+              color: ReclimColors.accent,
             ),
           ),
           SizedBox(width: 4),
           Icon(Icons.chevron_right_rounded,
               size: 16,
-              color: ClimpickColors.textTertiary),
+              color: ReclimColors.textTertiary),
         ],
       ),
     );
@@ -353,7 +353,7 @@ class _FavoriteGymsSection extends ConsumerWidget {
               children: [
                 const Text('내 암장',
                   style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600,
-                    color: ClimpickColors.textTertiary)),
+                    color: ReclimColors.textTertiary)),
                 const Spacer(),
                 InkWell(
                   onTap: () => FavoriteGymSheet.show(context),
@@ -365,10 +365,10 @@ class _FavoriteGymsSection extends ConsumerWidget {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(Icons.add_rounded, size: 16,
-                          color: ClimpickColors.textTertiary),
+                          color: ReclimColors.textTertiary),
                         SizedBox(width: 2),
                         Text('추가', style: TextStyle(fontSize: 13,
-                          color: ClimpickColors.textTertiary)),
+                          color: ReclimColors.textTertiary)),
                       ],
                     ),
                   ),
@@ -382,7 +382,7 @@ class _FavoriteGymsSection extends ConsumerWidget {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: ClimpickColors.border),
+              border: Border.all(color: ReclimColors.border),
             ),
             child: favoriteGyms.when(
               data: (gyms) {
@@ -392,7 +392,7 @@ class _FavoriteGymsSection extends ConsumerWidget {
                     child: Center(
                       child: Text('자주 가는 암장을 추가해보세요',
                         style: TextStyle(fontSize: 13,
-                          color: ClimpickColors.textTertiary)),
+                          color: ReclimColors.textTertiary)),
                     ),
                   );
                 }
@@ -402,7 +402,7 @@ class _FavoriteGymsSection extends ConsumerWidget {
                       _FavoriteGymTile(gym: gyms[i]),
                       if (i < gyms.length - 1)
                         const Divider(height: 1, indent: 16, endIndent: 16,
-                          color: ClimpickColors.border),
+                          color: ReclimColors.border),
                     ],
                   ],
                 );
@@ -420,14 +420,14 @@ class _FavoriteGymsSection extends ConsumerWidget {
                     children: [
                       const Text('불러오기 실패',
                         style: TextStyle(fontSize: 13,
-                          color: ClimpickColors.textTertiary)),
+                          color: ReclimColors.textTertiary)),
                       const SizedBox(height: 8),
                       GestureDetector(
                         onTap: () => ref.invalidate(favoriteGymsProvider),
                         child: const Text('다시 시도',
                           style: TextStyle(fontSize: 13,
                             fontWeight: FontWeight.w600,
-                            color: ClimpickColors.accent)),
+                            color: ReclimColors.accent)),
                       ),
                     ],
                   ),
@@ -452,7 +452,7 @@ class _FavoriteGymTile extends ConsumerWidget {
       child: Row(
         children: [
           const Icon(Icons.location_on_outlined, size: 18,
-            color: ClimpickColors.textTertiary),
+            color: ReclimColors.textTertiary),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
@@ -462,7 +462,7 @@ class _FavoriteGymTile extends ConsumerWidget {
                   overflow: TextOverflow.ellipsis),
                 if (gym.address != null)
                   Text(gym.address!, style: const TextStyle(fontSize: 11,
-                    color: ClimpickColors.textTertiary),
+                    color: ReclimColors.textTertiary),
                     overflow: TextOverflow.ellipsis),
               ],
             ),
@@ -478,7 +478,7 @@ class _FavoriteGymTile extends ConsumerWidget {
                 ref.invalidate(recommendedGymsProvider);
               },
               icon: const Icon(Icons.close_rounded, size: 16,
-                color: ClimpickColors.textTertiary),
+                color: ReclimColors.textTertiary),
               padding: EdgeInsets.zero,
             ),
           ),

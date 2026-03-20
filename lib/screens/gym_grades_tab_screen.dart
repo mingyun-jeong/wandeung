@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/gym_color_scale.dart';
 import '../providers/gym_color_scale_provider.dart';
 import '../utils/constants.dart';
-import '../widgets/climpick_app_bar.dart';
+import '../widgets/reclim_app_bar.dart';
 
 class GymGradesTabScreen extends ConsumerStatefulWidget {
   const GymGradesTabScreen({super.key});
@@ -22,7 +22,7 @@ class _GymGradesTabScreenState extends ConsumerState<GymGradesTabScreen> {
     final scalesAsync = ref.watch(allColorScalesProvider);
 
     return Scaffold(
-      appBar: ClimpickAppBar(
+      appBar: ReclimAppBar(
         extraActions: [
           IconButton(
             icon: const Icon(Icons.refresh_rounded),

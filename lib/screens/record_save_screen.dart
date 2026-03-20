@@ -28,7 +28,7 @@ import '../widgets/difficulty_selector.dart';
 import '../widgets/gym_selection_sheet.dart';
 import '../widgets/gym_map_sheet.dart';
 import '../widgets/tag_input.dart';
-import '../widgets/climpick_app_bar.dart';
+import '../widgets/reclim_app_bar.dart';
 import '../utils/cache_cleanup.dart';
 import '../utils/video_download_cache.dart';
 import '../utils/thumbnail_utils.dart';
@@ -583,7 +583,7 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
       // 2) 로컬 모드: 갤러리 저장
       if (!isCloudMode) {
         try {
-          await Gal.putVideo(videoPath, album: '클림픽');
+          await Gal.putVideo(videoPath, album: '리클림');
         } catch (_) {}
       }
 
@@ -728,7 +728,7 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
         localPath = downloaded;
       }
 
-      await Gal.putVideo(localPath, album: '클림픽');
+      await Gal.putVideo(localPath, album: '리클림');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -774,7 +774,7 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
         : null;
 
     return Scaffold(
-      appBar: ClimpickAppBar(
+      appBar: ReclimAppBar(
         title: _isEditMode ? '기록 편집' : '기록 저장',
         showBackButton: true,
         extraActions: [
@@ -830,13 +830,13 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
                   children: [
                     const Icon(Icons.access_time_rounded,
                         size: 14,
-                        color: ClimpickColors.textTertiary),
+                        color: ReclimColors.textTertiary),
                     const SizedBox(width: 4),
                     Text(
                       '기록일시 ${_formatDateTime(widget.existingRecord!.createdAt!)}',
                       style: const TextStyle(
                         fontSize: 12,
-                        color: ClimpickColors.textTertiary,
+                        color: ReclimColors.textTertiary,
                       ),
                     ),
                   ],
@@ -927,13 +927,13 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(Icons.videocam_off_rounded, size: 36,
-                            color: ClimpickColors.textTertiary),
+                            color: ReclimColors.textTertiary),
                         SizedBox(height: 6),
                         Text('영상 파일을 찾을 수 없습니다.\n촬영 영상은 기기에만 저장되므로,\n파일 삭제·이동 또는 다른 기기에서\n로그인한 경우 재생할 수 없습니다.',
                             textAlign: TextAlign.center,
                             style: TextStyle(
                                 fontSize: 12,
-                                color: ClimpickColors.textTertiary)),
+                                color: ReclimColors.textTertiary)),
                       ],
                     ),
                   ),
@@ -950,7 +950,7 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
                       style: TextStyle(
                         fontWeight: FontWeight.w700,
                         fontSize: 15,
-                        color: ClimpickColors.textPrimary,
+                        color: ReclimColors.textPrimary,
                       )),
                   const SizedBox(height: 8),
                   Row(
@@ -958,7 +958,7 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
                       final isSelected = _status == s;
                       final isCompleted = s == ClimbingStatus.completed;
                       final activeColor = isCompleted
-                          ? ClimpickColors.success
+                          ? ReclimColors.success
                           : const Color(0xFFFF6B35);
                       return Padding(
                         padding: EdgeInsets.only(right: isCompleted ? 8 : 0),
@@ -990,7 +990,7 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
                                       : Icons.sports_kabaddi_rounded,
                                   color: isSelected
                                       ? activeColor
-                                      : ClimpickColors.textTertiary,
+                                      : ReclimColors.textTertiary,
                                   size: 18,
                                 ),
                                 const SizedBox(width: 6),
@@ -1003,7 +1003,7 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
                                     fontSize: 13,
                                     color: isSelected
                                         ? activeColor
-                                        : ClimpickColors.textTertiary,
+                                        : ReclimColors.textTertiary,
                                   ),
                                 ),
                               ],
@@ -1046,7 +1046,7 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
                       style: TextStyle(
                         fontWeight: FontWeight.w700,
                         fontSize: 15,
-                        color: ClimpickColors.textPrimary,
+                        color: ReclimColors.textPrimary,
                       )),
                   const SizedBox(height: 8),
                   if (displayGym != null)
@@ -1077,7 +1077,7 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
                                     style: const TextStyle(
                                       fontSize: 16,
                                       fontWeight: FontWeight.w600,
-                                      color: ClimpickColors.textPrimary,
+                                      color: ReclimColors.textPrimary,
                                     ),
                                   ),
                                   if (displayGym.address != null)
@@ -1087,7 +1087,7 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
                                         displayGym.address!,
                                         style: const TextStyle(
                                           fontSize: 12,
-                                          color: ClimpickColors.textTertiary,
+                                          color: ReclimColors.textTertiary,
                                         ),
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
@@ -1106,7 +1106,7 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
                               ),
                               icon: const Icon(Icons.map_outlined,
                                   size: 20,
-                                  color: ClimpickColors.accent),
+                                  color: ReclimColors.accent),
                               constraints: const BoxConstraints(
                                   minWidth: 40, minHeight: 40),
                               padding: EdgeInsets.zero,
@@ -1123,7 +1123,7 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
                             },
                             icon: const Icon(Icons.close_rounded,
                                 size: 18,
-                                color: ClimpickColors.textTertiary),
+                                color: ReclimColors.textTertiary),
                             constraints: const BoxConstraints(
                                 minWidth: 40, minHeight: 40),
                             padding: EdgeInsets.zero,
@@ -1147,13 +1147,13 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
                           children: [
                             Icon(Icons.add_location_alt_outlined,
                                 size: 18,
-                                color: ClimpickColors.textTertiary),
+                                color: ReclimColors.textTertiary),
                             SizedBox(width: 10),
                             Text(
                               '암장을 선택해주세요',
                               style: TextStyle(
                                 fontSize: 14,
-                                color: ClimpickColors.textTertiary,
+                                color: ReclimColors.textTertiary,
                               ),
                             ),
                           ],
@@ -1169,7 +1169,7 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
                           style: TextStyle(
                             fontWeight: FontWeight.w700,
                             fontSize: 15,
-                            color: ClimpickColors.textPrimary,
+                            color: ReclimColors.textPrimary,
                           )),
                       const Spacer(),
                       if (!_isEditMode)
@@ -1201,7 +1201,7 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
                                 '다음 촬영에도 태그 유지',
                                 style: TextStyle(
                                   fontSize: 12,
-                                  color: ClimpickColors.textSecondary,
+                                  color: ReclimColors.textSecondary,
                                 ),
                               ),
                             ],
@@ -1307,7 +1307,7 @@ class _ExportedVideosList extends ConsumerWidget {
               children: [
                 const Icon(Icons.video_library_rounded,
                     size: 18,
-                    color: ClimpickColors.textSecondary),
+                    color: ReclimColors.textSecondary),
                 const SizedBox(width: 6),
                 Text(
                   '내보내기 영상 (${exports.length})',
@@ -1346,7 +1346,7 @@ class _ExportedVideosList extends ConsumerWidget {
             children: [
               const Text('내보내기 영상을 불러오지 못했습니다',
                 style: TextStyle(fontSize: 13,
-                  color: ClimpickColors.textTertiary)),
+                  color: ReclimColors.textTertiary)),
               const SizedBox(height: 8),
               GestureDetector(
                 onTap: () => ref.invalidate(
@@ -1354,7 +1354,7 @@ class _ExportedVideosList extends ConsumerWidget {
                 child: const Text('다시 시도',
                   style: TextStyle(fontSize: 13,
                     fontWeight: FontWeight.w600,
-                    color: ClimpickColors.accent)),
+                    color: ReclimColors.accent)),
               ),
             ],
           ),
@@ -1430,7 +1430,7 @@ class _ExportedVideoCardState extends State<_ExportedVideoCard> {
     }
 
     try {
-      await Gal.putVideo(localPath, album: '클림픽');
+      await Gal.putVideo(localPath, album: '리클림');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -1626,7 +1626,7 @@ class _ExportedVideoCardState extends State<_ExportedVideoCard> {
                       _formatDate(record.createdAt),
                       style: const TextStyle(
                           fontSize: 12,
-                          color: ClimpickColors.textTertiary),
+                          color: ReclimColors.textTertiary),
                     ),
                   ],
                 ),
@@ -1636,7 +1636,7 @@ class _ExportedVideoCardState extends State<_ExportedVideoCard> {
                   onPressed: () => _saveExportToGallery(record),
                   icon: const Icon(Icons.download_rounded,
                       size: 18,
-                      color: ClimpickColors.textTertiary),
+                      color: ReclimColors.textTertiary),
                   constraints: const BoxConstraints(
                       minWidth: 40, minHeight: 40),
                   padding: EdgeInsets.zero,
@@ -1645,7 +1645,7 @@ class _ExportedVideoCardState extends State<_ExportedVideoCard> {
                 onPressed: _startEditing,
                 icon: const Icon(Icons.edit_rounded,
                     size: 18,
-                    color: ClimpickColors.textTertiary),
+                    color: ReclimColors.textTertiary),
                 constraints: const BoxConstraints(
                     minWidth: 40, minHeight: 40),
                 padding: EdgeInsets.zero,
@@ -1675,7 +1675,7 @@ class _ExportedVideoCardState extends State<_ExportedVideoCard> {
                 },
                 icon: const Icon(Icons.delete_outline_rounded,
                     size: 20,
-                    color: ClimpickColors.textTertiary),
+                    color: ReclimColors.textTertiary),
                 constraints: const BoxConstraints(
                     minWidth: 40, minHeight: 40),
                 padding: EdgeInsets.zero,

@@ -19,5 +19,5 @@ void main() async {
     debugPrint('FFmpegKit font directory 설정 실패: $e');
   }
 
-  runApp(const ProviderScope(child: ClimpickApp()));
+  runApp(const ProviderScope(child: ReclimApp()));
 }

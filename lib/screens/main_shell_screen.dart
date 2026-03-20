@@ -31,7 +31,7 @@ class MainShellScreen extends ConsumerWidget {
       bottomNavigationBar: Container(
         decoration: const BoxDecoration(
           border: Border(
-            top: BorderSide(color: ClimpickColors.border, width: 1),
+            top: BorderSide(color: ReclimColors.border, width: 1),
           ),
         ),
         child: NavigationBar(
@@ -58,12 +58,12 @@ class MainShellScreen extends ConsumerWidget {
             NavigationDestination(
               icon: Badge(
                 label: Text('Beta', style: TextStyle(fontSize: 8)),
-                backgroundColor: ClimpickColors.accent,
+                backgroundColor: ReclimColors.accent,
                 child: Icon(Icons.calendar_month_outlined),
               ),
               selectedIcon: Badge(
                 label: Text('Beta', style: TextStyle(fontSize: 8)),
-                backgroundColor: ClimpickColors.accent,
+                backgroundColor: ReclimColors.accent,
                 child: Icon(Icons.calendar_month_rounded),
               ),
               label: '세팅일정',

@@ -6,13 +6,13 @@ import '../screens/login_screen.dart';
 import '../screens/profile_screen.dart';
 import '../screens/settings_screen.dart';
 
-class ClimpickAppBar extends ConsumerWidget implements PreferredSizeWidget {
+class ReclimAppBar extends ConsumerWidget implements PreferredSizeWidget {
   final String? title;
   final bool showBackButton;
   final List<Widget>? extraActions;
   final PreferredSizeWidget? bottom;
 
-  const ClimpickAppBar({
+  const ReclimAppBar({
     super.key,
     this.title,
     this.showBackButton = false,
@@ -56,7 +56,7 @@ class ClimpickAppBar extends ConsumerWidget implements PreferredSizeWidget {
                 ),
                 const SizedBox(width: 10),
                 const Text(
-                  '클림픽',
+                  '리클림',
                   style: TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.w800,

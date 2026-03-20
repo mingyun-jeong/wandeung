@@ -75,13 +75,13 @@ class GymStatsTab extends ConsumerWidget {
             width: 64,
             height: 64,
             decoration: BoxDecoration(
-              color: ClimpickColors.border.withOpacity(0.5),
+              color: ReclimColors.border.withOpacity(0.5),
               shape: BoxShape.circle,
             ),
             child: Icon(
               Icons.store_outlined,
               size: 32,
-              color: ClimpickColors.textTertiary.withOpacity(0.5),
+              color: ReclimColors.textTertiary.withOpacity(0.5),
             ),
           ),
           const SizedBox(height: 12),
@@ -90,7 +90,7 @@ class GymStatsTab extends ConsumerWidget {
             style: TextStyle(
               fontSize: 15,
               fontWeight: FontWeight.w500,
-              color: ClimpickColors.textTertiary,
+              color: ReclimColors.textTertiary,
             ),
           ),
           const SizedBox(height: 4),
@@ -98,7 +98,7 @@ class GymStatsTab extends ConsumerWidget {
             '암장별 통계와 내 순위를 확인할 수 있어요',
             style: TextStyle(
               fontSize: 13,
-              color: ClimpickColors.textTertiary.withOpacity(0.7),
+              color: ReclimColors.textTertiary.withOpacity(0.7),
             ),
           ),
         ],
@@ -145,7 +145,7 @@ class _GymPickerBar extends StatelessWidget {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: ClimpickColors.border),
+                border: Border.all(color: ReclimColors.border),
               ),
               child: DropdownButtonHideUnderline(
                 child: DropdownButton<String>(
@@ -156,18 +156,18 @@ class _GymPickerBar extends StatelessWidget {
                     '내 암장 선택',
                     style: TextStyle(
                       fontSize: 15,
-                      color: ClimpickColors.textTertiary,
+                      color: ReclimColors.textTertiary,
                     ),
                   ),
                   isExpanded: true,
                   icon: const Icon(
                     Icons.keyboard_arrow_down_rounded,
-                    color: ClimpickColors.textTertiary,
+                    color: ReclimColors.textTertiary,
                   ),
                   style: const TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
-                    color: ClimpickColors.textPrimary,
+                    color: ReclimColors.textPrimary,
                   ),
                   items: gyms
                       .where((g) => g.id != null)
@@ -178,7 +178,7 @@ class _GymPickerBar extends StatelessWidget {
                                 const Icon(
                                   Icons.location_on_outlined,
                                   size: 16,
-                                  color: ClimpickColors.accent,
+                                  color: ReclimColors.accent,
                                 ),
                                 const SizedBox(width: 8),
                                 Expanded(
@@ -204,7 +204,7 @@ class _GymPickerBar extends StatelessWidget {
               width: 48,
               height: 48,
               decoration: BoxDecoration(
-                color: ClimpickColors.accent,
+                color: ReclimColors.accent,
                 borderRadius: BorderRadius.circular(14),
               ),
               child: const Icon(
@@ -240,7 +240,7 @@ class _GymStatsContent extends ConsumerWidget {
             child: Center(
               child: Text(
                 '최근 30일간 기록이 없습니다',
-                style: TextStyle(color: ClimpickColors.textTertiary),
+                style: TextStyle(color: ReclimColors.textTertiary),
               ),
             ),
           );
@@ -278,11 +278,11 @@ class _GymStatsContent extends ConsumerWidget {
             children: [
               Icon(Icons.error_outline,
                   size: 36,
-                  color: ClimpickColors.textTertiary.withOpacity(0.5)),
+                  color: ReclimColors.textTertiary.withOpacity(0.5)),
               const SizedBox(height: 8),
               const Text(
                 '통계를 불러올 수 없습니다',
-                style: TextStyle(color: ClimpickColors.textTertiary),
+                style: TextStyle(color: ReclimColors.textTertiary),
               ),
               const SizedBox(height: 12),
               TextButton.icon(
@@ -316,7 +316,7 @@ class _GymSummaryCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: ClimpickColors.border),
+        border: Border.all(color: ReclimColors.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -328,7 +328,7 @@ class _GymSummaryCard extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 17,
                   fontWeight: FontWeight.w700,
-                  color: ClimpickColors.textPrimary,
+                  color: ReclimColors.textPrimary,
                 ),
               ),
               const Spacer(),
@@ -336,7 +336,7 @@ class _GymSummaryCard extends StatelessWidget {
                 '최근 30일',
                 style: TextStyle(
                   fontSize: 11,
-                  color: ClimpickColors.textTertiary.withOpacity(0.7),
+                  color: ReclimColors.textTertiary.withOpacity(0.7),
                 ),
               ),
             ],
@@ -380,14 +380,14 @@ class _GymSummaryCard extends StatelessWidget {
               child: Row(
                 children: [
                   const Icon(Icons.star_rounded,
-                      size: 16, color: ClimpickColors.inProgress),
+                      size: 16, color: ReclimColors.inProgress),
                   const SizedBox(width: 8),
                   const Text(
                     '인기 등급',
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w500,
-                      color: ClimpickColors.textSecondary,
+                      color: ReclimColors.textSecondary,
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -397,7 +397,7 @@ class _GymSummaryCard extends StatelessWidget {
                       style: const TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w700,
-                        color: ClimpickColors.textPrimary,
+                        color: ReclimColors.textPrimary,
                       ),
                       textAlign: TextAlign.right,
                     ),
@@ -416,7 +416,7 @@ class _GymSummaryCard extends StatelessWidget {
       width: 1,
       height: 36,
       margin: const EdgeInsets.symmetric(horizontal: 4),
-      color: ClimpickColors.border,
+      color: ReclimColors.border,
     );
   }
 }
@@ -445,7 +445,7 @@ class _SummaryValue extends StatelessWidget {
                 style: const TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.w800,
-                  color: ClimpickColors.textPrimary,
+                  color: ReclimColors.textPrimary,
                   height: 1,
                   letterSpacing: -1,
                 ),
@@ -457,7 +457,7 @@ class _SummaryValue extends StatelessWidget {
                   style: const TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
-                    color: ClimpickColors.textTertiary,
+                    color: ReclimColors.textTertiary,
                   ),
                 ),
               ),
@@ -468,7 +468,7 @@ class _SummaryValue extends StatelessWidget {
             label,
             style: const TextStyle(
               fontSize: 11,
-              color: ClimpickColors.textTertiary,
+              color: ReclimColors.textTertiary,
             ),
           ),
         ],
@@ -489,7 +489,7 @@ class _MyPositionCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: ClimpickColors.primary,
+        color: ReclimColors.primary,
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
@@ -657,7 +657,7 @@ class _ComparisonBar extends StatelessWidget {
                     width: 8,
                     height: 8,
                     decoration: const BoxDecoration(
-                      color: ClimpickColors.success,
+                      color: ReclimColors.success,
                       shape: BoxShape.circle,
                     ),
                   ),
@@ -667,7 +667,7 @@ class _ComparisonBar extends StatelessWidget {
                     style: const TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
-                      color: ClimpickColors.success,
+                      color: ReclimColors.success,
                     ),
                   ),
                 ],
@@ -725,7 +725,7 @@ class _ComparisonBar extends StatelessWidget {
                   widthFactor: myNorm,
                   child: Container(
                     decoration: BoxDecoration(
-                      color: ClimpickColors.success,
+                      color: ReclimColors.success,
                       borderRadius: BorderRadius.circular(4),
                     ),
                   ),
@@ -791,7 +791,7 @@ class _GradeDistributionCard extends ConsumerWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: ClimpickColors.border),
+        border: Border.all(color: ReclimColors.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -801,7 +801,7 @@ class _GradeDistributionCard extends ConsumerWidget {
             style: TextStyle(
               fontSize: 17,
               fontWeight: FontWeight.w700,
-              color: ClimpickColors.textPrimary,
+              color: ReclimColors.textPrimary,
             ),
           ),
           const SizedBox(height: 16),
@@ -823,7 +823,7 @@ class _GradeDistributionCard extends ConsumerWidget {
                       style: const TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
-                        color: ClimpickColors.textPrimary,
+                        color: ReclimColors.textPrimary,
                       ),
                     ),
                   ),
@@ -869,7 +869,7 @@ class _GradeDistributionCard extends ConsumerWidget {
                       style: const TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
-                        color: ClimpickColors.textSecondary,
+                        color: ReclimColors.textSecondary,
                       ),
                     ),
                   ),
@@ -883,10 +883,10 @@ class _GradeDistributionCard extends ConsumerWidget {
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
                         color: g.completionRate >= 70
-                            ? ClimpickColors.success
+                            ? ReclimColors.success
                             : g.completionRate >= 40
-                                ? ClimpickColors.inProgress
-                                : ClimpickColors.accent,
+                                ? ReclimColors.inProgress
+                                : ReclimColors.accent,
                       ),
                     ),
                   ),
@@ -899,11 +899,11 @@ class _GradeDistributionCard extends ConsumerWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
-              _legendDot(ClimpickColors.success, '완등 70%↑'),
+              _legendDot(ReclimColors.success, '완등 70%↑'),
               const SizedBox(width: 10),
-              _legendDot(ClimpickColors.inProgress, '40~70%'),
+              _legendDot(ReclimColors.inProgress, '40~70%'),
               const SizedBox(width: 10),
-              _legendDot(ClimpickColors.accent, '40%↓'),
+              _legendDot(ReclimColors.accent, '40%↓'),
             ],
           ),
         ],
@@ -928,7 +928,7 @@ class _GradeDistributionCard extends ConsumerWidget {
           text,
           style: const TextStyle(
             fontSize: 10,
-            color: ClimpickColors.textTertiary,
+            color: ReclimColors.textTertiary,
           ),
         ),
       ],

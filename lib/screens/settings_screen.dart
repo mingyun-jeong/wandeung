@@ -125,7 +125,7 @@ class SettingsScreen extends ConsumerWidget {
                                   style: TextStyle(
                                     fontSize: 14,
                                     height: 1.5,
-                                    color: ClimpickColors.textSecondary,
+                                    color: ReclimColors.textSecondary,
                                   ),
                                 ),
                                 const SizedBox(height: 24),
@@ -225,7 +225,7 @@ class SettingsScreen extends ConsumerWidget {
                       style: TextStyle(
                         fontSize: 13,
                         height: 1.4,
-                        color: ClimpickColors.textSecondary,
+                        color: ReclimColors.textSecondary,
                       ),
                     ),
                   ),
@@ -259,7 +259,7 @@ class _SectionHeader extends StatelessWidget {
       style: const TextStyle(
         fontSize: 13,
         fontWeight: FontWeight.w700,
-        color: ClimpickColors.textTertiary,
+        color: ReclimColors.textTertiary,
         letterSpacing: 0.3,
       ),
     );
@@ -291,7 +291,7 @@ class _ModeSegment extends StatelessWidget {
           curve: Curves.easeOut,
           padding: const EdgeInsets.symmetric(vertical: 10),
           decoration: BoxDecoration(
-            color: isSelected ? ClimpickColors.accent : Colors.transparent,
+            color: isSelected ? ReclimColors.accent : Colors.transparent,
             borderRadius: BorderRadius.circular(9),
           ),
           child: Row(
@@ -302,7 +302,7 @@ class _ModeSegment extends StatelessWidget {
                 size: 18,
                 color: isSelected
                     ? Colors.white
-                    : ClimpickColors.textSecondary,
+                    : ReclimColors.textSecondary,
               ),
               const SizedBox(width: 6),
               Text(
@@ -312,7 +312,7 @@ class _ModeSegment extends StatelessWidget {
                   fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                   color: isSelected
                       ? Colors.white
-                      : ClimpickColors.textSecondary,
+                      : ReclimColors.textSecondary,
                 ),
               ),
             ],
@@ -344,7 +344,7 @@ class _CloudCard extends ConsumerWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: ClimpickColors.border,
+          color: ReclimColors.border,
         ),
       ),
       child: Column(
@@ -358,7 +358,7 @@ class _CloudCard extends ConsumerWidget {
                 Icon(
                   isPro ? Icons.star_rounded : Icons.cloud_outlined,
                   size: 18,
-                  color: isPro ? Colors.amber : ClimpickColors.accent,
+                  color: isPro ? Colors.amber : ReclimColors.accent,
                 ),
                 const SizedBox(width: 8),
                 Text(
@@ -366,7 +366,7 @@ class _CloudCard extends ConsumerWidget {
                   style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
-                    color: ClimpickColors.textPrimary,
+                    color: ReclimColors.textPrimary,
                   ),
                 ),
               ],
@@ -384,7 +384,7 @@ class _CloudCard extends ConsumerWidget {
             padding: EdgeInsets.symmetric(horizontal: 12),
             child: Divider(
               height: 1,
-              color: ClimpickColors.border,
+              color: ReclimColors.border,
             ),
           ),
 
@@ -433,7 +433,7 @@ class _CloudCard extends ConsumerWidget {
                       ].join(' · '),
                       style: const TextStyle(
                         fontSize: 13,
-                        color: ClimpickColors.textSecondary,
+                        color: ReclimColors.textSecondary,
                       ),
                     ),
                   ),
@@ -472,7 +472,7 @@ class _CloudUsageIndicator extends ConsumerWidget {
       error: (_, __) => const Padding(
         padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         child: Text('사용량 확인 실패',
-          style: TextStyle(fontSize: 12, color: ClimpickColors.textTertiary)),
+          style: TextStyle(fontSize: 12, color: ReclimColors.textTertiary)),
       ),
       data: (usedBytes) {
         const limitBytes = freeStorageLimitBytes;
@@ -491,7 +491,7 @@ class _CloudUsageIndicator extends ConsumerWidget {
                     '사용량',
                     style: TextStyle(
                       fontSize: 12,
-                      color: ClimpickColors.textSecondary,
+                      color: ReclimColors.textSecondary,
                     ),
                   ),
                   Text(
@@ -501,7 +501,7 @@ class _CloudUsageIndicator extends ConsumerWidget {
                       fontWeight: FontWeight.w600,
                       color: ratio > 0.9
                           ? Colors.red
-                          : ClimpickColors.textSecondary,
+                          : ReclimColors.textSecondary,
                     ),
                   ),
                 ],
@@ -512,9 +512,9 @@ class _CloudUsageIndicator extends ConsumerWidget {
                 child: LinearProgressIndicator(
                   value: ratio,
                   minHeight: 5,
-                  backgroundColor: ClimpickColors.border,
+                  backgroundColor: ReclimColors.border,
                   valueColor: AlwaysStoppedAnimation(
-                    ratio > 0.9 ? Colors.red : ClimpickColors.accent,
+                    ratio > 0.9 ? Colors.red : ReclimColors.accent,
                   ),
                 ),
               ),
@@ -563,7 +563,7 @@ class _LocalVideoSection extends ConsumerWidget {
                 '모든 영상이 서버에 업로드되었습니다',
                 style: TextStyle(
                   fontSize: 13,
-                  color: ClimpickColors.textSecondary,
+                  color: ReclimColors.textSecondary,
                 ),
               ),
             ],
@@ -583,7 +583,7 @@ class _LocalVideoSection extends ConsumerWidget {
                     '업로드되지 않은 영상: ${orphaned.length}건',
                     style: const TextStyle(
                       fontSize: 13,
-                      color: ClimpickColors.textSecondary,
+                      color: ReclimColors.textSecondary,
                     ),
                   ),
                 ),
@@ -596,7 +596,7 @@ class _LocalVideoSection extends ConsumerWidget {
                   '${uploadable.length}건 업로드 가능 · $missingCount건 파일 없음',
                   style: const TextStyle(
                     fontSize: 12,
-                    color: ClimpickColors.textTertiary,
+                    color: ReclimColors.textTertiary,
                   ),
                 ),
               ),

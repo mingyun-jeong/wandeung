@@ -15,7 +15,7 @@ import '../screens/gym_detail_screen.dart';
 import '../screens/record_save_screen.dart';
 import '../screens/video_playback_screen.dart';
 import '../utils/constants.dart';
-import '../widgets/climpick_app_bar.dart';
+import '../widgets/reclim_app_bar.dart';
 
 class HomeTabScreen extends ConsumerWidget {
   const HomeTabScreen({super.key});
@@ -27,9 +27,9 @@ class HomeTabScreen extends ConsumerWidget {
     final gymsAsync = ref.watch(recentGymsProvider);
 
     return Scaffold(
-      appBar: const ClimpickAppBar(),
+      appBar: const ReclimAppBar(),
       body: RefreshIndicator(
-        color: ClimpickColors.accent,
+        color: ReclimColors.accent,
         onRefresh: () async {
           ref.invalidate(userStatsProvider);
           ref.invalidate(recentRecordsProvider);
@@ -81,7 +81,7 @@ class HomeTabScreen extends ConsumerWidget {
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w700,
-                        color: ClimpickColors.textPrimary,
+                        color: ReclimColors.textPrimary,
                       ),
                     ),
                     const Spacer(),
@@ -109,13 +109,13 @@ class HomeTabScreen extends ConsumerWidget {
                                         style: TextStyle(
                                           fontSize: 13,
                                           fontWeight: FontWeight.w500,
-                                          color: ClimpickColors.accent,
+                                          color: ReclimColors.accent,
                                         ),
                                       ),
                                       Icon(
                                         Icons.chevron_right_rounded,
                                         size: 18,
-                                        color: ClimpickColors.accent,
+                                        color: ReclimColors.accent,
                                       ),
                                     ],
                                   ),
@@ -193,7 +193,7 @@ class _HeroStatsCard extends ConsumerWidget {
       child: Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: ClimpickColors.primary,
+          color: ReclimColors.primary,
           borderRadius: BorderRadius.circular(20),
         ),
         child: Column(
@@ -206,7 +206,7 @@ class _HeroStatsCard extends ConsumerWidget {
                     padding: const EdgeInsets.symmetric(
                         horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
-                      color: ClimpickColors.accent.withOpacity(0.25),
+                      color: ReclimColors.accent.withOpacity(0.25),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Row(
@@ -215,7 +215,7 @@ class _HeroStatsCard extends ConsumerWidget {
                         const Icon(
                           Icons.local_fire_department_rounded,
                           size: 14,
-                          color: ClimpickColors.accentLight,
+                          color: ReclimColors.accentLight,
                         ),
                         const SizedBox(width: 4),
                         Text(
@@ -223,7 +223,7 @@ class _HeroStatsCard extends ConsumerWidget {
                           style: const TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w700,
-                            color: ClimpickColors.accentLight,
+                            color: ReclimColors.accentLight,
                           ),
                         ),
                       ],
@@ -251,7 +251,7 @@ class _HeroStatsCard extends ConsumerWidget {
                   child: _StatColumn(
                     value: '${stats.totalCompleted}',
                     label: '완등',
-                    color: ClimpickColors.success,
+                    color: ReclimColors.success,
                   ),
                 ),
 
@@ -272,7 +272,7 @@ class _HeroStatsCard extends ConsumerWidget {
                           strokeWidth: 7,
                           backgroundColor: Colors.white.withOpacity(0.1),
                           valueColor: const AlwaysStoppedAnimation<Color>(
-                            ClimpickColors.success,
+                            ReclimColors.success,
                           ),
                           strokeCap: StrokeCap.round,
                         ),
@@ -309,7 +309,7 @@ class _HeroStatsCard extends ConsumerWidget {
                   child: _StatColumn(
                     value: '${stats.totalInProgress}',
                     label: '도전중',
-                    color: ClimpickColors.inProgress,
+                    color: ReclimColors.inProgress,
                   ),
                 ),
               ],
@@ -435,7 +435,7 @@ class _HeatmapDot extends StatelessWidget {
             fontSize: 11,
             fontWeight: isToday ? FontWeight.w700 : FontWeight.w500,
             color: isToday
-                ? ClimpickColors.accentLight
+                ? ReclimColors.accentLight
                 : Colors.white.withOpacity(0.4),
           ),
         ),
@@ -446,13 +446,13 @@ class _HeatmapDot extends StatelessWidget {
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: hasRecord
-                ? ClimpickColors.success
+                ? ReclimColors.success
                 : isFuture
                     ? Colors.transparent
                     : Colors.white.withOpacity(0.08),
             border: isToday && !hasRecord
                 ? Border.all(
-                    color: ClimpickColors.accentLight.withOpacity(0.6),
+                    color: ReclimColors.accentLight.withOpacity(0.6),
                     width: 1.5)
                 : null,
           ),
@@ -489,7 +489,7 @@ class _QuickActions extends ConsumerWidget {
               padding:
                   const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               decoration: BoxDecoration(
-                color: ClimpickColors.accent,
+                color: ReclimColors.accent,
                 borderRadius: BorderRadius.circular(22),
               ),
               child: const Row(
@@ -528,7 +528,7 @@ class _QuickActions extends ConsumerWidget {
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(22),
-                      border: Border.all(color: ClimpickColors.border),
+                      border: Border.all(color: ReclimColors.border),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -536,7 +536,7 @@ class _QuickActions extends ConsumerWidget {
                         const Icon(
                           Icons.location_on_outlined,
                           size: 15,
-                          color: ClimpickColors.accent,
+                          color: ReclimColors.accent,
                         ),
                         const SizedBox(width: 4),
                         Text(
@@ -544,7 +544,7 @@ class _QuickActions extends ConsumerWidget {
                           style: const TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w500,
-                            color: ClimpickColors.textSecondary,
+                            color: ReclimColors.textSecondary,
                           ),
                         ),
                       ],
@@ -585,7 +585,7 @@ class _WeeklySettingSection extends ConsumerWidget {
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w700,
-                    color: ClimpickColors.textPrimary,
+                    color: ReclimColors.textPrimary,
                   ),
                 ),
                 const Spacer(),
@@ -606,13 +606,13 @@ class _WeeklySettingSection extends ConsumerWidget {
                         style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w500,
-                          color: ClimpickColors.accent,
+                          color: ReclimColors.accent,
                         ),
                       ),
                       Icon(
                         Icons.chevron_right_rounded,
                         size: 18,
-                        color: ClimpickColors.accent,
+                        color: ReclimColors.accent,
                       ),
                     ],
                   ),
@@ -668,8 +668,8 @@ class _WeeklySettingCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
           color: isToday
-              ? ClimpickColors.accent.withOpacity(0.4)
-              : ClimpickColors.border,
+              ? ReclimColors.accent.withOpacity(0.4)
+              : ReclimColors.border,
         ),
       ),
       child: Row(
@@ -678,8 +678,8 @@ class _WeeklySettingCard extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
               color: isToday
-                  ? ClimpickColors.accent.withOpacity(0.1)
-                  : ClimpickColors.border.withOpacity(0.5),
+                  ? ReclimColors.accent.withOpacity(0.1)
+                  : ReclimColors.border.withOpacity(0.5),
               borderRadius: BorderRadius.circular(6),
             ),
             child: Text(
@@ -688,8 +688,8 @@ class _WeeklySettingCard extends StatelessWidget {
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
                 color: isToday
-                    ? ClimpickColors.accent
-                    : ClimpickColors.textSecondary,
+                    ? ReclimColors.accent
+                    : ReclimColors.textSecondary,
               ),
             ),
           ),
@@ -703,7 +703,7 @@ class _WeeklySettingCard extends StatelessWidget {
                   style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: ClimpickColors.textPrimary,
+                    color: ReclimColors.textPrimary,
                   ),
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -712,7 +712,7 @@ class _WeeklySettingCard extends StatelessWidget {
                   '$sectorNames 세팅',
                   style: const TextStyle(
                     fontSize: 12,
-                    color: ClimpickColors.textSecondary,
+                    color: ReclimColors.textSecondary,
                   ),
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -751,7 +751,7 @@ class _RecordGridCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: ClimpickColors.border),
+          border: Border.all(color: ReclimColors.border),
         ),
         clipBehavior: Clip.antiAlias,
         child: Column(
@@ -772,8 +772,8 @@ class _RecordGridCard extends StatelessWidget {
                           horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
                         color: isCompleted
-                            ? ClimpickColors.success
-                            : ClimpickColors.inProgress,
+                            ? ReclimColors.success
+                            : ReclimColors.inProgress,
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Text(
@@ -913,7 +913,7 @@ class _RecordGridCard extends StatelessWidget {
                           style: const TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
-                            color: ClimpickColors.textPrimary,
+                            color: ReclimColors.textPrimary,
                             letterSpacing: -0.2,
                           ),
                           maxLines: 1,
@@ -927,7 +927,7 @@ class _RecordGridCard extends StatelessWidget {
                     '${diffColor.korean} · ${record.grade}',
                     style: const TextStyle(
                       fontSize: 11,
-                      color: ClimpickColors.textTertiary,
+                      color: ReclimColors.textTertiary,
                     ),
                   ),
                 ],
@@ -1016,13 +1016,13 @@ class _EmptyRecords extends ConsumerWidget {
               width: 72,
               height: 72,
               decoration: BoxDecoration(
-                color: ClimpickColors.accent.withOpacity(0.08),
+                color: ReclimColors.accent.withOpacity(0.08),
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 Icons.terrain_outlined,
                 size: 36,
-                color: ClimpickColors.accent.withOpacity(0.4),
+                color: ReclimColors.accent.withOpacity(0.4),
               ),
             ),
             const SizedBox(height: 16),
@@ -1031,7 +1031,7 @@ class _EmptyRecords extends ConsumerWidget {
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
-                color: ClimpickColors.textSecondary,
+                color: ReclimColors.textSecondary,
               ),
             ),
             const SizedBox(height: 6),
@@ -1039,7 +1039,7 @@ class _EmptyRecords extends ConsumerWidget {
               '첫 등반을 기록해보세요!',
               style: TextStyle(
                 fontSize: 13,
-                color: ClimpickColors.textTertiary,
+                color: ReclimColors.textTertiary,
               ),
             ),
             const SizedBox(height: 20),

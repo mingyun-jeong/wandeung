@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'screens/splash_screen.dart';
 
-/// 클림픽 앱 컬러 상수
-class ClimpickColors {
-  ClimpickColors._();
+/// 리클림 앱 컬러 상수
+class ReclimColors {
+  ReclimColors._();
 
   static const primary = Color(0xFF1A1A2E);       // Deep Navy
   static const accent = Color(0xFFE94560);         // Climbing Red
@@ -20,69 +20,69 @@ class ClimpickColors {
   static const textTertiary = Color(0xFF9CA3AF);
 }
 
-class ClimpickApp extends ConsumerWidget {
-  const ClimpickApp({super.key});
+class ReclimApp extends ConsumerWidget {
+  const ReclimApp({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return MaterialApp(
-      title: '클림픽',
+      title: '리클림',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
-          seedColor: ClimpickColors.accent,
+          seedColor: ReclimColors.accent,
           brightness: Brightness.light,
-          primary: ClimpickColors.accent,
+          primary: ReclimColors.accent,
           onPrimary: Colors.white,
-          secondary: ClimpickColors.secondary,
-          surface: ClimpickColors.surface,
-          onSurface: ClimpickColors.textPrimary,
+          secondary: ReclimColors.secondary,
+          surface: ReclimColors.surface,
+          onSurface: ReclimColors.textPrimary,
         ),
         useMaterial3: true,
-        scaffoldBackgroundColor: ClimpickColors.surface,
+        scaffoldBackgroundColor: ReclimColors.surface,
         cardTheme: CardTheme(
           elevation: 0,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
-            side: const BorderSide(color: ClimpickColors.border),
+            side: const BorderSide(color: ReclimColors.border),
           ),
-          color: ClimpickColors.card,
+          color: ReclimColors.card,
         ),
         appBarTheme: const AppBarTheme(
           scrolledUnderElevation: 0,
-          backgroundColor: ClimpickColors.surface,
+          backgroundColor: ReclimColors.surface,
           surfaceTintColor: Colors.transparent,
-          foregroundColor: ClimpickColors.textPrimary,
+          foregroundColor: ReclimColors.textPrimary,
         ),
         navigationBarTheme: NavigationBarThemeData(
           backgroundColor: Colors.white,
           surfaceTintColor: Colors.transparent,
-          indicatorColor: ClimpickColors.accent.withOpacity(0.12),
+          indicatorColor: ReclimColors.accent.withOpacity(0.12),
           elevation: 0,
           height: 64,
           iconTheme: WidgetStateProperty.resolveWith((states) {
             if (states.contains(WidgetState.selected)) {
-              return const IconThemeData(color: ClimpickColors.accent);
+              return const IconThemeData(color: ReclimColors.accent);
             }
-            return const IconThemeData(color: ClimpickColors.textSecondary);
+            return const IconThemeData(color: ReclimColors.textSecondary);
           }),
           labelTextStyle: WidgetStateProperty.resolveWith((states) {
             if (states.contains(WidgetState.selected)) {
               return const TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.w600,
-                color: ClimpickColors.accent,
+                color: ReclimColors.accent,
               );
             }
             return const TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w500,
-              color: ClimpickColors.textSecondary,
+              color: ReclimColors.textSecondary,
             );
           }),
         ),
         filledButtonTheme: FilledButtonThemeData(
           style: FilledButton.styleFrom(
-            backgroundColor: ClimpickColors.accent,
+            backgroundColor: ReclimColors.accent,
             foregroundColor: Colors.white,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(14),
@@ -91,7 +91,7 @@ class ClimpickApp extends ConsumerWidget {
         ),
         outlinedButtonTheme: OutlinedButtonThemeData(
           style: OutlinedButton.styleFrom(
-            foregroundColor: ClimpickColors.accent,
+            foregroundColor: ReclimColors.accent,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(14),
             ),
@@ -110,11 +110,11 @@ class ClimpickApp extends ConsumerWidget {
           surfaceTintColor: Colors.transparent,
         ),
         dividerTheme: const DividerThemeData(
-          color: ClimpickColors.border,
+          color: ReclimColors.border,
           thickness: 1,
         ),
         floatingActionButtonTheme: const FloatingActionButtonThemeData(
-          backgroundColor: ClimpickColors.accent,
+          backgroundColor: ReclimColors.accent,
           foregroundColor: Colors.white,
         ),
       ),

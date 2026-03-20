@@ -11,7 +11,7 @@ import '../providers/record_provider.dart';
 import '../providers/upload_queue_provider.dart';
 import '../utils/constants.dart';
 import '../utils/video_download_cache.dart';
-import '../widgets/climpick_app_bar.dart';
+import '../widgets/reclim_app_bar.dart';
 import 'video_compare_screen.dart';
 import 'video_editor_screen.dart';
 import '../widgets/record_select_bottom_sheet.dart';
@@ -130,7 +130,7 @@ class _RecordDetailScreenState extends ConsumerState<RecordDetailScreen> {
         localPath = downloaded;
       }
 
-      await Gal.putVideo(localPath, album: '클림픽');
+      await Gal.putVideo(localPath, album: '리클림');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('갤러리에 저장되었습니다')),
@@ -165,7 +165,7 @@ class _RecordDetailScreenState extends ConsumerState<RecordDetailScreen> {
     final isCompleted = record.status == 'completed';
 
     return Scaffold(
-      appBar: ClimpickAppBar(
+      appBar: ReclimAppBar(
         title: record.gymName ?? '등반 기록',
         showBackButton: true,
         extraActions: [
@@ -259,12 +259,12 @@ class _RecordDetailScreenState extends ConsumerState<RecordDetailScreen> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(Icons.videocam_off_rounded, size: 48,
-                          color: ClimpickColors.textTertiary),
+                          color: ReclimColors.textTertiary),
                       SizedBox(height: 8),
                       Text('영상 파일을 찾을 수 없습니다.\n촬영 영상은 기기에만 저장되므로,\n파일 삭제·이동 또는 다른 기기에서\n로그인한 경우 재생할 수 없습니다.',
                           textAlign: TextAlign.center,
                           style: TextStyle(
-                              color: ClimpickColors.textTertiary)),
+                              color: ReclimColors.textTertiary)),
                     ],
                   ),
                 ),
@@ -395,7 +395,7 @@ class _RecordDetailScreenState extends ConsumerState<RecordDetailScreen> {
                             horizontal: 14, vertical: 7),
                         decoration: BoxDecoration(
                           color: isCompleted
-                              ? ClimpickColors.success.withOpacity(0.1)
+                              ? ReclimColors.success.withOpacity(0.1)
                               : const Color(0xFFFF6B35).withOpacity(0.1),
                           borderRadius: BorderRadius.circular(22),
                         ),
@@ -408,7 +408,7 @@ class _RecordDetailScreenState extends ConsumerState<RecordDetailScreen> {
                                   : Icons.sports_kabaddi_rounded,
                               size: 16,
                               color: isCompleted
-                                  ? ClimpickColors.success
+                                  ? ReclimColors.success
                                   : const Color(0xFFE65100),
                             ),
                             const SizedBox(width: 5),
@@ -418,7 +418,7 @@ class _RecordDetailScreenState extends ConsumerState<RecordDetailScreen> {
                                 fontSize: 13,
                                 fontWeight: FontWeight.w600,
                                 color: isCompleted
-                                    ? ClimpickColors.success
+                                    ? ReclimColors.success
                                     : const Color(0xFFE65100),
                               ),
                             ),
@@ -433,7 +433,7 @@ class _RecordDetailScreenState extends ConsumerState<RecordDetailScreen> {
                       padding: EdgeInsets.only(top: 24),
                       child: Divider(
                           height: 1,
-                          color: ClimpickColors.border),
+                          color: ReclimColors.border),
                     ),
 
                   // 태그
@@ -444,7 +444,7 @@ class _RecordDetailScreenState extends ConsumerState<RecordDetailScreen> {
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
-                        color: ClimpickColors.textTertiary,
+                        color: ReclimColors.textTertiary,
                         letterSpacing: 0.5,
                       ),
                     ),
@@ -464,7 +464,7 @@ class _RecordDetailScreenState extends ConsumerState<RecordDetailScreen> {
                                   tag,
                                   style: const TextStyle(
                                     fontSize: 13,
-                                    color: ClimpickColors.textSecondary,
+                                    color: ReclimColors.textSecondary,
                                   ),
                                 ),
                               ))
@@ -501,7 +501,7 @@ class _ExportedVideosSection extends ConsumerWidget {
       error: (_, __) => const Padding(
         padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
         child: Text('내보내기 영상을 불러오지 못했습니다',
-          style: TextStyle(fontSize: 13, color: ClimpickColors.textTertiary)),
+          style: TextStyle(fontSize: 13, color: ReclimColors.textTertiary)),
       ),
       data: (exports) {
         if (exports.isEmpty) return const SizedBox.shrink();
@@ -516,7 +516,7 @@ class _ExportedVideosSection extends ConsumerWidget {
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
-                  color: ClimpickColors.textTertiary,
+                  color: ReclimColors.textTertiary,
                   letterSpacing: 0.5,
                 ),
               ),

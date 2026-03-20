@@ -47,7 +47,7 @@ class _ExportProgressSheetState extends ConsumerState<ExportProgressSheet>
     final status = ref.watch(exportStatusProvider);
     final percent = progress != null ? (progress * 100).round() : 0;
     final colorScheme = Theme.of(context).colorScheme;
-    const teal = ClimpickColors.accent;
+    const teal = ReclimColors.accent;
 
     return PopScope(
       canPop: false,

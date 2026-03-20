@@ -122,13 +122,13 @@ class _SettingScheduleSubmitScreenState
                           alignment: Alignment.center,
                           decoration: BoxDecoration(
                             color: isSelected
-                                ? ClimpickColors.accent
+                                ? ReclimColors.accent
                                 : Colors.transparent,
                             borderRadius: BorderRadius.circular(10),
                             border: isSelected
                                 ? null
                                 : Border.all(
-                                    color: ClimpickColors.border),
+                                    color: ReclimColors.border),
                           ),
                           child: Text(
                             '$month월',
@@ -139,7 +139,7 @@ class _SettingScheduleSubmitScreenState
                                   : FontWeight.w400,
                               color: isSelected
                                   ? Colors.white
-                                  : ClimpickColors.textPrimary,
+                                  : ReclimColors.textPrimary,
                             ),
                           ),
                         ),
@@ -265,14 +265,14 @@ class _SettingScheduleSubmitScreenState
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          CircularProgressIndicator(color: ClimpickColors.accent),
+          CircularProgressIndicator(color: ReclimColors.accent),
           SizedBox(height: 20),
           Text(
             'AI가 일정을 분석중...',
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w600,
-              color: ClimpickColors.textPrimary,
+              color: ReclimColors.textPrimary,
             ),
           ),
           SizedBox(height: 8),
@@ -280,7 +280,7 @@ class _SettingScheduleSubmitScreenState
             '잠시만 기다려주세요',
             style: TextStyle(
               fontSize: 13,
-              color: ClimpickColors.textSecondary,
+              color: ReclimColors.textSecondary,
             ),
           ),
         ],
@@ -299,7 +299,7 @@ class _SettingScheduleSubmitScreenState
               style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
-                  color: ClimpickColors.textPrimary)),
+                  color: ReclimColors.textPrimary)),
           const SizedBox(height: 6),
           TextField(
             controller: _gymNameController,
@@ -346,7 +346,7 @@ class _SettingScheduleSubmitScreenState
               style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
-                  color: ClimpickColors.textPrimary)),
+                  color: ReclimColors.textPrimary)),
           const SizedBox(height: 6),
           GestureDetector(
             onTap: () => _showMonthPicker(),
@@ -371,7 +371,7 @@ class _SettingScheduleSubmitScreenState
               style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
-                  color: ClimpickColors.textPrimary)),
+                  color: ReclimColors.textPrimary)),
           const SizedBox(height: 6),
           _buildImageSection(),
 
@@ -425,7 +425,7 @@ class _SettingScheduleSubmitScreenState
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: ClimpickColors.border),
+        border: Border.all(color: ReclimColors.border),
       ),
       child: gymsAsync.when(
         data: (gyms) {
@@ -434,7 +434,7 @@ class _SettingScheduleSubmitScreenState
               padding: EdgeInsets.all(12),
               child: Text('검색 결과가 없습니다',
                   style: TextStyle(
-                      fontSize: 13, color: ClimpickColors.textSecondary)),
+                      fontSize: 13, color: ReclimColors.textSecondary)),
             );
           }
           return ListView.builder(
@@ -445,14 +445,14 @@ class _SettingScheduleSubmitScreenState
               final gym = gyms[i];
               return ListTile(
                 leading: const Icon(Icons.location_on_outlined,
-                    size: 18, color: ClimpickColors.accent),
+                    size: 18, color: ReclimColors.accent),
                 title: Text(gym.name,
                     style: const TextStyle(fontSize: 14)),
                 subtitle: gym.address != null
                     ? Text(gym.address!,
                         style: const TextStyle(
                             fontSize: 12,
-                            color: ClimpickColors.textTertiary),
+                            color: ReclimColors.textTertiary),
                         overflow: TextOverflow.ellipsis)
                     : null,
                 onTap: () => _selectGym(gym),
@@ -474,7 +474,7 @@ class _SettingScheduleSubmitScreenState
           padding: const EdgeInsets.all(12),
           child: Text('오류: $e',
               style: const TextStyle(
-                  fontSize: 13, color: ClimpickColors.textSecondary)),
+                  fontSize: 13, color: ReclimColors.textSecondary)),
         ),
       ),
     );
@@ -509,10 +509,10 @@ class _SettingScheduleSubmitScreenState
       child: Container(
         height: 140,
         decoration: BoxDecoration(
-          color: ClimpickColors.surface,
+          color: ReclimColors.surface,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: ClimpickColors.border,
+            color: ReclimColors.border,
             width: 1.5,
           ),
         ),
@@ -520,14 +520,14 @@ class _SettingScheduleSubmitScreenState
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(Icons.image_outlined,
-                size: 40, color: ClimpickColors.textTertiary),
+                size: 40, color: ReclimColors.textTertiary),
             SizedBox(height: 8),
             Text(
               '세팅일정 스크린샷 선택',
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
-                color: ClimpickColors.textSecondary,
+                color: ReclimColors.textSecondary,
               ),
             ),
             SizedBox(height: 4),
@@ -535,7 +535,7 @@ class _SettingScheduleSubmitScreenState
               'AI가 자동으로 분석합니다',
               style: TextStyle(
                 fontSize: 12,
-                color: ClimpickColors.textTertiary,
+                color: ReclimColors.textTertiary,
               ),
             ),
           ],

@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/stats_provider.dart';
 import '../widgets/gym_stats_tab.dart';
-import '../widgets/climpick_app_bar.dart';
+import '../widgets/reclim_app_bar.dart';
 import '../app.dart';
 
 class StatsTabScreen extends ConsumerStatefulWidget {
@@ -34,7 +34,7 @@ class _StatsTabScreenState extends ConsumerState<StatsTabScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: ClimpickAppBar(
+      appBar: ReclimAppBar(
         extraActions: [
           IconButton(
             icon: const Icon(Icons.refresh_rounded),
@@ -44,9 +44,9 @@ class _StatsTabScreenState extends ConsumerState<StatsTabScreen>
         ],
         bottom: TabBar(
           controller: _tabController,
-          labelColor: ClimpickColors.accent,
-          unselectedLabelColor: ClimpickColors.textTertiary,
-          indicatorColor: ClimpickColors.accent,
+          labelColor: ReclimColors.accent,
+          unselectedLabelColor: ReclimColors.textTertiary,
+          indicatorColor: ReclimColors.accent,
           labelStyle:
               const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
           unselectedLabelStyle:
@@ -99,13 +99,13 @@ class _StatsTabScreenState extends ConsumerState<StatsTabScreen>
                           width: 64,
                           height: 64,
                           decoration: BoxDecoration(
-                            color: ClimpickColors.border.withOpacity(0.5),
+                            color: ReclimColors.border.withOpacity(0.5),
                             shape: BoxShape.circle,
                           ),
                           child: Icon(
                             Icons.bar_chart_rounded,
                             size: 32,
-                            color: ClimpickColors.textTertiary
+                            color: ReclimColors.textTertiary
                                 .withOpacity(0.5),
                           ),
                         ),
@@ -115,7 +115,7 @@ class _StatsTabScreenState extends ConsumerState<StatsTabScreen>
                           style: TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.w500,
-                            color: ClimpickColors.textTertiary,
+                            color: ReclimColors.textTertiary,
                           ),
                         ),
                         const SizedBox(height: 4),
@@ -123,7 +123,7 @@ class _StatsTabScreenState extends ConsumerState<StatsTabScreen>
                           '등반 기록을 추가해보세요!',
                           style: TextStyle(
                             fontSize: 13,
-                            color: ClimpickColors.textTertiary
+                            color: ReclimColors.textTertiary
                                 .withOpacity(0.7),
                           ),
                         ),
@@ -206,8 +206,8 @@ class _PeriodSelector extends StatelessWidget {
                     fontSize: 14,
                     fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
                     color: selected
-                        ? ClimpickColors.textPrimary
-                        : ClimpickColors.textTertiary,
+                        ? ReclimColors.textPrimary
+                        : ReclimColors.textTertiary,
                   ),
                 ),
               ),
@@ -246,7 +246,7 @@ class _SummaryGrid extends StatelessWidget {
                   icon: Icons.terrain_rounded,
                   label: '총 등반',
                   value: '${stats.totalClimbs}',
-                  accent: ClimpickColors.accent,
+                  accent: ReclimColors.accent,
                 ),
               ),
               const SizedBox(width: 10),
@@ -255,7 +255,7 @@ class _SummaryGrid extends StatelessWidget {
                   icon: Icons.check_circle_rounded,
                   label: '완등',
                   value: '${stats.totalCompleted}',
-                  accent: ClimpickColors.success,
+                  accent: ReclimColors.success,
                 ),
               ),
             ],
@@ -268,7 +268,7 @@ class _SummaryGrid extends StatelessWidget {
                   icon: Icons.percent_rounded,
                   label: '완등률',
                   value: '${stats.completionRate.toStringAsFixed(0)}%',
-                  accent: ClimpickColors.secondary,
+                  accent: ReclimColors.secondary,
                 ),
               ),
               const SizedBox(width: 10),
@@ -277,7 +277,7 @@ class _SummaryGrid extends StatelessWidget {
                   icon: Icons.calendar_today_rounded,
                   label: '등반 일수',
                   value: '$activeDays일',
-                  accent: ClimpickColors.inProgress,
+                  accent: ReclimColors.inProgress,
                 ),
               ),
             ],
@@ -307,7 +307,7 @@ class _StatCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: ClimpickColors.border),
+        border: Border.all(color: ReclimColors.border),
       ),
       child: Row(
         children: [
@@ -330,7 +330,7 @@ class _StatCard extends StatelessWidget {
                   style: const TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.w800,
-                    color: ClimpickColors.textPrimary,
+                    color: ReclimColors.textPrimary,
                     height: 1,
                     letterSpacing: -0.5,
                   ),
@@ -341,7 +341,7 @@ class _StatCard extends StatelessWidget {
                   style: const TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
-                    color: ClimpickColors.textTertiary,
+                    color: ReclimColors.textTertiary,
                   ),
                 ),
               ],
@@ -398,8 +398,8 @@ class _TrendBanner extends StatelessWidget {
                           : Icons.trending_down_rounded,
                       size: 18,
                       color: rateDiff >= 0
-                          ? ClimpickColors.success
-                          : ClimpickColors.accent,
+                          ? ReclimColors.success
+                          : ReclimColors.accent,
                     ),
                     const SizedBox(width: 8),
                     Expanded(
@@ -408,7 +408,7 @@ class _TrendBanner extends StatelessWidget {
                         style: const TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
-                          color: ClimpickColors.textPrimary,
+                          color: ReclimColors.textPrimary,
                         ),
                       ),
                     ),
@@ -443,10 +443,10 @@ class _DiffChip extends StatelessWidget {
     final isPositive = diff > 0;
     final isNegative = diff < 0;
     final color = isPositive
-        ? ClimpickColors.success
+        ? ReclimColors.success
         : isNegative
-            ? ClimpickColors.accent
-            : ClimpickColors.textTertiary;
+            ? ReclimColors.accent
+            : ReclimColors.textTertiary;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -503,7 +503,7 @@ class _DailyClimbChartSection extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: ClimpickColors.border),
+          border: Border.all(color: ReclimColors.border),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -513,7 +513,7 @@ class _DailyClimbChartSection extends StatelessWidget {
               style: TextStyle(
                 fontSize: 17,
                 fontWeight: FontWeight.w700,
-                color: ClimpickColors.textPrimary,
+                color: ReclimColors.textPrimary,
               ),
             ),
             const SizedBox(height: 20),
@@ -526,7 +526,7 @@ class _DailyClimbChartSection extends StatelessWidget {
                     drawVerticalLine: false,
                     horizontalInterval: interval,
                     getDrawingHorizontalLine: (value) => const FlLine(
-                      color: ClimpickColors.border,
+                      color: ReclimColors.border,
                       strokeWidth: 1,
                     ),
                   ),
@@ -550,7 +550,7 @@ class _DailyClimbChartSection extends StatelessWidget {
                               value.toInt().toString(),
                               style: const TextStyle(
                                 fontSize: 11,
-                                color: ClimpickColors.textTertiary,
+                                color: ReclimColors.textTertiary,
                               ),
                             ),
                           );
@@ -580,7 +580,7 @@ class _DailyClimbChartSection extends StatelessWidget {
                               series[idx].label,
                               style: const TextStyle(
                                 fontSize: 10,
-                                color: ClimpickColors.textTertiary,
+                                color: ReclimColors.textTertiary,
                               ),
                             ),
                           );
@@ -602,7 +602,7 @@ class _DailyClimbChartSection extends StatelessWidget {
                       isCurved: true,
                       curveSmoothness: 0.3,
                       preventCurveOverShooting: true,
-                      color: ClimpickColors.accent,
+                      color: ReclimColors.accent,
                       barWidth: 2.5,
                       dotData: FlDotData(show: series.length <= 7),
                       belowBarData: BarAreaData(
@@ -611,8 +611,8 @@ class _DailyClimbChartSection extends StatelessWidget {
                           begin: Alignment.topCenter,
                           end: Alignment.bottomCenter,
                           colors: [
-                            ClimpickColors.accent.withOpacity(0.15),
-                            ClimpickColors.accent.withOpacity(0.02),
+                            ReclimColors.accent.withOpacity(0.15),
+                            ReclimColors.accent.withOpacity(0.02),
                           ],
                         ),
                       ),
@@ -622,7 +622,7 @@ class _DailyClimbChartSection extends StatelessWidget {
                     touchTooltipData: LineTouchTooltipData(
                       getTooltipColor: (_) => Colors.white,
                       tooltipBorder:
-                          const BorderSide(color: ClimpickColors.border),
+                          const BorderSide(color: ReclimColors.border),
                       tooltipRoundedRadius: 8,
                       fitInsideHorizontally: true,
                       getTooltipItems: (spots) {
@@ -633,7 +633,7 @@ class _DailyClimbChartSection extends StatelessWidget {
                           return LineTooltipItem(
                             '$label: ${spot.y.toInt()}건',
                             const TextStyle(
-                              color: ClimpickColors.accent,
+                              color: ReclimColors.accent,
                               fontWeight: FontWeight.w600,
                               fontSize: 12,
                             ),
@@ -673,7 +673,7 @@ class _GymSection extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: ClimpickColors.border),
+          border: Border.all(color: ReclimColors.border),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -683,7 +683,7 @@ class _GymSection extends StatelessWidget {
               style: TextStyle(
                 fontSize: 17,
                 fontWeight: FontWeight.w700,
-                color: ClimpickColors.textPrimary,
+                color: ReclimColors.textPrimary,
               ),
             ),
             const SizedBox(height: 16),
@@ -705,7 +705,7 @@ class _GymSection extends StatelessWidget {
                         const Icon(
                           Icons.location_on_outlined,
                           size: 14,
-                          color: ClimpickColors.accent,
+                          color: ReclimColors.accent,
                         ),
                         const SizedBox(width: 4),
                         Expanded(
@@ -714,7 +714,7 @@ class _GymSection extends StatelessWidget {
                             style: const TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w600,
-                              color: ClimpickColors.textPrimary,
+                              color: ReclimColors.textPrimary,
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -725,7 +725,7 @@ class _GymSection extends StatelessWidget {
                           style: const TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w500,
-                            color: ClimpickColors.textTertiary,
+                            color: ReclimColors.textTertiary,
                           ),
                         ),
                         if (stats.hasPrevious) ...[
@@ -747,14 +747,14 @@ class _GymSection extends StatelessWidget {
                                 flex:
                                     (completedFraction * 1000).round(),
                                 child: Container(
-                                    color: ClimpickColors.success),
+                                    color: ReclimColors.success),
                               ),
                             if (inProgressFraction > 0)
                               Expanded(
                                 flex: (inProgressFraction * 1000)
                                     .round(),
                                 child: Container(
-                                    color: ClimpickColors.inProgress),
+                                    color: ReclimColors.inProgress),
                               ),
                           ],
                         ),
@@ -776,13 +776,13 @@ class _GymSection extends StatelessWidget {
         '—',
         style: TextStyle(
           fontSize: 11,
-          color: ClimpickColors.textTertiary,
+          color: ReclimColors.textTertiary,
         ),
       );
     }
     final isPositive = diff > 0;
     final color =
-        isPositive ? ClimpickColors.success : ClimpickColors.accent;
+        isPositive ? ReclimColors.success : ReclimColors.accent;
     return Text(
       '${isPositive ? '+' : ''}$diff',
       style: TextStyle(
@@ -862,7 +862,7 @@ class _ColorTrendSection extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: ClimpickColors.border),
+          border: Border.all(color: ReclimColors.border),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -872,7 +872,7 @@ class _ColorTrendSection extends StatelessWidget {
               style: TextStyle(
                 fontSize: 17,
                 fontWeight: FontWeight.w700,
-                color: ClimpickColors.textPrimary,
+                color: ReclimColors.textPrimary,
               ),
             ),
             const SizedBox(height: 20),
@@ -885,7 +885,7 @@ class _ColorTrendSection extends StatelessWidget {
                     drawVerticalLine: false,
                     horizontalInterval: interval,
                     getDrawingHorizontalLine: (value) => const FlLine(
-                      color: ClimpickColors.border,
+                      color: ReclimColors.border,
                       strokeWidth: 1,
                     ),
                   ),
@@ -909,7 +909,7 @@ class _ColorTrendSection extends StatelessWidget {
                               value.toInt().toString(),
                               style: const TextStyle(
                                 fontSize: 11,
-                                color: ClimpickColors.textTertiary,
+                                color: ReclimColors.textTertiary,
                               ),
                             ),
                           );
@@ -938,7 +938,7 @@ class _ColorTrendSection extends StatelessWidget {
                               timeSeries[idx].label,
                               style: const TextStyle(
                                 fontSize: 10,
-                                color: ClimpickColors.textTertiary,
+                                color: ReclimColors.textTertiary,
                               ),
                             ),
                           );
@@ -977,7 +977,7 @@ class _ColorTrendSection extends StatelessWidget {
                     touchTooltipData: LineTouchTooltipData(
                       getTooltipColor: (_) => Colors.white,
                       tooltipBorder:
-                          const BorderSide(color: ClimpickColors.border),
+                          const BorderSide(color: ReclimColors.border),
                       tooltipRoundedRadius: 8,
                       fitInsideHorizontally: true,
                       getTooltipItems: (spots) {
@@ -1031,7 +1031,7 @@ class _ColorTrendSection extends StatelessWidget {
                       style: const TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
-                        color: ClimpickColors.textTertiary,
+                        color: ReclimColors.textTertiary,
                       ),
                     ),
                   ],

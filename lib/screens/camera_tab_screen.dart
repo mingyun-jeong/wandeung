@@ -442,7 +442,7 @@ class _CameraTabScreenState extends ConsumerState<CameraTabScreen>
                     border: Border.all(color: Colors.white, width: 4),
                     boxShadow: [
                       BoxShadow(
-                        color: ClimpickColors.accent.withOpacity(0.3),
+                        color: ReclimColors.accent.withOpacity(0.3),
                         blurRadius: 12,
                         offset: const Offset(0, 4),
                       ),
@@ -454,7 +454,7 @@ class _CameraTabScreenState extends ConsumerState<CameraTabScreen>
                             width: 28,
                             height: 28,
                             decoration: BoxDecoration(
-                              color: ClimpickColors.accent,
+                              color: ReclimColors.accent,
                               borderRadius: BorderRadius.circular(5),
                             ),
                           )
@@ -466,8 +466,8 @@ class _CameraTabScreenState extends ConsumerState<CameraTabScreen>
                                 begin: Alignment.topLeft,
                                 end: Alignment.bottomRight,
                                 colors: [
-                                  ClimpickColors.accent,
-                                  ClimpickColors.accentLight,
+                                  ReclimColors.accent,
+                                  ReclimColors.accentLight,
                                 ],
                               ),
                               shape: BoxShape.circle,

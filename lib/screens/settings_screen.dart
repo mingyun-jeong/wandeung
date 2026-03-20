@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../app.dart';
 import '../models/user_subscription.dart';
 import '../providers/connectivity_provider.dart';
 import '../providers/record_provider.dart';
@@ -12,7 +13,6 @@ class SettingsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final colorScheme = Theme.of(context).colorScheme;
     final storageMode = ref.watch(storageModeProvider);
     final isCloudMode = storageMode == StorageMode.cloud;
     final wifiOnly = ref.watch(wifiOnlyUploadProvider);
@@ -38,13 +38,13 @@ class SettingsScreen extends ConsumerWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         children: [
           // --- 섹션 헤더 ---
-          _SectionHeader(label: '저장 모드'),
+          const _SectionHeader(label: '저장 모드'),
           const SizedBox(height: 10),
 
           // --- 클라우드 / 로컬 세그먼트 선택 ---
           Container(
             decoration: BoxDecoration(
-              color: colorScheme.onSurface.withOpacity(0.06),
+              color: const Color(0xFFF0F0F0),
               borderRadius: BorderRadius.circular(12),
             ),
             padding: const EdgeInsets.all(4),
@@ -69,9 +69,9 @@ class SettingsScreen extends ConsumerWidget {
                       context: context,
                       backgroundColor: Colors.transparent,
                       builder: (ctx) => Container(
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.surface,
-                          borderRadius: const BorderRadius.vertical(
+                        decoration: const BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.vertical(
                               top: Radius.circular(20)),
                         ),
                         child: SafeArea(
@@ -117,7 +117,7 @@ class SettingsScreen extends ConsumerWidget {
                                   ),
                                 ),
                                 const SizedBox(height: 12),
-                                Text(
+                                const Text(
                                   '새 영상이 서버에 저장되지 않습니다.\n'
                                   '원본 영상은 현재 기기에만 저장되며,\n'
                                   '기기 분실 시 영상을 복구할 수 없습니다.',
@@ -125,10 +125,7 @@ class SettingsScreen extends ConsumerWidget {
                                   style: TextStyle(
                                     fontSize: 14,
                                     height: 1.5,
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .onSurface
-                                        .withOpacity(0.55),
+                                    color: ClimpickColors.textSecondary,
                                   ),
                                 ),
                                 const SizedBox(height: 24),
@@ -202,7 +199,6 @@ class SettingsScreen extends ConsumerWidget {
               wifiOnly: wifiOnly,
               totalPending: totalPending,
               failedCount: failedCount,
-              ref: ref,
             ),
           ],
 
@@ -217,19 +213,19 @@ class SettingsScreen extends ConsumerWidget {
                   color: Colors.amber.withOpacity(0.25),
                 ),
               ),
-              child: Row(
+              child: const Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(Icons.info_outline,
+                  Icon(Icons.info_outline,
                       size: 18, color: Colors.amber),
-                  const SizedBox(width: 10),
+                  SizedBox(width: 10),
                   Expanded(
                     child: Text(
                       '원본 영상은 현재 기기에만 저장됩니다.\n기기 분실 시 영상을 복구할 수 없습니다.',
                       style: TextStyle(
                         fontSize: 13,
                         height: 1.4,
-                        color: colorScheme.onSurface.withOpacity(0.7),
+                        color: ClimpickColors.textSecondary,
                       ),
                     ),
                   ),
@@ -241,7 +237,7 @@ class SettingsScreen extends ConsumerWidget {
 
           // --- 로컬 영상 관리 ---
           if (isCloudMode) ...[
-            _SectionHeader(label: '로컬 영상'),
+            const _SectionHeader(label: '로컬 영상'),
             const SizedBox(height: 8),
             _LocalVideoSection(),
           ],
@@ -260,10 +256,10 @@ class _SectionHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       label,
-      style: TextStyle(
+      style: const TextStyle(
         fontSize: 13,
         fontWeight: FontWeight.w700,
-        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.45),
+        color: ClimpickColors.textTertiary,
         letterSpacing: 0.3,
       ),
     );
@@ -286,17 +282,16 @@ class _ModeSegment extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
     return Expanded(
-      child: GestureDetector(
+      child: InkWell(
         onTap: onTap,
+        borderRadius: BorderRadius.circular(9),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
           curve: Curves.easeOut,
           padding: const EdgeInsets.symmetric(vertical: 10),
           decoration: BoxDecoration(
-            color: isSelected ? colorScheme.primary : Colors.transparent,
+            color: isSelected ? ClimpickColors.accent : Colors.transparent,
             borderRadius: BorderRadius.circular(9),
           ),
           child: Row(
@@ -306,8 +301,8 @@ class _ModeSegment extends StatelessWidget {
                 icon,
                 size: 18,
                 color: isSelected
-                    ? colorScheme.onPrimary
-                    : colorScheme.onSurface.withOpacity(0.5),
+                    ? Colors.white
+                    : ClimpickColors.textSecondary,
               ),
               const SizedBox(width: 6),
               Text(
@@ -316,8 +311,8 @@ class _ModeSegment extends StatelessWidget {
                   fontSize: 14,
                   fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                   color: isSelected
-                      ? colorScheme.onPrimary
-                      : colorScheme.onSurface.withOpacity(0.5),
+                      ? Colors.white
+                      : ClimpickColors.textSecondary,
                 ),
               ),
             ],
@@ -334,26 +329,22 @@ class _CloudCard extends ConsumerWidget {
   final bool wifiOnly;
   final int totalPending;
   final int failedCount;
-  final WidgetRef ref;
 
   const _CloudCard({
     required this.isPro,
     required this.wifiOnly,
     required this.totalPending,
     required this.failedCount,
-    required this.ref,
   });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final colorScheme = Theme.of(context).colorScheme;
-
     return Container(
       decoration: BoxDecoration(
-        color: colorScheme.surface,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: colorScheme.outlineVariant.withOpacity(0.3),
+          color: ClimpickColors.border,
         ),
       ),
       child: Column(
@@ -367,15 +358,15 @@ class _CloudCard extends ConsumerWidget {
                 Icon(
                   isPro ? Icons.star_rounded : Icons.cloud_outlined,
                   size: 18,
-                  color: isPro ? Colors.amber : colorScheme.primary,
+                  color: isPro ? Colors.amber : ClimpickColors.accent,
                 ),
                 const SizedBox(width: 8),
                 Text(
                   isPro ? 'Pro' : 'Free',
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
-                    color: colorScheme.onSurface,
+                    color: ClimpickColors.textPrimary,
                   ),
                 ),
               ],
@@ -389,11 +380,11 @@ class _CloudCard extends ConsumerWidget {
           ],
 
           // 구분선
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 12),
             child: Divider(
               height: 1,
-              color: colorScheme.onSurface.withOpacity(0.08),
+              color: ClimpickColors.border,
             ),
           ),
 
@@ -440,9 +431,9 @@ class _CloudCard extends ConsumerWidget {
                         if (totalPending > 0) '대기 중 $totalPending건',
                         if (failedCount > 0) '실패 $failedCount건',
                       ].join(' · '),
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontSize: 13,
-                        color: colorScheme.onSurface.withOpacity(0.55),
+                        color: ClimpickColors.textSecondary,
                       ),
                     ),
                   ),
@@ -450,8 +441,6 @@ class _CloudCard extends ConsumerWidget {
                     TextButton(
                       style: TextButton.styleFrom(
                         padding: const EdgeInsets.symmetric(horizontal: 8),
-                        minimumSize: Size.zero,
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       ),
                       onPressed: () => ref
                           .read(uploadQueueProvider.notifier)
@@ -477,11 +466,14 @@ class _CloudUsageIndicator extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final usageAsync = ref.watch(cloudUsageProvider);
-    final colorScheme = Theme.of(context).colorScheme;
 
     return usageAsync.when(
       loading: () => const SizedBox.shrink(),
-      error: (_, __) => const SizedBox.shrink(),
+      error: (_, __) => const Padding(
+        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        child: Text('사용량 확인 실패',
+          style: TextStyle(fontSize: 12, color: ClimpickColors.textTertiary)),
+      ),
       data: (usedBytes) {
         const limitBytes = freeStorageLimitBytes;
         final usedMB = usedBytes / 1024 / 1024;
@@ -495,11 +487,11 @@ class _CloudUsageIndicator extends ConsumerWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
+                  const Text(
                     '사용량',
                     style: TextStyle(
                       fontSize: 12,
-                      color: colorScheme.onSurface.withOpacity(0.5),
+                      color: ClimpickColors.textSecondary,
                     ),
                   ),
                   Text(
@@ -509,7 +501,7 @@ class _CloudUsageIndicator extends ConsumerWidget {
                       fontWeight: FontWeight.w600,
                       color: ratio > 0.9
                           ? Colors.red
-                          : colorScheme.onSurface.withOpacity(0.5),
+                          : ClimpickColors.textSecondary,
                     ),
                   ),
                 ],
@@ -520,10 +512,9 @@ class _CloudUsageIndicator extends ConsumerWidget {
                 child: LinearProgressIndicator(
                   value: ratio,
                   minHeight: 5,
-                  backgroundColor:
-                      colorScheme.onSurface.withOpacity(0.08),
+                  backgroundColor: ClimpickColors.border,
                   valueColor: AlwaysStoppedAnimation(
-                    ratio > 0.9 ? Colors.red : colorScheme.primary,
+                    ratio > 0.9 ? Colors.red : ClimpickColors.accent,
                   ),
                 ),
               ),
@@ -541,7 +532,6 @@ class _LocalVideoSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final localRecordsAsync = ref.watch(localOnlyRecordsProvider);
-    final colorScheme = Theme.of(context).colorScheme;
 
     return localRecordsAsync.when(
       loading: () => const Padding(
@@ -551,7 +541,7 @@ class _LocalVideoSection extends ConsumerWidget {
       error: (e, _) => Padding(
         padding: const EdgeInsets.symmetric(vertical: 8),
         child: Text('오류: $e',
-            style: TextStyle(color: colorScheme.error, fontSize: 13)),
+            style: const TextStyle(color: Colors.red, fontSize: 13)),
       ),
       data: (records) {
         final queue = ref.watch(uploadQueueProvider);
@@ -565,15 +555,15 @@ class _LocalVideoSection extends ConsumerWidget {
         final missingCount = orphaned.length - uploadable.length;
 
         if (orphaned.isEmpty) {
-          return Row(
+          return const Row(
             children: [
-              const Icon(Icons.cloud_done, size: 16, color: Colors.green),
-              const SizedBox(width: 8),
+              Icon(Icons.cloud_done, size: 16, color: Colors.green),
+              SizedBox(width: 8),
               Text(
                 '모든 영상이 서버에 업로드되었습니다',
                 style: TextStyle(
                   fontSize: 13,
-                  color: colorScheme.onSurface.withOpacity(0.6),
+                  color: ClimpickColors.textSecondary,
                 ),
               ),
             ],
@@ -591,9 +581,9 @@ class _LocalVideoSection extends ConsumerWidget {
                 Expanded(
                   child: Text(
                     '업로드되지 않은 영상: ${orphaned.length}건',
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 13,
-                      color: colorScheme.onSurface.withOpacity(0.6),
+                      color: ClimpickColors.textSecondary,
                     ),
                   ),
                 ),
@@ -604,9 +594,9 @@ class _LocalVideoSection extends ConsumerWidget {
                 padding: const EdgeInsets.only(left: 24, top: 2),
                 child: Text(
                   '${uploadable.length}건 업로드 가능 · $missingCount건 파일 없음',
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 12,
-                    color: colorScheme.onSurface.withOpacity(0.4),
+                    color: ClimpickColors.textTertiary,
                   ),
                 ),
               ),

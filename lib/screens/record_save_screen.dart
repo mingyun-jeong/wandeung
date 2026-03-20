@@ -430,7 +430,7 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
 
   void _showStorageFullSheet(int currentUsage) {
     final usedMB = currentUsage / 1024 / 1024;
-    final limitMB = freeStorageLimitBytes / 1024 / 1024;
+    const limitMB = freeStorageLimitBytes / 1024 / 1024;
     final ratio = (currentUsage / freeStorageLimitBytes).clamp(0.0, 1.0);
 
     showModalBottomSheet(
@@ -828,21 +828,15 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
-                    Icon(Icons.access_time_rounded,
+                    const Icon(Icons.access_time_rounded,
                         size: 14,
-                        color: Theme.of(context)
-                            .colorScheme
-                            .onSurface
-                            .withOpacity(0.4)),
+                        color: ClimpickColors.textTertiary),
                     const SizedBox(width: 4),
                     Text(
                       '기록일시 ${_formatDateTime(widget.existingRecord!.createdAt!)}',
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontSize: 12,
-                        color: Theme.of(context)
-                            .colorScheme
-                            .onSurface
-                            .withOpacity(0.45),
+                        color: ClimpickColors.textTertiary,
                       ),
                     ),
                   ],
@@ -928,18 +922,18 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
                     color: const Color(0xFFE8ECF0),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Center(
+                  child: const Center(
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(Icons.videocam_off_rounded, size: 36,
-                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.25)),
-                        const SizedBox(height: 6),
+                            color: ClimpickColors.textTertiary),
+                        SizedBox(height: 6),
                         Text('영상 파일을 찾을 수 없습니다.\n촬영 영상은 기기에만 저장되므로,\n파일 삭제·이동 또는 다른 기기에서\n로그인한 경우 재생할 수 없습니다.',
                             textAlign: TextAlign.center,
                             style: TextStyle(
                                 fontSize: 12,
-                                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4))),
+                                color: ClimpickColors.textTertiary)),
                       ],
                     ),
                   ),
@@ -952,11 +946,11 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // 완등 여부
-                  Text('완등 여부',
+                  const Text('완등 여부',
                       style: TextStyle(
                         fontWeight: FontWeight.w700,
                         fontSize: 15,
-                        color: Theme.of(context).colorScheme.onSurface,
+                        color: ClimpickColors.textPrimary,
                       )),
                   const SizedBox(height: 8),
                   Row(
@@ -968,8 +962,9 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
                           : const Color(0xFFFF6B35);
                       return Padding(
                         padding: EdgeInsets.only(right: isCompleted ? 8 : 0),
-                        child: GestureDetector(
+                        child: InkWell(
                           onTap: () => setState(() => _status = s),
+                          borderRadius: BorderRadius.circular(22),
                           child: AnimatedContainer(
                             duration: const Duration(milliseconds: 180),
                             padding: const EdgeInsets.symmetric(
@@ -995,10 +990,7 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
                                       : Icons.sports_kabaddi_rounded,
                                   color: isSelected
                                       ? activeColor
-                                      : Theme.of(context)
-                                          .colorScheme
-                                          .onSurface
-                                          .withOpacity(0.3),
+                                      : ClimpickColors.textTertiary,
                                   size: 18,
                                 ),
                                 const SizedBox(width: 6),
@@ -1011,10 +1003,7 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
                                     fontSize: 13,
                                     color: isSelected
                                         ? activeColor
-                                        : Theme.of(context)
-                                            .colorScheme
-                                            .onSurface
-                                            .withOpacity(0.4),
+                                        : ClimpickColors.textTertiary,
                                   ),
                                 ),
                               ],
@@ -1053,11 +1042,11 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
                   const SizedBox(height: 16),
 
                   // 암장
-                  Text('암장',
+                  const Text('암장',
                       style: TextStyle(
                         fontWeight: FontWeight.w700,
                         fontSize: 15,
-                        color: Theme.of(context).colorScheme.onSurface,
+                        color: ClimpickColors.textPrimary,
                       )),
                   const SizedBox(height: 8),
                   if (displayGym != null)
@@ -1084,26 +1073,21 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    displayGym?.name ?? '',
-                                    style: TextStyle(
+                                    displayGym.name,
+                                    style: const TextStyle(
                                       fontSize: 16,
                                       fontWeight: FontWeight.w600,
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .onSurface,
+                                      color: ClimpickColors.textPrimary,
                                     ),
                                   ),
-                                  if (displayGym?.address != null)
+                                  if (displayGym.address != null)
                                     Padding(
                                       padding: const EdgeInsets.only(top: 2),
                                       child: Text(
-                                        displayGym!.address!,
-                                        style: TextStyle(
+                                        displayGym.address!,
+                                        style: const TextStyle(
                                           fontSize: 12,
-                                          color: Theme.of(context)
-                                              .colorScheme
-                                              .onSurface
-                                              .withOpacity(0.45),
+                                          color: ClimpickColors.textTertiary,
                                         ),
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
@@ -1113,25 +1097,22 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
                               ),
                             ),
                           ),
-                          if (displayGym?.latitude != null &&
-                              displayGym?.longitude != null)
-                            GestureDetector(
-                              onTap: () => GymMapSheet.show(
+                          if (displayGym.latitude != null &&
+                              displayGym.longitude != null)
+                            IconButton(
+                              onPressed: () => GymMapSheet.show(
                                 context,
-                                selectedGym: displayGym!,
+                                selectedGym: displayGym,
                               ),
-                              child: Padding(
-                                padding: const EdgeInsets.only(left: 8),
-                                child: Icon(Icons.map_outlined,
-                                    size: 20,
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .primary
-                                        .withOpacity(0.7)),
-                              ),
+                              icon: const Icon(Icons.map_outlined,
+                                  size: 20,
+                                  color: ClimpickColors.accent),
+                              constraints: const BoxConstraints(
+                                  minWidth: 40, minHeight: 40),
+                              padding: EdgeInsets.zero,
                             ),
-                          GestureDetector(
-                            onTap: () {
+                          IconButton(
+                            onPressed: () {
                               if (_isEditMode) {
                                 setState(() {
                                   _editGym = null;
@@ -1140,15 +1121,12 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
                                 ref.read(cameraSettingsProvider.notifier).clearGym();
                               }
                             },
-                            child: Padding(
-                              padding: const EdgeInsets.only(left: 8),
-                              child: Icon(Icons.close_rounded,
-                                  size: 18,
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .onSurface
-                                      .withOpacity(0.35)),
-                            ),
+                            icon: const Icon(Icons.close_rounded,
+                                size: 18,
+                                color: ClimpickColors.textTertiary),
+                            constraints: const BoxConstraints(
+                                minWidth: 40, minHeight: 40),
+                            padding: EdgeInsets.zero,
                           ),
                         ],
                       ),
@@ -1165,23 +1143,17 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
                           border: Border.all(color: const Color(0xFFE2E8F0)),
                           borderRadius: BorderRadius.circular(14),
                         ),
-                        child: Row(
+                        child: const Row(
                           children: [
                             Icon(Icons.add_location_alt_outlined,
                                 size: 18,
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .onSurface
-                                    .withOpacity(0.35)),
-                            const SizedBox(width: 10),
+                                color: ClimpickColors.textTertiary),
+                            SizedBox(width: 10),
                             Text(
                               '암장을 선택해주세요',
                               style: TextStyle(
                                 fontSize: 14,
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .onSurface
-                                    .withOpacity(0.35),
+                                color: ClimpickColors.textTertiary,
                               ),
                             ),
                           ],
@@ -1193,11 +1165,11 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
                   // 태그 헤더 행 (라벨 + 유지 옵션)
                   Row(
                     children: [
-                      Text('태그',
+                      const Text('태그',
                           style: TextStyle(
                             fontWeight: FontWeight.w700,
                             fontSize: 15,
-                            color: Theme.of(context).colorScheme.onSurface,
+                            color: ClimpickColors.textPrimary,
                           )),
                       const Spacer(),
                       if (!_isEditMode)
@@ -1225,11 +1197,11 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
                                 ),
                               ),
                               const SizedBox(width: 4),
-                              Text(
+                              const Text(
                                 '다음 촬영에도 태그 유지',
                                 style: TextStyle(
                                   fontSize: 12,
-                                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                                  color: ClimpickColors.textSecondary,
                                 ),
                               ),
                             ],
@@ -1333,12 +1305,9 @@ class _ExportedVideosList extends ConsumerWidget {
           children: [
             Row(
               children: [
-                Icon(Icons.video_library_rounded,
+                const Icon(Icons.video_library_rounded,
                     size: 18,
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withOpacity(0.5)),
+                    color: ClimpickColors.textSecondary),
                 const SizedBox(width: 6),
                 Text(
                   '내보내기 영상 (${exports.length})',
@@ -1369,7 +1338,28 @@ class _ExportedVideosList extends ConsumerWidget {
         padding: EdgeInsets.only(top: 16),
         child: Center(child: CircularProgressIndicator()),
       ),
-      error: (_, __) => const SizedBox.shrink(),
+      error: (_, __) => Padding(
+        padding: const EdgeInsets.only(top: 16),
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('내보내기 영상을 불러오지 못했습니다',
+                style: TextStyle(fontSize: 13,
+                  color: ClimpickColors.textTertiary)),
+              const SizedBox(height: 8),
+              GestureDetector(
+                onTap: () => ref.invalidate(
+                    exportedRecordsProvider(parentRecordId)),
+                child: const Text('다시 시도',
+                  style: TextStyle(fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: ClimpickColors.accent)),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
@@ -1530,7 +1520,7 @@ class _ExportedVideoCardState extends State<_ExportedVideoCard> {
                     fit: StackFit.expand,
                     children: [
                       hasThumbnail
-                          ? (thumbPath!.startsWith('/')
+                          ? (thumbPath.startsWith('/')
                               ? Image.file(
                                   File(thumbPath),
                                   fit: BoxFit.cover,
@@ -1634,44 +1624,34 @@ class _ExportedVideoCardState extends State<_ExportedVideoCard> {
                     const SizedBox(height: 2),
                     Text(
                       _formatDate(record.createdAt),
-                      style: TextStyle(
+                      style: const TextStyle(
                           fontSize: 12,
-                          color: Theme.of(context)
-                              .colorScheme
-                              .onSurface
-                              .withOpacity(0.4)),
+                          color: ClimpickColors.textTertiary),
                     ),
                   ],
                 ),
               ),
               if (record.videoPath != null)
-                GestureDetector(
-                  onTap: () => _saveExportToGallery(record),
-                  child: Padding(
-                    padding: const EdgeInsets.all(6),
-                    child: Icon(Icons.download_rounded,
-                        size: 18,
-                        color: Theme.of(context)
-                            .colorScheme
-                            .onSurface
-                            .withOpacity(0.3)),
-                  ),
-                ),
-              GestureDetector(
-                onTap: _startEditing,
-                child: Padding(
-                  padding: const EdgeInsets.all(6),
-                  child: Icon(Icons.edit_rounded,
+                IconButton(
+                  onPressed: () => _saveExportToGallery(record),
+                  icon: const Icon(Icons.download_rounded,
                       size: 18,
-                      color: Theme.of(context)
-                          .colorScheme
-                          .onSurface
-                          .withOpacity(0.3)),
+                      color: ClimpickColors.textTertiary),
+                  constraints: const BoxConstraints(
+                      minWidth: 40, minHeight: 40),
+                  padding: EdgeInsets.zero,
                 ),
+              IconButton(
+                onPressed: _startEditing,
+                icon: const Icon(Icons.edit_rounded,
+                    size: 18,
+                    color: ClimpickColors.textTertiary),
+                constraints: const BoxConstraints(
+                    minWidth: 40, minHeight: 40),
+                padding: EdgeInsets.zero,
               ),
-              const SizedBox(width: 2),
-              GestureDetector(
-                onTap: () async {
+              IconButton(
+                onPressed: () async {
                   final confirmed = await showDialog<bool>(
                     context: context,
                     builder: (ctx) => AlertDialog(
@@ -1693,15 +1673,12 @@ class _ExportedVideoCardState extends State<_ExportedVideoCard> {
                   );
                   if (confirmed == true) widget.onDelete();
                 },
-                child: Padding(
-                  padding: const EdgeInsets.all(6),
-                  child: Icon(Icons.delete_outline_rounded,
-                      size: 20,
-                      color: Theme.of(context)
-                          .colorScheme
-                          .onSurface
-                          .withOpacity(0.3)),
-                ),
+                icon: const Icon(Icons.delete_outline_rounded,
+                    size: 20,
+                    color: ClimpickColors.textTertiary),
+                constraints: const BoxConstraints(
+                    minWidth: 40, minHeight: 40),
+                padding: EdgeInsets.zero,
               ),
             ],
           ),

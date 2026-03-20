@@ -158,7 +158,6 @@ class _RecordDetailScreenState extends ConsumerState<RecordDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final record = widget.record;
-    final colorScheme = Theme.of(context).colorScheme;
     final color = DifficultyColor.values.firstWhere(
       (c) => c.name == record.difficultyColor,
       orElse: () => DifficultyColor.white,
@@ -255,17 +254,17 @@ class _RecordDetailScreenState extends ConsumerState<RecordDetailScreen> {
               Container(
                 height: 240,
                 color: const Color(0xFFE8ECF0),
-                child: Center(
+                child: const Center(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(Icons.videocam_off_rounded, size: 48,
-                          color: colorScheme.onSurface.withOpacity(0.25)),
-                      const SizedBox(height: 8),
+                          color: ClimpickColors.textTertiary),
+                      SizedBox(height: 8),
                       Text('영상 파일을 찾을 수 없습니다.\n촬영 영상은 기기에만 저장되므로,\n파일 삭제·이동 또는 다른 기기에서\n로그인한 경우 재생할 수 없습니다.',
                           textAlign: TextAlign.center,
                           style: TextStyle(
-                              color: colorScheme.onSurface.withOpacity(0.4))),
+                              color: ClimpickColors.textTertiary)),
                     ],
                   ),
                 ),
@@ -430,22 +429,22 @@ class _RecordDetailScreenState extends ConsumerState<RecordDetailScreen> {
                   ),
 
                   if (record.tags.isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 24),
+                    const Padding(
+                      padding: EdgeInsets.only(top: 24),
                       child: Divider(
                           height: 1,
-                          color: colorScheme.outline.withOpacity(0.15)),
+                          color: ClimpickColors.border),
                     ),
 
                   // 태그
                   if (record.tags.isNotEmpty) ...[
                     const SizedBox(height: 20),
-                    Text(
+                    const Text(
                       '태그',
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
-                        color: colorScheme.onSurface.withOpacity(0.4),
+                        color: ClimpickColors.textTertiary,
                         letterSpacing: 0.5,
                       ),
                     ),
@@ -458,16 +457,14 @@ class _RecordDetailScreenState extends ConsumerState<RecordDetailScreen> {
                                 padding: const EdgeInsets.symmetric(
                                     horizontal: 12, vertical: 6),
                                 decoration: BoxDecoration(
-                                  color: colorScheme.surfaceContainerHighest
-                                      .withOpacity(0.6),
+                                  color: const Color(0xFFF0F0F0),
                                   borderRadius: BorderRadius.circular(20),
                                 ),
                                 child: Text(
                                   tag,
-                                  style: TextStyle(
+                                  style: const TextStyle(
                                     fontSize: 13,
-                                    color: colorScheme.onSurface
-                                        .withOpacity(0.7),
+                                    color: ClimpickColors.textSecondary,
                                   ),
                                 ),
                               ))
@@ -501,7 +498,11 @@ class _ExportedVideosSection extends ConsumerWidget {
     final asyncExports = ref.watch(exportedRecordsProvider(parentRecordId));
     return asyncExports.when(
       loading: () => const SizedBox.shrink(),
-      error: (_, __) => const SizedBox.shrink(),
+      error: (_, __) => const Padding(
+        padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+        child: Text('내보내기 영상을 불러오지 못했습니다',
+          style: TextStyle(fontSize: 13, color: ClimpickColors.textTertiary)),
+      ),
       data: (exports) {
         if (exports.isEmpty) return const SizedBox.shrink();
         return Padding(
@@ -510,15 +511,12 @@ class _ExportedVideosSection extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: 4),
-              Text(
+              const Text(
                 '내보내기 영상',
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
-                  color: Theme.of(context)
-                      .colorScheme
-                      .onSurface
-                      .withOpacity(0.4),
+                  color: ClimpickColors.textTertiary,
                   letterSpacing: 0.5,
                 ),
               ),

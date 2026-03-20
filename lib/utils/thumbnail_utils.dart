@@ -21,8 +21,8 @@ Future<String?> generateThumbnail(String videoPath) async {
     final Uint8List bytes = await VideoThumbnail.thumbnailData(
       video: videoPath,
       imageFormat: ImageFormat.JPEG,
-      maxHeight: 200,
-      quality: 75,
+      maxHeight: 512,
+      quality: 95,
     );
 
     if (bytes.isNotEmpty) {

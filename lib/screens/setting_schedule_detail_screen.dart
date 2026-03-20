@@ -307,6 +307,24 @@ class _SectorCard extends StatelessWidget {
                       ],
                     ],
                   ),
+                  // 세팅 시간
+                  if (sector.timeRangeLabel != null) ...[
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        const Icon(Icons.schedule,
+                            size: 14, color: ReclimColors.textTertiary),
+                        const SizedBox(width: 4),
+                        Text(
+                          sector.timeRangeLabel!,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: ReclimColors.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                   const SizedBox(height: 8),
                   // 날짜 칩 (요일 포함, 지난 날짜 흐리게)
                   Wrap(

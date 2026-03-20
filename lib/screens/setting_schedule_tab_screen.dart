@@ -724,6 +724,16 @@ class _SettingCard extends StatelessWidget {
                           color: ReclimColors.textSecondary,
                         ),
                       ),
+                      if (sector.timeRangeLabel != null) ...[
+                        const SizedBox(width: 4),
+                        Text(
+                          sector.timeRangeLabel!,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: ReclimColors.textTertiary,
+                          ),
+                        ),
+                      ],
                     ],
                   );
                 }).toList(),

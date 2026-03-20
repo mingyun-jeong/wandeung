@@ -3,26 +3,54 @@ class SettingSector {
   final String name;
   final String? color; // DifficultyColor.name (예: "red", "blue") — 벽 색상
   final List<String> dates; // "YYYY-MM-DD"
+  final String? startTime; // "HH:mm" (예: "10:00")
+  final String? endTime; // "HH:mm" (예: "18:00")
 
-  SettingSector({required this.name, this.color, required this.dates});
+  SettingSector({
+    required this.name,
+    this.color,
+    required this.dates,
+    this.startTime,
+    this.endTime,
+  });
 
   factory SettingSector.fromMap(Map<String, dynamic> map) => SettingSector(
         name: map['name'] as String,
         color: map['color'] as String?,
         dates: (map['dates'] as List).cast<String>(),
+        startTime: map['start_time'] as String?,
+        endTime: map['end_time'] as String?,
       );
 
   Map<String, dynamic> toMap() => {
         'name': name,
         if (color != null) 'color': color,
         'dates': dates,
+        if (startTime != null) 'start_time': startTime,
+        if (endTime != null) 'end_time': endTime,
       };
 
-  SettingSector copyWith({String? name, String? color, List<String>? dates}) =>
+  /// "10:00 ~ 18:00" 또는 "10:00 ~" 또는 null
+  String? get timeRangeLabel {
+    if (startTime == null && endTime == null) return null;
+    if (startTime != null && endTime != null) return '$startTime ~ $endTime';
+    if (startTime != null) return '$startTime ~';
+    return '~ $endTime';
+  }
+
+  SettingSector copyWith({
+    String? name,
+    String? color,
+    List<String>? dates,
+    String? startTime,
+    String? endTime,
+  }) =>
       SettingSector(
         name: name ?? this.name,
         color: color ?? this.color,
         dates: dates ?? this.dates,
+        startTime: startTime ?? this.startTime,
+        endTime: endTime ?? this.endTime,
       );
 }
 

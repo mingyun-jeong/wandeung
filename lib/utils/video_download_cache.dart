@@ -55,7 +55,7 @@ class VideoDownloadCache {
       existingBytes = partialFile.lengthSync();
     }
 
-    final url = R2Config.getPresignedUrl(objectKey);
+    final url = await R2Config.getPresignedUrl(objectKey);
     final request = http.Request('GET', Uri.parse(url));
 
     // Range 헤더로 이어받기

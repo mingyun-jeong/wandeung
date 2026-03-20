@@ -126,16 +126,8 @@ class VideoUploadService {
   /// 사용자의 모든 리모트 파일 삭제 (회원탈퇴)
   static Future<void> deleteAllUserFiles(String userId) async {
     try {
-      // 영상 삭제
-      final videoKeys = await R2Config.listObjects('video/$userId/');
-      for (final key in videoKeys) {
-        await R2Config.deleteFile(key);
-      }
-      // 썸네일 삭제
-      final thumbnailKeys = await R2Config.listObjects('thumbnail/$userId/');
-      for (final key in thumbnailKeys) {
-        await R2Config.deleteFile(key);
-      }
+      await R2Config.deleteAllFiles('video/$userId/');
+      await R2Config.deleteAllFiles('thumbnail/$userId/');
     } catch (e) {
       debugPrint('R2 전체 삭제 실패: $e');
     }

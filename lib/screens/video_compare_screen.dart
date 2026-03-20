@@ -85,7 +85,7 @@ class _VideoCompareScreenState extends State<VideoCompareScreen> {
       }
       controller = VideoPlayerController.file(File(path));
     } else {
-      final url = R2Config.getPresignedUrl(path);
+      final url = await R2Config.getPresignedUrl(path);
       controller = VideoPlayerController.networkUrl(Uri.parse(url));
     }
 

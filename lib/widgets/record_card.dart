@@ -122,12 +122,24 @@ class RecordCard extends StatelessWidget {
               fit: BoxFit.cover,
               errorBuilder: (_, __, ___) => _GradeBadge(color: color, grade: record.grade),
             )
-          : Image.network(
-              R2Config.getPresignedUrl(path),
-              width: 72,
-              height: 72,
-              fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => _GradeBadge(color: color, grade: record.grade),
+          : FutureBuilder<String>(
+              future: R2Config.getPresignedUrl(path),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) {
+                  return SizedBox(
+                    width: 72,
+                    height: 72,
+                    child: _GradeBadge(color: color, grade: record.grade),
+                  );
+                }
+                return Image.network(
+                  snapshot.data!,
+                  width: 72,
+                  height: 72,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => _GradeBadge(color: color, grade: record.grade),
+                );
+              },
             );
 
       return ClipRRect(

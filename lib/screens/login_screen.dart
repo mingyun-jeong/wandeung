@@ -1,3 +1,4 @@
+import 'dart:io' show Platform;
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -84,10 +85,22 @@ class LoginScreen extends ConsumerWidget {
                           color: Colors.white,
                           strokeWidth: 2.5,
                         )
-                      : _GoogleSignInButton(
-                          onPressed: () => ref
-                              .read(authProvider.notifier)
-                              .signInWithGoogle(),
+                      : Column(
+                          children: [
+                            if (Platform.isIOS) ...[
+                              _AppleSignInButton(
+                                onPressed: () => ref
+                                    .read(authProvider.notifier)
+                                    .signInWithApple(),
+                              ),
+                              const SizedBox(height: 12),
+                            ],
+                            _GoogleSignInButton(
+                              onPressed: () => ref
+                                  .read(authProvider.notifier)
+                                  .signInWithGoogle(),
+                            ),
+                          ],
                         ),
 
                   if (authState.hasError)
@@ -125,7 +138,7 @@ class LoginScreen extends ConsumerWidget {
                   const SizedBox(height: 20),
 
                   Text(
-                    'Google 계정으로 간편하게 시작하세요',
+                    '간편하게 시작하세요',
                     style: TextStyle(
                       fontSize: 12,
                       color: Colors.white.withOpacity(0.4),
@@ -204,16 +217,38 @@ class _GoogleLogoPainter extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
-class _GoogleSignInButton extends StatefulWidget {
-  final VoidCallback onPressed;
-
-  const _GoogleSignInButton({required this.onPressed});
-
-  @override
-  State<_GoogleSignInButton> createState() => _GoogleSignInButtonState();
+class _AppleSignInButton extends _SignInButton {
+  const _AppleSignInButton({required super.onPressed})
+      : super(
+          icon: const Icon(Icons.apple, size: 22, color: Color(0xFF1F1F1F)),
+          label: 'Apple로 시작하기',
+        );
 }
 
-class _GoogleSignInButtonState extends State<_GoogleSignInButton>
+class _GoogleSignInButton extends _SignInButton {
+  _GoogleSignInButton({required super.onPressed})
+      : super(
+          icon: _buildGoogleLogo(),
+          label: 'Google로 시작하기',
+        );
+}
+
+class _SignInButton extends StatefulWidget {
+  final VoidCallback onPressed;
+  final Widget icon;
+  final String label;
+
+  const _SignInButton({
+    required this.onPressed,
+    required this.icon,
+    required this.label,
+  });
+
+  @override
+  State<_SignInButton> createState() => _SignInButtonState();
+}
+
+class _SignInButtonState extends State<_SignInButton>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _scaleAnimation;
@@ -278,11 +313,11 @@ class _GoogleSignInButtonState extends State<_GoogleSignInButton>
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              _buildGoogleLogo(),
+              widget.icon,
               const SizedBox(width: 12),
-              const Text(
-                'Google로 시작하기',
-                style: TextStyle(
+              Text(
+                widget.label,
+                style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
                   color: Color(0xFF1F1F1F),

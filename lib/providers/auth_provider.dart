@@ -1,8 +1,15 @@
+import 'dart:convert';
+import 'dart:io' show Platform;
+import 'dart:math';
+
+import 'package:crypto/crypto.dart';
 import 'package:flutter/painting.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../config/r2_config.dart';
 import '../config/supabase_config.dart';
 import '../services/video_upload_service.dart';
 import '../utils/cache_cleanup.dart';
@@ -38,6 +45,7 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
       final webClientId = dotenv.env['GOOGLE_WEB_CLIENT_ID']!;
 
       final googleSignIn = GoogleSignIn(
+        clientId: Platform.isIOS ? dotenv.env['GOOGLE_IOS_CLIENT_ID'] : null,
         serverClientId: webClientId,
       );
 
@@ -63,6 +71,48 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
     } catch (e, st) {
       state = AsyncValue.error(e, st);
     }
+  }
+
+  Future<void> signInWithApple() async {
+    state = const AsyncValue.loading();
+    try {
+      final rawNonce = _generateNonce();
+      final hashedNonce = sha256.convert(utf8.encode(rawNonce)).toString();
+
+      final credential = await SignInWithApple.getAppleIDCredential(
+        scopes: [
+          AppleIDAuthorizationScopes.email,
+          AppleIDAuthorizationScopes.fullName,
+        ],
+        nonce: hashedNonce,
+      );
+
+      final idToken = credential.identityToken;
+      if (idToken == null) throw Exception('Apple ID Token is null');
+
+      final response = await _supabase.auth.signInWithIdToken(
+        provider: OAuthProvider.apple,
+        idToken: idToken,
+        nonce: rawNonce,
+      );
+
+      state = AsyncValue.data(response.user);
+    } catch (e, st) {
+      if (e is SignInWithAppleAuthorizationException &&
+          e.code == AuthorizationErrorCode.canceled) {
+        state = const AsyncValue.data(null);
+        return;
+      }
+      state = AsyncValue.error(e, st);
+    }
+  }
+
+  String _generateNonce([int length = 32]) {
+    const charset =
+        '0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._';
+    final random = Random.secure();
+    return List.generate(length, (_) => charset[random.nextInt(charset.length)])
+        .join();
   }
 
   Future<void> signOut() async {
@@ -97,6 +147,7 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
   /// 앱 캐시 + 이미지 캐시 + Riverpod 데이터 캐시 전체 삭제
   Future<void> _clearAllCache() async {
     await CacheCleanup.clearAppCache();
+    R2Config.clearCache();
     PaintingBinding.instance.imageCache.clear();
     PaintingBinding.instance.imageCache.clearLiveImages();
     _resetUiState();

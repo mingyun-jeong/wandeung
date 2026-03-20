@@ -976,10 +976,16 @@ class _RecordGridCard extends StatelessWidget {
             fit: BoxFit.cover,
             errorBuilder: (_, __, ___) => fallback(),
           )
-        : Image.network(
-            R2Config.getPresignedUrl(path),
-            fit: BoxFit.cover,
-            errorBuilder: (_, __, ___) => fallback(),
+        : FutureBuilder<String>(
+            future: R2Config.getPresignedUrl(path),
+            builder: (context, snapshot) {
+              if (!snapshot.hasData) return fallback();
+              return Image.network(
+                snapshot.data!,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => fallback(),
+              );
+            },
           );
   }
 

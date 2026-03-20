@@ -42,7 +42,7 @@ class _VideoPlaybackScreenState extends State<VideoPlaybackScreen> {
       _videoController = VideoPlayerController.file(File(path));
     } else {
       debugPrint('[R2] video_path from DB: "$path"');
-      final url = R2Config.getPresignedUrl(path);
+      final url = await R2Config.getPresignedUrl(path);
       _videoController = VideoPlayerController.networkUrl(Uri.parse(url));
     }
 

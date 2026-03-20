@@ -62,7 +62,7 @@ class _RecordDetailScreenState extends ConsumerState<RecordDetailScreen> {
       }
       _videoController = VideoPlayerController.file(File(path));
     } else {
-      final url = R2Config.getPresignedUrl(path);
+      final url = await R2Config.getPresignedUrl(path);
       _videoController = VideoPlayerController.networkUrl(Uri.parse(url));
     }
 

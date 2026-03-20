@@ -515,12 +515,18 @@ class _RecordSelectItem extends StatelessWidget {
       if (!isLocal) {
         return ClipRRect(
           borderRadius: BorderRadius.circular(8),
-          child: Image.network(
-            R2Config.getPresignedUrl(path),
-            width: 48,
-            height: 48,
-            fit: BoxFit.cover,
-            errorBuilder: (_, __, ___) => _colorBadge(color),
+          child: FutureBuilder<String>(
+            future: R2Config.getPresignedUrl(path),
+            builder: (context, snapshot) {
+              if (!snapshot.hasData) return _colorBadge(color);
+              return Image.network(
+                snapshot.data!,
+                width: 48,
+                height: 48,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => _colorBadge(color),
+              );
+            },
           ),
         );
       }

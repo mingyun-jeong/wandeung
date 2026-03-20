@@ -139,7 +139,7 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
       }
       _videoController = VideoPlayerController.file(File(path));
     } else {
-      final url = R2Config.getPresignedUrl(path);
+      final url = await R2Config.getPresignedUrl(path);
       _videoController = VideoPlayerController.networkUrl(Uri.parse(url));
     }
 
@@ -1530,14 +1530,30 @@ class _ExportedVideoCardState extends State<_ExportedVideoCard> {
                                         color: Colors.white, size: 20),
                                   ),
                                 )
-                              : Image.network(
-                                  R2Config.getPresignedUrl(thumbPath),
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (_, __, ___) => Container(
-                                    color: const Color(0xFFE2E8F0),
-                                    child: const Icon(Icons.movie_rounded,
-                                        color: Colors.white, size: 20),
-                                  ),
+                              : FutureBuilder<String>(
+                                  future: R2Config.getPresignedUrl(thumbPath),
+                                  builder: (context, snapshot) {
+                                    if (!snapshot.hasData) {
+                                      return Container(
+                                        color: const Color(0xFFE2E8F0),
+                                        child: const Center(
+                                          child: SizedBox(
+                                            width: 16, height: 16,
+                                            child: CircularProgressIndicator(strokeWidth: 2),
+                                          ),
+                                        ),
+                                      );
+                                    }
+                                    return Image.network(
+                                      snapshot.data!,
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (_, __, ___) => Container(
+                                        color: const Color(0xFFE2E8F0),
+                                        child: const Icon(Icons.movie_rounded,
+                                            color: Colors.white, size: 20),
+                                      ),
+                                    );
+                                  },
                                 ))
                           : Container(
                               color: const Color(0xFFE2E8F0),
@@ -1710,10 +1726,12 @@ class _FullScreenVideoPlayerState extends State<_FullScreenVideoPlayer> {
   }
 
   Future<void> _initVideo() async {
-    _videoController = widget.videoPath.startsWith('/')
-        ? VideoPlayerController.file(File(widget.videoPath))
-        : VideoPlayerController.networkUrl(
-            Uri.parse(R2Config.getPresignedUrl(widget.videoPath)));
+    if (widget.videoPath.startsWith('/')) {
+      _videoController = VideoPlayerController.file(File(widget.videoPath));
+    } else {
+      final url = await R2Config.getPresignedUrl(widget.videoPath);
+      _videoController = VideoPlayerController.networkUrl(Uri.parse(url));
+    }
     try {
       await _videoController!.initialize();
     } catch (e) {

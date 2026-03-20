@@ -1,19 +1,27 @@
 /// 섹터별 세팅 날짜
 class SettingSector {
   final String name;
+  final String? color; // DifficultyColor.name (예: "red", "blue") — 벽 색상
   final List<String> dates; // "YYYY-MM-DD"
 
-  SettingSector({required this.name, required this.dates});
+  SettingSector({required this.name, this.color, required this.dates});
 
   factory SettingSector.fromMap(Map<String, dynamic> map) => SettingSector(
         name: map['name'] as String,
+        color: map['color'] as String?,
         dates: (map['dates'] as List).cast<String>(),
       );
 
-  Map<String, dynamic> toMap() => {'name': name, 'dates': dates};
+  Map<String, dynamic> toMap() => {
+        'name': name,
+        if (color != null) 'color': color,
+        'dates': dates,
+      };
 
-  SettingSector copyWith({String? name, List<String>? dates}) => SettingSector(
+  SettingSector copyWith({String? name, String? color, List<String>? dates}) =>
+      SettingSector(
         name: name ?? this.name,
+        color: color ?? this.color,
         dates: dates ?? this.dates,
       );
 }
@@ -88,9 +96,10 @@ class GymSettingSchedule {
         'status': status,
       };
 
-  /// 이메일 앞 2글자 + "님" (예: kimhyun@gmail.com → "ki님")
-  String? get submitterDisplayName {
-    if (submitterEmail == null) return null;
+  /// 공유자 표시명: submitted_by가 없으면 "관리자", 있으면 이메일 앞 2글자 + "님"
+  String get submitterDisplayName {
+    if (submittedBy == null) return '관리자';
+    if (submitterEmail == null) return '관리자';
     final local = submitterEmail!.split('@').first;
     if (local.length < 2) return '$local님';
     return '${local.substring(0, 2)}님';

@@ -9,7 +9,9 @@ import '../models/gym_setting_schedule.dart';
 import '../providers/favorite_gym_provider.dart';
 import '../providers/gym_provider.dart';
 import '../providers/setting_schedule_provider.dart';
+import '../utils/constants.dart';
 import '../widgets/reclim_app_bar.dart';
+import 'setting_schedule_detail_screen.dart';
 
 class SettingScheduleTabScreen extends ConsumerStatefulWidget {
   const SettingScheduleTabScreen({super.key});
@@ -34,9 +36,14 @@ class _SettingScheduleTabScreenState
   String _yearMonthStr(DateTime dt) =>
       '${dt.year}-${dt.month.toString().padLeft(2, '0')}';
 
-  void _selectGym(ClimbingGym gym) {
-    // google_place_id로 기존 gym 조회 → gym_id 필터 설정
-    // Places 검색 결과에는 DB id가 없으므로 name으로 표시, gym_id는 DB 조회 후 설정
+  /// 즐겨찾기 암장 선택 (DB id가 이미 있으므로 바로 설정)
+  void _selectFavoriteGym(ClimbingGym gym) {
+    ref.read(settingGymFilterProvider.notifier).state = gym.id;
+    ref.read(settingGymFilterNameProvider.notifier).state = gym.name;
+  }
+
+  /// 검색 결과에서 암장 선택 (Google Places → DB 조회 필요)
+  void _selectSearchGym(ClimbingGym gym) {
     _findAndSetGymFilter(gym);
     _searchController.text = gym.name;
     setState(() => _showSearchResults = false);
@@ -44,7 +51,6 @@ class _SettingScheduleTabScreenState
   }
 
   Future<void> _findAndSetGymFilter(ClimbingGym gym) async {
-    // google_place_id로 climbing_gyms에서 ID 조회
     if (gym.googlePlaceId != null) {
       final existing = await SupabaseConfig.client
           .from('climbing_gyms')
@@ -60,7 +66,6 @@ class _SettingScheduleTabScreenState
       }
     }
 
-    // DB에 없는 암장 → 이름으로 필터 (등록된 일정이 없을 것)
     ref.read(settingGymFilterProvider.notifier).state = '__not_found__';
     ref.read(settingGymFilterNameProvider.notifier).state = gym.name;
   }
@@ -74,11 +79,10 @@ class _SettingScheduleTabScreenState
 
   @override
   Widget build(BuildContext context) {
+    final gymFilter = ref.watch(settingGymFilterProvider);
     final focusedMonth = ref.watch(settingFocusedMonthProvider);
     final selectedDate = ref.watch(settingSelectedDateProvider);
-    final gymFilter = ref.watch(settingGymFilterProvider);
     final yearMonth = _yearMonthStr(focusedMonth);
-    final schedulesAsync = ref.watch(settingSchedulesProvider(yearMonth));
 
     return Scaffold(
       appBar: const ReclimAppBar(),
@@ -169,20 +173,25 @@ class _SettingScheduleTabScreenState
           // ─── 검색 결과 드롭다운 ───
           if (_showSearchResults) _buildSearchResults(),
 
-          // ─── 내 암장 목록 (기본) or 캘린더 (암장 선택 시) ───
-          if (!_showSearchResults && gymFilter == null)
-            _buildFavoriteGymList(),
+          // ─── 기본: 내 암장 목록 ───
+          if (!_showSearchResults && gymFilter == null) _buildFavoriteGymList(),
 
+          // ─── 암장 선택됨: 캘린더 + 목록 ───
           if (!_showSearchResults && gymFilter != null)
             Expanded(
               child: Column(
                 children: [
                   _buildCalendar(
-                      focusedMonth, selectedDate, schedulesAsync),
+                    focusedMonth,
+                    selectedDate,
+                    ref.watch(settingSchedulesProvider(yearMonth)),
+                  ),
                   const Divider(height: 1, color: ReclimColors.border),
                   Expanded(
                     child: _buildScheduleList(
-                        selectedDate, schedulesAsync, gymFilter),
+                      selectedDate,
+                      ref.watch(settingSchedulesProvider(yearMonth)),
+                    ),
                   ),
                 ],
               ),
@@ -191,6 +200,10 @@ class _SettingScheduleTabScreenState
       ),
     );
   }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // 내 암장 목록
+  // ═══════════════════════════════════════════════════════════════════════════
 
   Widget _buildFavoriteGymList() {
     final favoriteGymsAsync = ref.watch(favoriteGymsProvider);
@@ -203,7 +216,8 @@ class _SettingScheduleTabScreenState
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(Icons.search,
-                      size: 40, color: ReclimColors.textTertiary.withOpacity(0.5)),
+                      size: 40,
+                      color: ReclimColors.textTertiary.withOpacity(0.5)),
                   const SizedBox(height: 12),
                   const Text(
                     '암장을 검색해서 세팅일정을 확인하세요',
@@ -247,7 +261,9 @@ class _SettingScheduleTabScreenState
                             color: ReclimColors.textTertiary),
                         overflow: TextOverflow.ellipsis)
                     : null,
-                onTap: () => _selectGym(gym),
+                trailing: const Icon(Icons.chevron_right,
+                    size: 18, color: ReclimColors.textTertiary),
+                onTap: () => _selectFavoriteGym(gym),
                 contentPadding: EdgeInsets.zero,
                 dense: true,
               );
@@ -259,6 +275,10 @@ class _SettingScheduleTabScreenState
       ),
     );
   }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // 검색 결과
+  // ═══════════════════════════════════════════════════════════════════════════
 
   Widget _buildSearchResults() {
     final gymsAsync = ref.watch(gymsProvider);
@@ -291,7 +311,7 @@ class _SettingScheduleTabScreenState
                             color: ReclimColors.textTertiary),
                         overflow: TextOverflow.ellipsis)
                     : null,
-                onTap: () => _selectGym(gym),
+                onTap: () => _selectSearchGym(gym),
                 contentPadding: EdgeInsets.zero,
                 dense: true,
               );
@@ -304,28 +324,54 @@ class _SettingScheduleTabScreenState
     );
   }
 
+  // ═══════════════════════════════════════════════════════════════════════════
+  // 캘린더
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  Map<DateTime, List<_CalendarDayEntry>> _buildCalendarData(
+      List<GymSettingSchedule> schedules) {
+    final result = <DateTime, List<_CalendarDayEntry>>{};
+    for (final schedule in schedules) {
+      final dateColors = <String, List<Color>>{};
+      for (final sector in schedule.sectors) {
+        Color? c;
+        if (sector.color != null) {
+          final dc = DifficultyColor.values
+              .where((d) => d.name == sector.color)
+              .firstOrNull;
+          if (dc != null) c = Color(dc.colorValue);
+        }
+        for (final dateStr in sector.dates) {
+          dateColors.putIfAbsent(dateStr, () => []);
+          if (c != null) dateColors[dateStr]!.add(c);
+        }
+      }
+
+      for (final entry in dateColors.entries) {
+        final parts = entry.key.split('-');
+        if (parts.length != 3) continue;
+        final dt = DateTime(
+          int.parse(parts[0]),
+          int.parse(parts[1]),
+          int.parse(parts[2]),
+        );
+        result.putIfAbsent(dt, () => []);
+        result[dt]!.add(_CalendarDayEntry(
+          gymName: schedule.gymName ?? '',
+          colors: entry.value,
+        ));
+      }
+    }
+    return result;
+  }
+
   Widget _buildCalendar(
     DateTime focusedMonth,
     DateTime selectedDate,
     AsyncValue<List<GymSettingSchedule>> schedulesAsync,
   ) {
-    // 날짜별 세팅 이벤트 수 계산
     final schedules = schedulesAsync.valueOrNull ?? [];
-    final dateCounts = <DateTime, int>{};
-    for (final schedule in schedules) {
-      for (final dateStr in schedule.allDates) {
-        final parts = dateStr.split('-');
-        if (parts.length == 3) {
-          final dt = DateTime(
-            int.parse(parts[0]),
-            int.parse(parts[1]),
-            int.parse(parts[2]),
-          );
-          dateCounts[dt] = (dateCounts[dt] ?? 0) + 1;
-        }
-      }
-    }
-
+    final calendarData = _buildCalendarData(schedules);
     final colorScheme = Theme.of(context).colorScheme;
 
     return TableCalendar(
@@ -333,6 +379,7 @@ class _SettingScheduleTabScreenState
       lastDay: DateTime(2030),
       focusedDay: focusedMonth,
       calendarFormat: _calendarFormat,
+      rowHeight: 64,
       availableCalendarFormats: const {
         CalendarFormat.month: '월',
         CalendarFormat.twoWeeks: '2주',
@@ -350,41 +397,18 @@ class _SettingScheduleTabScreenState
         ref.read(settingFocusedMonthProvider.notifier).state = focused;
       },
       calendarBuilders: CalendarBuilders(
-        markerBuilder: (context, day, events) {
-          final normalized = DateTime(day.year, day.month, day.day);
-          final count = dateCounts[normalized] ?? 0;
-          if (count == 0) return const SizedBox.shrink();
-          return Positioned(
-            bottom: 1,
-            child: Container(
-              width: 6,
-              height: 6,
-              decoration: const BoxDecoration(
-                color: ReclimColors.accent,
-                shape: BoxShape.circle,
-              ),
-            ),
-          );
-        },
+        defaultBuilder: (context, day, focusedDay) =>
+            _buildDayCell(day, calendarData, false, false),
+        selectedBuilder: (context, day, focusedDay) =>
+            _buildDayCell(day, calendarData, true, false),
+        todayBuilder: (context, day, focusedDay) =>
+            _buildDayCell(day, calendarData, isSameDay(day, selectedDate), true),
       ),
       calendarStyle: CalendarStyle(
-        todayDecoration: BoxDecoration(
-          color: colorScheme.primaryContainer,
-          shape: BoxShape.circle,
-        ),
-        todayTextStyle: TextStyle(
-          color: colorScheme.onPrimaryContainer,
-          fontWeight: FontWeight.w600,
-        ),
-        selectedDecoration: BoxDecoration(
-          color: colorScheme.primary,
-          shape: BoxShape.circle,
-        ),
-        selectedTextStyle: TextStyle(
-          color: colorScheme.onPrimary,
-          fontWeight: FontWeight.w700,
-        ),
         outsideDaysVisible: false,
+        cellMargin: EdgeInsets.zero,
+        tableBorder: const TableBorder(),
+        markersMaxCount: 0,
         weekendTextStyle:
             TextStyle(color: colorScheme.error.withOpacity(0.7)),
         defaultTextStyle: const TextStyle(fontSize: 13),
@@ -415,23 +439,116 @@ class _SettingScheduleTabScreenState
       ),
       eventLoader: (day) {
         final normalized = DateTime(day.year, day.month, day.day);
-        final count = dateCounts[normalized] ?? 0;
-        return List.generate(count, (i) => i);
+        return calendarData[normalized] ?? [];
       },
     );
   }
 
+  Widget _buildDayCell(
+    DateTime day,
+    Map<DateTime, List<_CalendarDayEntry>> calendarData,
+    bool isSelected,
+    bool isToday,
+  ) {
+    final normalized = DateTime(day.year, day.month, day.day);
+    final entries = calendarData[normalized] ?? [];
+    final colorScheme = Theme.of(context).colorScheme;
+    final isWeekend = day.weekday == 6 || day.weekday == 7;
+
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.start,
+      children: [
+        const SizedBox(height: 4),
+        // 날짜 숫자 (선택: 원형 배경)
+        Container(
+          width: 28,
+          height: 28,
+          alignment: Alignment.center,
+          decoration: isSelected
+              ? const BoxDecoration(
+                  color: ReclimColors.accent,
+                  shape: BoxShape.circle,
+                )
+              : isToday
+                  ? BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: ReclimColors.accent, width: 1.5),
+                    )
+                  : null,
+          child: Text(
+            '${day.day}',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight:
+                  isSelected || isToday ? FontWeight.w700 : FontWeight.w400,
+              color: isSelected
+                  ? Colors.white
+                  : isToday
+                      ? ReclimColors.accent
+                      : isWeekend
+                          ? colorScheme.error.withOpacity(0.7)
+                          : ReclimColors.textPrimary,
+            ),
+          ),
+        ),
+        if (entries.isNotEmpty) ...[
+          const SizedBox(height: 2),
+          _buildColorDots(entries.first, isSelected),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildColorDots(_CalendarDayEntry entry, bool isSelected) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final colors = entry.colors;
+
+    if (colors.isEmpty) {
+      // 색상 정보 없으면 기본 dot
+      return Container(
+        width: 6,
+        height: 6,
+        decoration: const BoxDecoration(
+          color: ReclimColors.accent,
+          shape: BoxShape.circle,
+        ),
+      );
+    }
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: colors.take(4).map((c) => Container(
+            width: 6,
+            height: 6,
+            margin: const EdgeInsets.symmetric(horizontal: 1),
+            decoration: BoxDecoration(
+              color: c,
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: isSelected
+                    ? colorScheme.onPrimary.withOpacity(0.3)
+                    : ReclimColors.border,
+                width: 0.5,
+              ),
+            ),
+          )).toList(),
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // 선택된 날짜의 일정 목록
+  // ═══════════════════════════════════════════════════════════════════════════
+
   Widget _buildScheduleList(
     DateTime selectedDate,
     AsyncValue<List<GymSettingSchedule>> schedulesAsync,
-    String? gymFilter,
   ) {
     final dateStr = DateFormat('yyyy-MM-dd').format(selectedDate);
     final dateLabel = '${selectedDate.month}월 ${selectedDate.day}일';
 
     return schedulesAsync.when(
       data: (schedules) {
-        // 선택된 날짜에 세팅이 있는 스케줄만 필터
         final matchingEntries = <_ScheduleDateEntry>[];
         for (final schedule in schedules) {
           final sectors = schedule.sectorsForDate(dateStr);
@@ -444,11 +561,6 @@ class _SettingScheduleTabScreenState
         }
 
         if (matchingEntries.isEmpty) {
-          // 암장 필터가 있고 데이터가 없으면 공유 유도
-          if (gymFilter != null) {
-            final gymName = ref.read(settingGymFilterNameProvider) ?? '';
-            return _buildEmptyWithSharePrompt(gymName, dateLabel);
-          }
           return _buildEmptyState(dateLabel);
         }
 
@@ -470,7 +582,7 @@ class _SettingScheduleTabScreenState
               );
             }
             final entry = matchingEntries[i - 1];
-            return _SettingCard(entry: entry);
+            return _SettingCard(entry: entry, dateStr: dateStr);
           },
         );
       },
@@ -508,35 +620,16 @@ class _SettingScheduleTabScreenState
       ),
     );
   }
+}
 
-  Widget _buildEmptyWithSharePrompt(String gymName, String dateLabel) {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 56,
-            height: 56,
-            decoration: BoxDecoration(
-              color: ReclimColors.accent.withOpacity(0.08),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(Icons.event_busy_outlined,
-                size: 28, color: ReclimColors.accent.withOpacity(0.4)),
-          ),
-          const SizedBox(height: 12),
-          const Text(
-            '아직 등록된 세팅일정이 없습니다',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-              color: ReclimColors.textSecondary,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+// ═════════════════════════════════════════════════════════════════════════════
+// Helper classes
+// ═════════════════════════════════════════════════════════════════════════════
+
+class _CalendarDayEntry {
+  final String gymName;
+  final List<Color> colors;
+  const _CalendarDayEntry({required this.gymName, required this.colors});
 }
 
 class _ScheduleDateEntry {
@@ -547,57 +640,96 @@ class _ScheduleDateEntry {
 
 class _SettingCard extends StatelessWidget {
   final _ScheduleDateEntry entry;
-  const _SettingCard({required this.entry});
+  final String dateStr;
+
+  const _SettingCard({required this.entry, required this.dateStr});
 
   @override
   Widget build(BuildContext context) {
     final schedule = entry.schedule;
-    final sectorNames = entry.sectors.map((s) => s.name).join(', ');
 
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                const Icon(Icons.location_on,
-                    size: 16, color: ReclimColors.accent),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: Text(
-                    schedule.gymName ?? '',
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                      color: ReclimColors.textPrimary,
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 6),
-            Text(
-              '$sectorNames 세팅',
-              style: const TextStyle(
-                fontSize: 13,
-                color: ReclimColors.textSecondary,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => SettingScheduleDetailScreen(
+                schedule: schedule,
+                selectedDate: dateStr,
               ),
             ),
-            if (schedule.submitterDisplayName != null) ...[
-              const SizedBox(height: 4),
-              Text(
-                '정보 공유자: ${schedule.submitterDisplayName}',
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: ReclimColors.textTertiary,
-                ),
+          );
+        },
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.location_on,
+                      size: 16, color: ReclimColors.accent),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      schedule.gymName ?? '',
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: ReclimColors.textPrimary,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  const Icon(Icons.chevron_right,
+                      size: 18, color: ReclimColors.textTertiary),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 4,
+                children: entry.sectors.map((sector) {
+                  Color? sectorColor;
+                  if (sector.color != null) {
+                    final dc = DifficultyColor.values
+                        .where((d) => d.name == sector.color)
+                        .firstOrNull;
+                    if (dc != null) sectorColor = Color(dc.colorValue);
+                  }
+                  return Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (sectorColor != null) ...[
+                        Container(
+                          width: 10,
+                          height: 10,
+                          decoration: BoxDecoration(
+                            color: sectorColor,
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: ReclimColors.border,
+                              width: 0.5,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                      ],
+                      Text(
+                        '${sector.name} 세팅',
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: ReclimColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  );
+                }).toList(),
               ),
             ],
-          ],
+          ),
         ),
       ),
     );

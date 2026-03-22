@@ -9,6 +9,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/climbing_record.dart';
 import '../models/user_subscription.dart';
+import '../services/video_export_service.dart';
 import '../services/video_upload_service.dart';
 import 'connectivity_provider.dart';
 import 'subscription_provider.dart';
@@ -275,12 +276,33 @@ class UploadQueueNotifier extends StateNotifier<List<UploadTask>> {
         await _persist();
 
         try {
+          final isPro =
+              _ref.read(subscriptionTierProvider) == SubscriptionTier.pro;
+
+          // Free 티어: 720p 압축 후 업로드
+          String uploadPath = task.localVideoPath;
+          if (!isPro) {
+            debugPrint('[UploadQueue] Free 티어 — 720p 압축 시작');
+            uploadPath = await VideoExportService.compressForUpload(
+              inputPath: task.localVideoPath,
+              isPro: false,
+            ).timeout(const Duration(minutes: 10));
+            debugPrint('[UploadQueue] 압축 완료: $uploadPath');
+          }
+
           await VideoUploadService.uploadVideoAndUpdateRecord(
             recordId: task.recordId,
-            localVideoPath: task.localVideoPath,
+            localVideoPath: uploadPath,
             userId: userId,
             isExport: task.isExport,
           ).timeout(const Duration(minutes: 5));
+
+          // 압축 임시 파일 삭제
+          if (uploadPath != task.localVideoPath) {
+            try {
+              await File(uploadPath).delete();
+            } catch (_) {}
+          }
 
           debugPrint('[UploadQueue] 업로드 성공: ${task.recordId}');
           task.status = UploadStatus.uploaded;

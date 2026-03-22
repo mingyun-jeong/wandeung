@@ -827,9 +827,17 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
       body: Column(
         children: [
           Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.only(bottom: 16),
-              child: Column(
+            child: RefreshIndicator(
+              onRefresh: () async {
+                if (_isEditMode && widget.existingRecord!.id != null) {
+                  ref.invalidate(
+                      exportedRecordsProvider(widget.existingRecord!.id!));
+                }
+              },
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.only(bottom: 16),
+                child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
             // 기록일시 (편집 모드에서만, 영상 위)
@@ -1241,6 +1249,7 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
           ],
               ),
             ),
+          ),
           ),
           // 하단 고정 버튼
           SafeArea(

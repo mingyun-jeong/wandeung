@@ -252,7 +252,7 @@ class _GymStatsContent extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // [1] 암장 전체 통계
-            _GymSummaryCard(stats: stats),
+            _GymSummaryCard(stats: stats, gymName: gymName),
 
             // [2] 나의 포지션
             if (ranking != null && ranking.myClimbs > 0) ...[
@@ -303,13 +303,27 @@ class _GymStatsContent extends ConsumerWidget {
 
 // ─── [1] 암장 전체 통계 ───────────────────────────────────────────────────────
 
-class _GymSummaryCard extends StatelessWidget {
+class _GymSummaryCard extends ConsumerWidget {
   final GymStats stats;
-  const _GymSummaryCard({required this.stats});
+  final String? gymName;
+  const _GymSummaryCard({required this.stats, this.gymName});
 
   @override
-  Widget build(BuildContext context) {
-    final topGrades = stats.popularGrades.take(3).join(', ');
+  Widget build(BuildContext context, WidgetRef ref) {
+    final colorScale = gymName != null
+        ? ref.watch(gymColorScaleProvider(gymName!))
+        : null;
+
+    final topGradeEntries = stats.popularGrades.take(3).map((name) {
+      final normalized = name.trim().toLowerCase().replaceAll('-', '');
+      for (final g in ClimbingGrade.values) {
+        if (g.label.toLowerCase() == normalized ||
+            g.name.toLowerCase() == normalized) {
+          return g;
+        }
+      }
+      return null;
+    }).toList();
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -367,7 +381,7 @@ class _GymSummaryCard extends StatelessWidget {
           ),
 
           // 인기 등급
-          if (topGrades.isNotEmpty) ...[
+          if (topGradeEntries.any((g) => g != null)) ...[
             const SizedBox(height: 16),
             Container(
               width: double.infinity,
@@ -383,24 +397,46 @@ class _GymSummaryCard extends StatelessWidget {
                       size: 16, color: ReclimColors.inProgress),
                   const SizedBox(width: 8),
                   const Text(
-                    '인기 등급',
+                    '인기 난이도',
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w500,
                       color: ReclimColors.textSecondary,
                     ),
                   ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      topGrades,
-                      style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        color: ReclimColors.textPrimary,
-                      ),
-                      textAlign: TextAlign.right,
-                    ),
+                  const Spacer(),
+                  ...topGradeEntries.whereType<ClimbingGrade>().map(
+                    (grade) {
+                      DifficultyColor diffColor = grade.defaultColor;
+                      if (colorScale != null) {
+                        for (final level in colorScale.levels) {
+                          if (grade.sortIndex >= level.vMin.sortIndex &&
+                              grade.sortIndex <= level.vMax.sortIndex) {
+                            diffColor = level.color;
+                            break;
+                          }
+                        }
+                      }
+                      final color = Color(diffColor.colorValue);
+                      final needsBorder = diffColor.needsDarkIcon;
+                      return Padding(
+                        padding: const EdgeInsets.only(left: 6),
+                        child: Container(
+                          width: 18,
+                          height: 18,
+                          decoration: BoxDecoration(
+                            color: color,
+                            shape: BoxShape.circle,
+                            border: needsBorder
+                                ? Border.all(
+                                    color: const Color(0xFFBDBDBD),
+                                    width: 0.8,
+                                  )
+                                : null,
+                          ),
+                        ),
+                      );
+                    },
                   ),
                 ],
               ),

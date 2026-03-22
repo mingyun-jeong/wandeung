@@ -173,90 +173,117 @@ class RecordsTabScreen extends ConsumerWidget {
           ),
           const Divider(height: 1, color: Color(0xFFE8ECF0)),
           Expanded(
-            child: records.when(
-              data: (list) {
-                if (list.isEmpty) {
-                  return Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          width: 56,
-                          height: 56,
-                          decoration: BoxDecoration(
-                            color: ReclimColors.accent.withOpacity(0.08),
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(Icons.terrain_outlined,
-                              size: 28,
-                              color: ReclimColors.accent.withOpacity(0.4)),
-                        ),
-                        const SizedBox(height: 12),
-                        const Text(
-                          '이 날의 등반 기록이 없습니다',
-                          style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
-                              color: ReclimColors.textSecondary),
-                        ),
-                        const SizedBox(height: 16),
-                        FilledButton.icon(
-                          onPressed: () {
-                            ref.read(bottomNavIndexProvider.notifier).state = 2;
-                          },
-                          icon: const Icon(Icons.videocam_rounded, size: 18),
-                          label: const Text('촬영하러 가기'),
-                          style: FilledButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                }
-
-                final filtered = _applyFilters(
-                    list, selectedColor, selectedStatus, selectedTag, selectedGym);
-                final hasActiveFilters = selectedColor != null ||
-                    selectedStatus != null ||
-                    selectedTag != null ||
-                    selectedGym != null;
-                if (filtered.isEmpty) {
-                  return Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.filter_list_off_rounded,
-                            size: 40,
-                            color: ReclimColors.textTertiary),
-                        const SizedBox(height: 10),
-                        const Text(
-                          '필터 조건에 맞는 기록이 없습니다',
-                          style: TextStyle(
-                              fontSize: 14,
-                              color: ReclimColors.textTertiary),
-                        ),
-                        if (hasActiveFilters) ...[
-                          const SizedBox(height: 12),
-                          TextButton(
-                            onPressed: () => _resetFilters(ref),
-                            child: const Text('필터 초기화'),
-                          ),
-                        ],
-                      ],
-                    ),
-                  );
-                }
-                return ListView.builder(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-                  itemCount: filtered.length,
-                  itemBuilder: (_, i) =>
-                      RecordCard(record: filtered[i]),
-                );
+            child: RefreshIndicator(
+              color: ReclimColors.accent,
+              onRefresh: () async {
+                ref.invalidate(recordsByDateProvider(selectedDate));
+                ref.invalidate(recordCountsByDateProvider(focusedMonth));
               },
-              loading: () =>
-                  const Center(child: CircularProgressIndicator()),
-              error: (e, _) => Center(child: Text('오류: $e')),
+              child: records.when(
+                data: (list) {
+                  if (list.isEmpty) {
+                    return ListView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      children: [
+                        SizedBox(
+                          height: MediaQuery.of(context).size.height * 0.3,
+                          child: Center(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  width: 56,
+                                  height: 56,
+                                  decoration: BoxDecoration(
+                                    color: ReclimColors.accent.withOpacity(0.08),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Icon(Icons.terrain_outlined,
+                                      size: 28,
+                                      color: ReclimColors.accent.withOpacity(0.4)),
+                                ),
+                                const SizedBox(height: 12),
+                                const Text(
+                                  '이 날의 등반 기록이 없습니다',
+                                  style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w500,
+                                      color: ReclimColors.textSecondary),
+                                ),
+                                const SizedBox(height: 16),
+                                FilledButton.icon(
+                                  onPressed: () {
+                                    ref.read(bottomNavIndexProvider.notifier).state = 2;
+                                  },
+                                  icon: const Icon(Icons.videocam_rounded, size: 18),
+                                  label: const Text('촬영하러 가기'),
+                                  style: FilledButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    );
+                  }
+
+                  final filtered = _applyFilters(
+                      list, selectedColor, selectedStatus, selectedTag, selectedGym);
+                  final hasActiveFilters = selectedColor != null ||
+                      selectedStatus != null ||
+                      selectedTag != null ||
+                      selectedGym != null;
+                  if (filtered.isEmpty) {
+                    return ListView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      children: [
+                        SizedBox(
+                          height: MediaQuery.of(context).size.height * 0.3,
+                          child: Center(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.filter_list_off_rounded,
+                                    size: 40,
+                                    color: ReclimColors.textTertiary),
+                                const SizedBox(height: 10),
+                                const Text(
+                                  '필터 조건에 맞는 기록이 없습니다',
+                                  style: TextStyle(
+                                      fontSize: 14,
+                                      color: ReclimColors.textTertiary),
+                                ),
+                                if (hasActiveFilters) ...[
+                                  const SizedBox(height: 12),
+                                  TextButton(
+                                    onPressed: () => _resetFilters(ref),
+                                    child: const Text('필터 초기화'),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    );
+                  }
+                  return ListView.builder(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                    itemCount: filtered.length,
+                    itemBuilder: (_, i) =>
+                        RecordCard(record: filtered[i]),
+                  );
+                },
+                loading: () =>
+                    const Center(child: CircularProgressIndicator()),
+                error: (e, _) => ListView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  children: [Center(child: Text('오류: $e'))],
+                ),
+              ),
             ),
           ),
         ],

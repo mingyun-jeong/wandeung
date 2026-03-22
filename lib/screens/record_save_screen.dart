@@ -1575,28 +1575,6 @@ class _ExportedVideoCardState extends ConsumerState<_ExportedVideoCard> {
                               child: const Icon(Icons.movie_rounded,
                                   color: Colors.white, size: 20),
                             ),
-                      if (record.videoQuality != null)
-                        Positioned(
-                          right: 3,
-                          top: 3,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 3, vertical: 1),
-                            decoration: BoxDecoration(
-                              color: Colors.black.withOpacity(0.65),
-                              borderRadius: BorderRadius.circular(3),
-                            ),
-                            child: Text(
-                              record.videoQuality!,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 9,
-                                fontWeight: FontWeight.w500,
-                                height: 1.2,
-                              ),
-                            ),
-                          ),
-                        ),
                       if (record.videoDurationSeconds != null)
                         Positioned(
                           right: 3,

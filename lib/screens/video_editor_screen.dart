@@ -32,7 +32,6 @@ import '../widgets/editor/subtitle_overlay_layer.dart';
 import '../widgets/editor/track_label_panel.dart';
 import '../widgets/editor/crop_overlay.dart';
 import '../widgets/editor/vllo_timeline.dart';
-import '../app.dart';
 import 'record_save_screen.dart';
 
 /// 비디오 편집 화면
@@ -511,15 +510,6 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
   }
 
   /// 내보내기 실행
-  /// 내보내기 품질 선택 바텀시트
-  Future<ExportQuality?> _showQualityPicker() async {
-    return showModalBottomSheet<ExportQuality>(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => const _ExportQualitySheet(),
-    );
-  }
-
   Future<void> _handleExport() async {
     if (_isExporting) return;
 
@@ -551,9 +541,7 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
       }
     }
 
-    // 품질 선택
-    final quality = await _showQualityPicker();
-    if (quality == null || !mounted) return;
+    const quality = ExportQuality.original;
 
     setState(() => _isExporting = true);
     ref.read(exportStatusProvider.notifier).state = ExportStatus.exporting;
@@ -1753,177 +1741,3 @@ class _FullscreenVideoPageState extends State<_FullscreenVideoPage> {
   }
 }
 
-// ─── 내보내기 품질 선택 바텀시트 ────────────────────────────
-
-class _ExportQualitySheet extends StatefulWidget {
-  const _ExportQualitySheet();
-
-  @override
-  State<_ExportQualitySheet> createState() => _ExportQualitySheetState();
-}
-
-class _ExportQualitySheetState extends State<_ExportQualitySheet> {
-  ExportQuality _selected = ExportQuality.original;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      child: SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // 핸들
-              Container(
-                width: 36,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: ReclimColors.border,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(height: 20),
-              // 제목
-              const Row(
-                children: [
-                  Icon(Icons.tune, size: 20, color: ReclimColors.textPrimary),
-                  SizedBox(width: 8),
-                  Text(
-                    '내보내기 품질',
-                    style: TextStyle(
-                      fontSize: 17,
-                      fontWeight: FontWeight.w700,
-                      color: ReclimColors.textPrimary,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              // 품질 카드들
-              ...ExportQuality.values.map(_buildQualityCard),
-              const SizedBox(height: 16),
-              // 추출 버튼
-              SizedBox(
-                width: double.infinity,
-                height: 48,
-                child: FilledButton(
-                  onPressed: () => Navigator.pop(context, _selected),
-                  child: Text(
-                    '${_selected.label}로 추출하기',
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildQualityCard(ExportQuality q) {
-    final isSelected = _selected == q;
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: GestureDetector(
-        onTap: () => setState(() => _selected = q),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          curve: Curves.easeOut,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          decoration: BoxDecoration(
-            color: isSelected
-                ? ReclimColors.accent.withOpacity(0.06)
-                : ReclimColors.surface,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(
-              color: isSelected ? ReclimColors.accent : ReclimColors.border,
-              width: isSelected ? 1.5 : 1,
-            ),
-          ),
-          child: Row(
-            children: [
-              // 아이콘
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: isSelected
-                      ? ReclimColors.accent.withOpacity(0.12)
-                      : ReclimColors.border.withOpacity(0.5),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(
-                  Icons.hd,
-                  size: 22,
-                  color: isSelected
-                      ? ReclimColors.accent
-                      : ReclimColors.textSecondary,
-                ),
-              ),
-              const SizedBox(width: 14),
-              // 텍스트
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      q.label,
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight:
-                            isSelected ? FontWeight.w700 : FontWeight.w600,
-                        color: isSelected
-                            ? ReclimColors.accent
-                            : ReclimColors.textPrimary,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      q.targetHeight == 0
-                          ? '촬영된 해상도 그대로 내보내기'
-                          : '${q.targetHeight}p · 선명한 화질',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: ReclimColors.textTertiary,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              // 라디오 체크
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                width: 22,
-                height: 22,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: isSelected ? ReclimColors.accent : Colors.transparent,
-                  border: Border.all(
-                    color: isSelected
-                        ? ReclimColors.accent
-                        : ReclimColors.textTertiary,
-                    width: 1.5,
-                  ),
-                ),
-                child: isSelected
-                    ? const Icon(Icons.check, size: 14, color: Colors.white)
-                    : null,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}

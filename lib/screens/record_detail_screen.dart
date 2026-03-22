@@ -521,9 +521,7 @@ class _ExportedVideosSection extends ConsumerWidget {
                 ),
               ),
               const SizedBox(height: 8),
-              ...exports
-                  .where((export) => !export.isLocalVideo && !export.localOnly)
-                  .map((export) {
+              ...exports.map((export) {
                 final hasVideo = export.videoPath != null;
                 final label = export.memo ?? '내보내기 영상';
                 return Padding(

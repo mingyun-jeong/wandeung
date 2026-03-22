@@ -33,6 +33,23 @@ final gymStatsProvider =
   }
 });
 
+/// 암장 실시간 포화도 (최근 1시간 활동 유저 수)
+final gymCrowdednessProvider =
+    FutureProvider.family<int, String>((ref, gymId) async {
+  try {
+    final response = await SupabaseConfig.client.rpc(
+      'get_gym_crowdedness',
+      params: {'p_gym_id': gymId},
+    );
+    final data = _extractMap(response);
+    if (data == null) return 0;
+    return (data['active_users'] as num?)?.toInt() ?? 0;
+  } catch (e) {
+    debugPrint('[gymCrowdednessProvider] error: $e');
+    return 0;
+  }
+});
+
 /// 내 상대 순위 (최근 30일)
 final myGymRankingProvider =
     FutureProvider.family<MyGymRanking?, String>((ref, gymId) async {

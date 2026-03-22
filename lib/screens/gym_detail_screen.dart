@@ -1,17 +1,23 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../models/climbing_gym.dart';
+import '../providers/gym_stats_provider.dart';
 
-class GymDetailScreen extends StatelessWidget {
+class GymDetailScreen extends ConsumerWidget {
   final ClimbingGym gym;
   const GymDetailScreen({super.key, required this.gym});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final colorScheme = Theme.of(context).colorScheme;
     final hasLocation = gym.latitude != null && gym.longitude != null;
     final latLng = hasLocation
         ? LatLng(gym.latitude!, gym.longitude!)
+        : null;
+
+    final activeUsers = gym.id != null
+        ? ref.watch(gymCrowdednessProvider(gym.id!))
         : null;
 
     return Scaffold(
@@ -21,7 +27,15 @@ class GymDetailScreen extends StatelessWidget {
           style: const TextStyle(fontWeight: FontWeight.w700),
         ),
       ),
-      body: Column(
+      body: RefreshIndicator(
+        onRefresh: () async {
+          if (gym.id != null) {
+            ref.invalidate(gymCrowdednessProvider(gym.id!));
+          }
+        },
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: Column(
         children: [
           // 지도 영역
           SizedBox(
@@ -44,7 +58,7 @@ class GymDetailScreen extends StatelessWidget {
                     mapToolbarEnabled: false,
                   )
                 : Container(
-                    color: colorScheme.surfaceContainerHighest,
+                    color: const Color(0xFFF0F0F0),
                     child: Center(
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
@@ -116,11 +130,80 @@ class GymDetailScreen extends StatelessWidget {
                     ],
                   ),
                 ],
+
+                // 실시간 활동 유저
+                if (activeUsers != null) ...[
+                  const SizedBox(height: 20),
+                  _ActiveUsersCard(activeUsers: activeUsers),
+                ],
               ],
             ),
           ),
         ],
       ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ActiveUsersCard extends StatelessWidget {
+  final AsyncValue<int> activeUsers;
+  const _ActiveUsersCard({required this.activeUsers});
+
+  @override
+  Widget build(BuildContext context) {
+    return activeUsers.when(
+      loading: () => const SizedBox(
+        height: 56,
+        child: Center(
+          child: SizedBox(
+            width: 20,
+            height: 20,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+        ),
+      ),
+      error: (_, __) => const SizedBox.shrink(),
+      data: (count) {
+        final dotColor = count == 0
+            ? Colors.grey[400]!
+            : const Color(0xFF4CAF50);
+
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF0F0F0),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            children: [
+              // 깜빡이는 점 (활동 중일 때)
+              Container(
+                width: 8,
+                height: 8,
+                decoration: BoxDecoration(
+                  color: dotColor,
+                  shape: BoxShape.circle,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  count > 0
+                      ? '최근 1시간 동안 $count명이 등반을 기록 중이에요!'
+                      : '최근 1시간 동안 등반 기록이 없네요ㅠ 주변 지인들에게 리클림 앱을 소개해보세요~!',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey[700],
+                    height: 1.3,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

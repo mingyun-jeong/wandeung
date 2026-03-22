@@ -7,6 +7,7 @@ import '../providers/auth_provider.dart';
 import '../providers/favorite_gym_provider.dart';
 import '../providers/subscription_provider.dart';
 import '../widgets/favorite_gym_sheet.dart';
+import 'gym_detail_screen.dart';
 import 'login_screen.dart';
 import 'settings_screen.dart';
 
@@ -447,42 +448,51 @@ class _FavoriteGymTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      child: Row(
-        children: [
-          const Icon(Icons.location_on_outlined, size: 18,
-            color: ReclimColors.textTertiary),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(gym.name, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-                  overflow: TextOverflow.ellipsis),
-                if (gym.address != null)
-                  Text(gym.address!, style: const TextStyle(fontSize: 11,
-                    color: ReclimColors.textTertiary),
+    return InkWell(
+      onTap: () {
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => GymDetailScreen(gym: gym)),
+        );
+      },
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          children: [
+            const Icon(Icons.location_on_outlined, size: 18,
+              color: ReclimColors.textTertiary),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(gym.name, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
                     overflow: TextOverflow.ellipsis),
-              ],
+                  if (gym.address != null)
+                    Text(gym.address!, style: const TextStyle(fontSize: 11,
+                      color: ReclimColors.textTertiary),
+                      overflow: TextOverflow.ellipsis),
+                ],
+              ),
             ),
-          ),
-          SizedBox(
-            width: 40,
-            height: 40,
-            child: IconButton(
-              onPressed: () async {
-                if (gym.id == null) return;
-                await FavoriteGymService.removeFavorite(gym.id!);
-                ref.invalidate(favoriteGymsProvider);
-                ref.invalidate(recommendedGymsProvider);
-              },
-              icon: const Icon(Icons.close_rounded, size: 16,
-                color: ReclimColors.textTertiary),
-              padding: EdgeInsets.zero,
+            const Icon(Icons.chevron_right_rounded, size: 20,
+              color: ReclimColors.textTertiary),
+            SizedBox(
+              width: 40,
+              height: 40,
+              child: IconButton(
+                onPressed: () async {
+                  if (gym.id == null) return;
+                  await FavoriteGymService.removeFavorite(gym.id!);
+                  ref.invalidate(favoriteGymsProvider);
+                  ref.invalidate(recommendedGymsProvider);
+                },
+                icon: const Icon(Icons.close_rounded, size: 16,
+                  color: ReclimColors.textTertiary),
+                padding: EdgeInsets.zero,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

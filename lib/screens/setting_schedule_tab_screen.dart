@@ -122,6 +122,47 @@ class _SettingScheduleTabScreenState
             ),
           ),
 
+          // ─── Beta 안내 배너 ───
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFF8E1),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: const Color(0xFFFFE082),
+                  width: 0.5,
+                ),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Padding(
+                    padding: EdgeInsets.only(top: 1),
+                    child: Icon(
+                      Icons.info_outline_rounded,
+                      size: 15,
+                      color: Color(0xFFF9A825),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      '세팅일정은 Beta 기능으로, 정보가 정확하지 않을 수 있어요. 참고용으로만 활용해 주세요.',
+                      style: TextStyle(
+                        fontSize: 12,
+                        height: 1.4,
+                        fontWeight: FontWeight.w400,
+                        color: Colors.amber.shade900,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
           // ─── 암장 검색 바 ───
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),

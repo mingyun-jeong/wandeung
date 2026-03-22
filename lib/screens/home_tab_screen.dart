@@ -620,6 +620,38 @@ class _WeeklySettingSection extends ConsumerWidget {
               ],
             ),
           ),
+          Container(
+            margin: const EdgeInsets.only(left: 4, bottom: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFF8E1),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: const Color(0xFFFFE082),
+                width: 0.5,
+              ),
+            ),
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.info_outline_rounded,
+                  size: 14,
+                  color: Color(0xFFF9A825),
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    'Beta 기능이에요. 일정이 정확하지 않을 수 있으니 참고만 해주세요.',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w400,
+                      color: Colors.amber.shade900,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
           ...entries.map((entry) => _WeeklySettingCard(
                 gymName: entry.schedule.gymName ?? '',
                 sectors: entry.sectors,

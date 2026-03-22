@@ -9,6 +9,7 @@ import '../models/climbing_record.dart';
 import '../models/gym_setting_schedule.dart';
 import '../models/user_climbing_stats.dart';
 import '../providers/camera_settings_provider.dart';
+import '../providers/gym_stats_provider.dart';
 import '../providers/record_provider.dart';
 import '../providers/setting_schedule_provider.dart';
 import '../screens/gym_detail_screen.dart';
@@ -35,6 +36,13 @@ class HomeTabScreen extends ConsumerWidget {
           ref.invalidate(recentRecordsProvider);
           ref.invalidate(recentGymsProvider);
           ref.invalidate(weeklySettingSchedulesProvider);
+          // 최근 암장 액티브 유저 수 갱신
+          final gyms = ref.read(recentGymsProvider).valueOrNull ?? [];
+          for (final gym in gyms) {
+            if (gym.id != null) {
+              ref.invalidate(gymCrowdednessProvider(gym.id!));
+            }
+          }
         },
         child: CustomScrollView(
           slivers: [
@@ -514,45 +522,78 @@ class _QuickActions extends ConsumerWidget {
           // 최근 암장 칩들
           ...gyms.map((gym) => Padding(
                 padding: const EdgeInsets.only(left: 8),
-                child: GestureDetector(
-                  onTap: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => GymDetailScreen(gym: gym),
-                      ),
-                    );
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 10),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(22),
-                      border: Border.all(color: ReclimColors.border),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(
-                          Icons.location_on_outlined,
-                          size: 15,
-                          color: ReclimColors.accent,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          gym.name,
-                          style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w500,
-                            color: ReclimColors.textSecondary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
+                child: _RecentGymChip(gym: gym),
               )),
         ],
+      ),
+    );
+  }
+}
+
+class _RecentGymChip extends ConsumerWidget {
+  final ClimbingGym gym;
+  const _RecentGymChip({required this.gym});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final activeUsers = gym.id != null
+        ? ref.watch(gymCrowdednessProvider(gym.id!)).valueOrNull ?? 0
+        : 0;
+
+    return GestureDetector(
+      onTap: () {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => GymDetailScreen(gym: gym),
+          ),
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(color: ReclimColors.border),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.location_on_outlined,
+              size: 15,
+              color: ReclimColors.accent,
+            ),
+            const SizedBox(width: 4),
+            Text(
+              gym.name,
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+                color: ReclimColors.textSecondary,
+              ),
+            ),
+            if (activeUsers > 0) ...[
+              const SizedBox(width: 6),
+              Container(
+                width: 6,
+                height: 6,
+                decoration: const BoxDecoration(
+                  color: Color(0xFF4CAF50),
+                  shape: BoxShape.circle,
+                ),
+              ),
+              const SizedBox(width: 3),
+              Text(
+                '$activeUsers',
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF4CAF50),
+                ),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }

@@ -53,6 +53,9 @@ class _CameraTabScreenState extends ConsumerState<CameraTabScreen>
     if (state == AppLifecycleState.inactive) {
       final controllerToDispose = _controller;
       _controller = null;
+      _isRecording = false;
+      _timer?.cancel();
+      _recordingSeconds = 0;
       controllerToDispose?.dispose();
     } else if (state == AppLifecycleState.resumed) {
       if (_controller == null && !_isInitializing && _hasEverInitialized) {
@@ -103,6 +106,9 @@ class _CameraTabScreenState extends ConsumerState<CameraTabScreen>
   Future<void> _setupCamera(CameraDescription camera) async {
     _controller?.dispose();
     _controller = null;
+    _isRecording = false;
+    _timer?.cancel();
+    _recordingSeconds = 0;
     // 이전 카메라 세션의 캐시 정리
     CacheCleanup.clearAppCache();
     final controller = CameraController(
@@ -142,6 +148,15 @@ class _CameraTabScreenState extends ConsumerState<CameraTabScreen>
     if (_controller == null) return;
 
     if (_isRecording) {
+      if (!_controller!.value.isRecordingVideo) {
+        // 컨트롤러가 실제로 녹화 중이 아니면 상태만 리셋
+        setState(() {
+          _isRecording = false;
+          _recordingSeconds = 0;
+        });
+        _timer?.cancel();
+        return;
+      }
       final file = await _controller!.stopVideoRecording();
       _timer?.cancel();
       if (!mounted) return;
@@ -231,6 +246,9 @@ class _CameraTabScreenState extends ConsumerState<CameraTabScreen>
         // 카메라 탭에서 이탈 — 비동기로 dispose하여 build 중 side-effect 방지
         final controllerToDispose = _controller;
         _controller = null;
+        _isRecording = false;
+        _timer?.cancel();
+        _recordingSeconds = 0;
         if (mounted) setState(() {});
         controllerToDispose?.dispose();
       }

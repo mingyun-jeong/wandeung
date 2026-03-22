@@ -497,11 +497,12 @@ class _RecordSelectItem extends StatelessWidget {
 
   Widget _buildThumbnail(DifficultyColor color) {
     final path = record.thumbnailPath;
+    Widget thumbnail;
     if (path != null) {
       final isLocal = path.startsWith('/');
       final hasLocal = isLocal && File(path).existsSync();
       if (hasLocal) {
-        return ClipRRect(
+        thumbnail = ClipRRect(
           borderRadius: BorderRadius.circular(8),
           child: Image.file(
             File(path),
@@ -511,9 +512,8 @@ class _RecordSelectItem extends StatelessWidget {
             errorBuilder: (_, __, ___) => _colorBadge(color),
           ),
         );
-      }
-      if (!isLocal) {
-        return ClipRRect(
+      } else if (!isLocal) {
+        thumbnail = ClipRRect(
           borderRadius: BorderRadius.circular(8),
           child: FutureBuilder<String>(
             future: R2Config.getPresignedUrl(path),
@@ -529,9 +529,55 @@ class _RecordSelectItem extends StatelessWidget {
             },
           ),
         );
+      } else {
+        thumbnail = _colorBadge(color);
       }
+    } else {
+      thumbnail = _colorBadge(color);
     }
-    return _colorBadge(color);
+
+    final duration = record.videoDurationSeconds;
+    if (duration == null) return thumbnail;
+
+    final minutes = duration ~/ 60;
+    final seconds = duration % 60;
+    final durationText = '$minutes:${seconds.toString().padLeft(2, '0')}';
+
+    return SizedBox(
+      width: 48,
+      height: 48,
+      child: Stack(
+        children: [
+          thumbnail,
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Colors.transparent, Colors.black54],
+                ),
+                borderRadius: BorderRadius.vertical(bottom: Radius.circular(8)),
+              ),
+              padding: const EdgeInsets.only(bottom: 2, top: 6),
+              alignment: Alignment.bottomCenter,
+              child: Text(
+                durationText,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 9,
+                  fontWeight: FontWeight.w600,
+                  height: 1,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _colorBadge(DifficultyColor color) {

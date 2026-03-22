@@ -588,6 +588,41 @@ class _WeeklySettingSection extends ConsumerWidget {
                     color: ReclimColors.textPrimary,
                   ),
                 ),
+                const SizedBox(width: 4),
+                GestureDetector(
+                  onTap: () {
+                    showDialog(
+                      context: context,
+                      builder: (ctx) => AlertDialog(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        title: const Text(
+                          '세팅일정 안내',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        content: const Text(
+                          'Beta 기능이에요. 일정이 정확하지 않을 수 있으니 참고만 해주세요.',
+                          style: TextStyle(fontSize: 14, height: 1.5),
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(ctx),
+                            child: const Text('확인'),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                  child: const Icon(
+                    Icons.help_rounded,
+                    size: 18,
+                    color: Colors.orange,
+                  ),
+                ),
                 const Spacer(),
                 TextButton(
                   onPressed: () {
@@ -615,38 +650,6 @@ class _WeeklySettingSection extends ConsumerWidget {
                         color: ReclimColors.accent,
                       ),
                     ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Container(
-            margin: const EdgeInsets.only(left: 4, bottom: 10),
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(
-              color: const Color(0xFFFFF8E1),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(
-                color: const Color(0xFFFFE082),
-                width: 0.5,
-              ),
-            ),
-            child: Row(
-              children: [
-                const Icon(
-                  Icons.info_outline_rounded,
-                  size: 14,
-                  color: Color(0xFFF9A825),
-                ),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: Text(
-                    'Beta 기능이에요. 일정이 정확하지 않을 수 있으니 참고만 해주세요.',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w400,
-                      color: Colors.amber.shade900,
-                    ),
                   ),
                 ),
               ],

@@ -32,6 +32,7 @@ class _VideoCompareScreenState extends State<VideoCompareScreen> {
   bool _initialized2 = false;
   String? _error1;
   String? _error2;
+  bool _isSyncPlaying = false;
 
   @override
   void initState() {
@@ -117,6 +118,8 @@ class _VideoCompareScreenState extends State<VideoCompareScreen> {
       aspectRatio = controller.value.aspectRatio;
     }
 
+    controller.addListener(_onVideoStateChanged);
+
     if (mounted) {
       setState(() {
         if (isFirst) {
@@ -138,11 +141,49 @@ class _VideoCompareScreenState extends State<VideoCompareScreen> {
     } else {
       controller.play();
     }
+    // 개별 조작 시 동시 재생 상태 해제
+    _isSyncPlaying = false;
     setState(() {});
+  }
+
+  Future<void> _toggleSyncPlayPause() async {
+    final c1 = _controller1;
+    final c2 = _controller2;
+    if (c1 == null && c2 == null) return;
+
+    if (_isSyncPlaying) {
+      _isSyncPlaying = false;
+      setState(() {});
+      await Future.wait([
+        if (c1 != null) c1.pause(),
+        if (c2 != null) c2.pause(),
+      ]);
+    } else {
+      _isSyncPlaying = true;
+      setState(() {});
+      await Future.wait([
+        if (c1 != null) c1.play(),
+        if (c2 != null) c2.play(),
+      ]);
+    }
+    if (mounted) setState(() {});
+  }
+
+  void _onVideoStateChanged() {
+    if (!mounted) return;
+    // 둘 다 재생 중이 아니면 동시 재생 상태 해제
+    final c1Playing = _controller1?.value.isPlaying ?? false;
+    final c2Playing = _controller2?.value.isPlaying ?? false;
+    if (_isSyncPlaying && !c1Playing && !c2Playing) {
+      _isSyncPlaying = false;
+      setState(() {});
+    }
   }
 
   @override
   void dispose() {
+    _controller1?.removeListener(_onVideoStateChanged);
+    _controller2?.removeListener(_onVideoStateChanged);
     _controller1?.dispose();
     _controller2?.dispose();
     SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
@@ -183,19 +224,74 @@ class _VideoCompareScreenState extends State<VideoCompareScreen> {
       },
     );
 
+    final bothReady = _initialized1 && _initialized2 &&
+        _controller1 != null && _controller2 != null;
+
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: isLandscape ? null : const ReclimAppBar(
+      appBar: isLandscape ? null : ReclimAppBar(
         title: '영상 비교',
         showBackButton: true,
+        extraActions: [
+          if (bothReady)
+            IconButton(
+              onPressed: _toggleSyncPlayPause,
+              tooltip: _isSyncPlaying ? '동시 정지' : '동시 재생',
+              icon: Icon(
+                _isSyncPlaying ? Icons.pause_circle_rounded : Icons.play_circle_rounded,
+                size: 28,
+              ),
+            ),
+        ],
       ),
       body: SafeArea(
         child: isLandscape
-            ? Row(
+            ? Stack(
                 children: [
-                  Expanded(child: panel1),
-                  const SizedBox(width: 12),
-                  Expanded(child: panel2),
+                  Row(
+                    children: [
+                      Expanded(child: panel1),
+                      const SizedBox(width: 12),
+                      Expanded(child: panel2),
+                    ],
+                  ),
+                  if (bothReady)
+                    Positioned(
+                      top: 8,
+                      left: 0,
+                      right: 0,
+                      child: Center(
+                        child: GestureDetector(
+                          onTap: _toggleSyncPlayPause,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: Colors.black54,
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  _isSyncPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                                  color: Colors.white,
+                                  size: 20,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  _isSyncPlaying ? '동시 정지' : '동시 재생',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
                 ],
               )
             : Column(

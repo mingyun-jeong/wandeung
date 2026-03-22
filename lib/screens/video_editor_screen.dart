@@ -220,23 +220,45 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
     }
 
     final cr = currentCrop.cropRect;
-    return ClipRect(
-      child: FittedBox(
-        fit: BoxFit.cover,
-        alignment: Alignment(
-          // -1 to 1 범위로 변환
-          (cr.left + cr.width / 2) * 2 - 1,
-          (cr.top + cr.height / 2) * 2 - 1,
-        ),
-        child: SizedBox(
-          width: _correctedVideoDimension.width * cr.width,
-          height: _correctedVideoDimension.height * cr.height,
-          child: Transform.scale(
-            scale: 1.0 / cr.width, // 크롭 비율의 역수로 확대
+
+    // 크롭 영역의 중심 → Alignment(-1~1) 변환
+    // left=0 → -1, left=1-width → +1 (경계에서 정확히 끝까지 이동)
+    final alignX = cr.width >= 1.0
+        ? 0.0
+        : (cr.left / (1.0 - cr.width)) * 2.0 - 1.0;
+    final alignY = cr.height >= 1.0
+        ? 0.0
+        : (cr.top / (1.0 - cr.height)) * 2.0 - 1.0;
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final containerW = constraints.maxWidth;
+        final containerH = constraints.maxHeight;
+
+        // 크롭 영역의 종횡비
+        final cropAR = (cr.width * _correctedVideoDimension.width) /
+            (cr.height * _correctedVideoDimension.height);
+        final containerAR = containerW / containerH;
+
+        // 크롭 영역이 컨테이너를 꽉 채우도록 스케일 계산 (cover 방식)
+        final double scale;
+        if (cropAR > containerAR) {
+          // 크롭이 더 넓음 → 세로 기준으로 맞춤
+          scale = 1.0 / cr.height;
+        } else {
+          // 크롭이 더 좁음 → 가로 기준으로 맞춤
+          scale = 1.0 / cr.width;
+        }
+
+        return ClipRect(
+          child: OverflowBox(
+            maxWidth: containerW * scale,
+            maxHeight: containerH * scale,
+            alignment: Alignment(alignX, alignY),
             child: VideoPlayer(_controller.video),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
@@ -801,12 +823,12 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
                     children: [
                       Center(
                         child: selectedTab == EditorTab.zoom
-                            // 줌 탭: 제스처는 CropOverlay가 처리
+                            // 줌 탭: 원본 전체 영상 표시 + CropOverlay가 제스처 처리
                             ? AspectRatio(
                                 aspectRatio: _displayAspectRatio,
-                                child: _buildCroppedPreview(),
+                                child: VideoPlayer(_controller.video),
                               )
-                            // 다른 탭: 영상 미리보기용 줌 (내보내기 무관)
+                            // 다른 탭: 크롭 적용된 프리뷰 + 확대/축소 가능
                             : InteractiveViewer(
                                 minScale: 1.0,
                                 maxScale: 5.0,

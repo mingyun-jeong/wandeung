@@ -84,10 +84,16 @@ class _VideoCompareScreenState extends State<VideoCompareScreen> {
         }
         return;
       }
-      controller = VideoPlayerController.file(File(path));
+      controller = VideoPlayerController.file(
+        File(path),
+        videoPlayerOptions: VideoPlayerOptions(mixWithOthers: true),
+      );
     } else {
       final url = await R2Config.getPresignedUrl(path);
-      controller = VideoPlayerController.networkUrl(Uri.parse(url));
+      controller = VideoPlayerController.networkUrl(
+        Uri.parse(url),
+        videoPlayerOptions: VideoPlayerOptions(mixWithOthers: true),
+      );
     }
 
     try {
@@ -227,20 +233,48 @@ class _VideoCompareScreenState extends State<VideoCompareScreen> {
     final bothReady = _initialized1 && _initialized2 &&
         _controller1 != null && _controller2 != null;
 
+    final syncButton = bothReady
+        ? GestureDetector(
+            onTap: _toggleSyncPlayPause,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.black54,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    _isSyncPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    _isSyncPlaying ? '동시 정지' : '동시 재생',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          )
+        : null;
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: isLandscape ? null : ReclimAppBar(
         title: '영상 비교',
         showBackButton: true,
         extraActions: [
-          if (bothReady)
-            IconButton(
-              onPressed: _toggleSyncPlayPause,
-              tooltip: _isSyncPlaying ? '동시 정지' : '동시 재생',
-              icon: Icon(
-                _isSyncPlaying ? Icons.pause_circle_rounded : Icons.play_circle_rounded,
-                size: 28,
-              ),
+          if (syncButton != null)
+            Padding(
+              padding: const EdgeInsets.only(right: 4),
+              child: syncButton,
             ),
         ],
       ),
@@ -255,42 +289,12 @@ class _VideoCompareScreenState extends State<VideoCompareScreen> {
                       Expanded(child: panel2),
                     ],
                   ),
-                  if (bothReady)
+                  if (syncButton != null)
                     Positioned(
-                      top: 8,
                       left: 0,
                       right: 0,
-                      child: Center(
-                        child: GestureDetector(
-                          onTap: _toggleSyncPlayPause,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                            decoration: BoxDecoration(
-                              color: Colors.black54,
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  _isSyncPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
-                                  color: Colors.white,
-                                  size: 20,
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  _isSyncPlaying ? '동시 정지' : '동시 재생',
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
+                      top: 8,
+                      child: Center(child: syncButton),
                     ),
                 ],
               )

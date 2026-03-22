@@ -20,6 +20,7 @@ import '../models/climbing_gym.dart';
 import '../models/climbing_record.dart';
 import '../providers/camera_settings_provider.dart';
 import '../providers/favorite_gym_provider.dart';
+import '../providers/gallery_save_path_provider.dart';
 import '../providers/record_provider.dart';
 import '../utils/constants.dart';
 import '../models/gym_color_scale.dart';
@@ -363,6 +364,10 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
         final capturedGym = settings.selectedGym;
         final capturedScales = ref.read(allColorScalesProvider).valueOrNull;
         final uploadQueueNotifier = ref.read(uploadQueueProvider.notifier);
+        final galleryAlbum = resolveGalleryAlbum(
+          ref.read(gallerySavePathProvider),
+          gymName: capturedGym?.name,
+        );
 
         // 무거운 작업은 백그라운드에서 (pop 이후에도 계속 실행)
         _runPostSaveWork(
@@ -376,6 +381,7 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
           gym: capturedGym,
           scales: capturedScales,
           uploadQueueNotifier: uploadQueueNotifier,
+          galleryAlbum: galleryAlbum,
         );
       }
 
@@ -570,6 +576,7 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
     required ClimbingGym? gym,
     required List<GymColorScale>? scales,
     required UploadQueueNotifier uploadQueueNotifier,
+    required String galleryAlbum,
   }) async {
     try {
       // 1) 편집 원본 파일 정리
@@ -583,7 +590,7 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
       // 2) 로컬 모드: 갤러리 저장
       if (!isCloudMode) {
         try {
-          await Gal.putVideo(videoPath, album: '리클림');
+          await Gal.putVideo(videoPath, album: galleryAlbum);
         } catch (_) {}
       }
 
@@ -728,7 +735,11 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
         localPath = downloaded;
       }
 
-      await Gal.putVideo(localPath, album: '리클림');
+      final album = resolveGalleryAlbum(
+        ref.read(gallerySavePathProvider),
+        gymName: record.gymName,
+      );
+      await Gal.putVideo(localPath, album: album);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -1365,7 +1376,7 @@ class _ExportedVideosList extends ConsumerWidget {
 }
 
 /// 내보내기 영상 카드
-class _ExportedVideoCard extends StatefulWidget {
+class _ExportedVideoCard extends ConsumerStatefulWidget {
   final ClimbingRecord record;
   final VoidCallback onDelete;
   final ValueChanged<String> onEditTitle;
@@ -1376,10 +1387,10 @@ class _ExportedVideoCard extends StatefulWidget {
   });
 
   @override
-  State<_ExportedVideoCard> createState() => _ExportedVideoCardState();
+  ConsumerState<_ExportedVideoCard> createState() => _ExportedVideoCardState();
 }
 
-class _ExportedVideoCardState extends State<_ExportedVideoCard> {
+class _ExportedVideoCardState extends ConsumerState<_ExportedVideoCard> {
   bool _isEditing = false;
   late final TextEditingController _titleController;
   late final FocusNode _focusNode;
@@ -1430,7 +1441,11 @@ class _ExportedVideoCardState extends State<_ExportedVideoCard> {
     }
 
     try {
-      await Gal.putVideo(localPath, album: '리클림');
+      final album = resolveGalleryAlbum(
+        ref.read(gallerySavePathProvider),
+        gymName: record.gymName,
+      );
+      await Gal.putVideo(localPath, album: album);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(

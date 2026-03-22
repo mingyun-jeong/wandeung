@@ -4,6 +4,7 @@ import '../app.dart';
 import '../models/user_subscription.dart';
 import '../providers/camera_settings_provider.dart';
 import '../providers/connectivity_provider.dart';
+import '../providers/gallery_save_path_provider.dart';
 import '../providers/subscription_provider.dart';
 import '../providers/upload_queue_provider.dart';
 
@@ -33,10 +34,11 @@ class SettingsScreen extends ConsumerWidget {
           style: TextStyle(fontWeight: FontWeight.w700, fontSize: 18),
         ),
       ),
-      body: ListView(
+      body: SafeArea(
+        child: ListView(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         children: [
-          // --- 섹션 헤더 ---
+          // --- 저장 모드 ---
           const _SectionHeader(label: '저장 모드'),
           const SizedBox(height: 10),
 
@@ -234,11 +236,19 @@ class SettingsScreen extends ConsumerWidget {
 
           const SizedBox(height: 28),
 
+          // --- 갤러리 저장 경로 ---
+          const _SectionHeader(label: '갤러리 저장 경로'),
+          const SizedBox(height: 10),
+          _GallerySavePathCard(),
+
+          const SizedBox(height: 28),
+
           // --- 진입 모드 ---
           const _SectionHeader(label: '진입 모드'),
           const SizedBox(height: 10),
           _EntryModeCard(),
         ],
+      ),
       ),
     );
   }
@@ -556,6 +566,145 @@ class _EntryModeCard extends ConsumerWidget {
         value: isCameraEntry,
         onChanged: (_) =>
             ref.read(entryModeCameraProvider.notifier).toggle(),
+      ),
+    );
+  }
+}
+
+// ─── 갤러리 저장 경로 카드 ──────────────────────────────────────
+class _GallerySavePathCard extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final current = ref.watch(gallerySavePathProvider);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: ReclimColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _GallerySavePathOption(
+            icon: Icons.photo_library_outlined,
+            label: '모든 영상을 "리클림" 앨범에 저장',
+            example: '리클림/',
+            value: GallerySavePath.defaultAlbum,
+            groupValue: current,
+            isFirst: true,
+          ),
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 12),
+            child: Divider(height: 1, color: ReclimColors.border),
+          ),
+          _GallerySavePathOption(
+            icon: Icons.store_outlined,
+            label: '암장 이름으로 앨범을 분리하여 저장',
+            example: '더클라임 신사/',
+            value: GallerySavePath.byGym,
+            groupValue: current,
+            isLast: true,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _GallerySavePathOption extends ConsumerWidget {
+  final IconData icon;
+  final String label;
+  final String example;
+  final GallerySavePath value;
+  final GallerySavePath groupValue;
+  final bool isFirst;
+  final bool isLast;
+
+  const _GallerySavePathOption({
+    required this.icon,
+    required this.label,
+    required this.example,
+    required this.value,
+    required this.groupValue,
+    this.isFirst = false,
+    this.isLast = false,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isSelected = value == groupValue;
+
+    return InkWell(
+      onTap: () => ref.read(gallerySavePathProvider.notifier).set(value),
+      borderRadius: BorderRadius.vertical(
+        top: isFirst ? const Radius.circular(14) : Radius.zero,
+        bottom: isLast ? const Radius.circular(14) : Radius.zero,
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        child: Row(
+          children: [
+            Icon(
+              icon,
+              size: 20,
+              color: isSelected
+                  ? ReclimColors.accent
+                  : ReclimColors.textTertiary,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight:
+                          isSelected ? FontWeight.w700 : FontWeight.w500,
+                      color: isSelected
+                          ? ReclimColors.textPrimary
+                          : ReclimColors.textSecondary,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF0F0F0),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      example,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontFamily: 'monospace',
+                        color: ReclimColors.textSecondary,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              width: 20,
+              height: 20,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: isSelected
+                      ? ReclimColors.accent
+                      : ReclimColors.textTertiary,
+                  width: isSelected ? 6 : 1.5,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

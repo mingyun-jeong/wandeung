@@ -226,7 +226,7 @@ class CropSegmentsNotifier extends StateNotifier<List<CropSegment>> {
     for (final seg in state) {
       if (position > seg.start && position < seg.end) {
         newSegments.add(seg.copyWith(end: position));
-        newSegments.add(seg.copyWith(start: position, animateTransition: false));
+        newSegments.add(seg.copyWith(start: position, animateTransition: true));
       } else {
         newSegments.add(seg);
       }

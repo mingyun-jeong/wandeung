@@ -208,20 +208,73 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
     });
   }
 
+  /// 전환 애니메이션 지속시간 (FFmpeg export의 transitionDurationSec와 동일)
+  static const _cropTransitionDuration = Duration(milliseconds: 300);
+
   Widget _buildCroppedPreview() {
     final cropSegments = ref.watch(cropSegmentsProvider);
-    final currentCrop = cropSegments
-        .where((s) => _currentPosition >= s.start && _currentPosition < s.end)
-        .firstOrNull;
 
-    if (currentCrop == null || !currentCrop.hasCrop) {
-      return VideoPlayer(_controller.video);
+    // 현재 위치의 구간 인덱스 찾기
+    int? currentIdx;
+    for (int i = 0; i < cropSegments.length; i++) {
+      if (_currentPosition >= cropSegments[i].start &&
+          _currentPosition < cropSegments[i].end) {
+        currentIdx = i;
+        break;
+      }
     }
 
-    final cr = currentCrop.cropRect;
+    if (currentIdx == null) return VideoPlayer(_controller.video);
 
-    // 크롭 영역의 중심 → Alignment(-1~1) 변환
-    // left=0 → -1, left=1-width → +1 (경계에서 정확히 끝까지 이동)
+    final currentCrop = cropSegments[currentIdx];
+    Rect cr = currentCrop.cropRect;
+
+    // animateTransition이면 구간 시작 0.3초 동안 이전 구간에서 보간
+    if (currentCrop.animateTransition && currentIdx > 0) {
+      final elapsed = _currentPosition - currentCrop.start;
+      if (elapsed < _cropTransitionDuration) {
+        final t = elapsed.inMilliseconds / _cropTransitionDuration.inMilliseconds;
+        // easeOut 커브 적용
+        final curved = Curves.easeOut.transform(t.clamp(0.0, 1.0));
+        final prevRect = cropSegments[currentIdx - 1].cropRect;
+        cr = Rect.fromLTWH(
+          _lerpDouble(prevRect.left, cr.left, curved),
+          _lerpDouble(prevRect.top, cr.top, curved),
+          _lerpDouble(prevRect.width, cr.width, curved),
+          _lerpDouble(prevRect.height, cr.height, curved),
+        );
+      }
+    }
+
+    // 다음 구간이 animateTransition이면 구간 끝 0.3초 동안 다음 구간으로 보간
+    if (currentIdx + 1 < cropSegments.length &&
+        cropSegments[currentIdx + 1].animateTransition) {
+      final remaining = currentCrop.end - _currentPosition;
+      if (remaining < _cropTransitionDuration) {
+        final t = 1.0 -
+            remaining.inMilliseconds / _cropTransitionDuration.inMilliseconds;
+        final curved = Curves.easeIn.transform(t.clamp(0.0, 1.0));
+        final nextRect = cropSegments[currentIdx + 1].cropRect;
+        cr = Rect.fromLTWH(
+          _lerpDouble(cr.left, nextRect.left, curved),
+          _lerpDouble(cr.top, nextRect.top, curved),
+          _lerpDouble(cr.width, nextRect.width, curved),
+          _lerpDouble(cr.height, nextRect.height, curved),
+        );
+      }
+    }
+
+    if (!_hasCrop(cr)) return VideoPlayer(_controller.video);
+
+    return _buildCropTransform(cr);
+  }
+
+  static double _lerpDouble(double a, double b, double t) => a + (b - a) * t;
+
+  static bool _hasCrop(Rect cr) =>
+      cr.left != 0 || cr.top != 0 || cr.width != 1 || cr.height != 1;
+
+  Widget _buildCropTransform(Rect cr) {
     final alignX = cr.width >= 1.0
         ? 0.0
         : (cr.left / (1.0 - cr.width)) * 2.0 - 1.0;
@@ -234,18 +287,14 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
         final containerW = constraints.maxWidth;
         final containerH = constraints.maxHeight;
 
-        // 크롭 영역의 종횡비
         final cropAR = (cr.width * _correctedVideoDimension.width) /
             (cr.height * _correctedVideoDimension.height);
         final containerAR = containerW / containerH;
 
-        // 크롭 영역이 컨테이너를 꽉 채우도록 스케일 계산 (cover 방식)
         final double scale;
         if (cropAR > containerAR) {
-          // 크롭이 더 넓음 → 세로 기준으로 맞춤
           scale = 1.0 / cr.height;
         } else {
-          // 크롭이 더 좁음 → 가로 기준으로 맞춤
           scale = 1.0 / cr.width;
         }
 

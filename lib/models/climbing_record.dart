@@ -73,7 +73,7 @@ class ClimbingRecord {
         memo: map['memo'],
         recordedAt: DateTime.parse(map['recorded_at']),
         createdAt: map['created_at'] != null
-            ? DateTime.parse(map['created_at'])
+            ? DateTime.parse(map['created_at']).toLocal()
             : null,
         parentRecordId: map['parent_record_id'],
         videoDurationSeconds: map['video_duration_seconds'],

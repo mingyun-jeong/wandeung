@@ -1493,7 +1493,8 @@ class _ExportedVideoCardState extends ConsumerState<_ExportedVideoCard> {
 
   String _formatDate(DateTime? dt) {
     if (dt == null) return '';
-    return '${dt.month}/${dt.day} ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+    final local = dt.toLocal();
+    return '${local.month}/${local.day} ${local.hour.toString().padLeft(2, '0')}:${local.minute.toString().padLeft(2, '0')}';
   }
 
   @override
@@ -1557,15 +1558,18 @@ class _ExportedVideoCardState extends ConsumerState<_ExportedVideoCard> {
                               : FutureBuilder<String>(
                                   future: R2Config.getPresignedUrl(thumbPath),
                                   builder: (context, snapshot) {
-                                    if (!snapshot.hasData) {
+                                    if (snapshot.hasError || !snapshot.hasData) {
                                       return Container(
                                         color: const Color(0xFFE2E8F0),
-                                        child: const Center(
-                                          child: SizedBox(
-                                            width: 16, height: 16,
-                                            child: CircularProgressIndicator(strokeWidth: 2),
-                                          ),
-                                        ),
+                                        child: snapshot.hasError
+                                            ? const Icon(Icons.movie_rounded,
+                                                color: Colors.white, size: 20)
+                                            : const Center(
+                                                child: SizedBox(
+                                                  width: 16, height: 16,
+                                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                                ),
+                                              ),
                                       );
                                     }
                                     return Image.network(

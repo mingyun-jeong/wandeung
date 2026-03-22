@@ -197,14 +197,27 @@ class FFmpegCommandBuilder {
     }
 
     // --- 크롭 줌 처리 ---
-    // crop 후 원본 해상도로 scale-up하여 프리뷰와 동일한 확대 효과 적용
+    // crop 후 종횡비를 유지하면서 스케일업 (원본 비율 보존)
     if (hasCrop) {
       final cropInput = hasSpeedChange ? '[vspeed]' : baseVideoLabel;
       final origW = videoResolution.width.round();
       final origH = videoResolution.height.round();
-      // 짝수 보정 (libx264 요구)
-      final scaleW = origW % 2 == 0 ? origW : origW + 1;
-      final scaleH = origH % 2 == 0 ? origH : origH + 1;
+
+      // 크롭 영역의 종횡비에 맞춰 스케일 결정
+      // 가로 기준으로 맞추고 세로는 -2(짝수 자동), 또는 그 반대
+      String cropScale(Rect cr) {
+        final cropAR = (cr.width * origW) / (cr.height * origH);
+        final origAR = origW / origH;
+        if (cropAR > origAR) {
+          // 크롭이 더 넓음 → 가로를 원본에 맞추고 세로는 비율 유지
+          final w = origW % 2 == 0 ? origW : origW + 1;
+          return 'scale=$w:-2';
+        } else {
+          // 크롭이 더 좁음 → 세로를 원본에 맞추고 가로는 비율 유지
+          final h = origH % 2 == 0 ? origH : origH + 1;
+          return 'scale=-2:$h';
+        }
+      }
 
       if (cropSegments.length == 1) {
         // 단일 크롭 구간
@@ -215,13 +228,14 @@ class FFmpegCommandBuilder {
           final ch = '${cr.height.toStringAsFixed(4)}*ih';
           final cx = '${cr.left.toStringAsFixed(4)}*iw';
           final cy = '${cr.top.toStringAsFixed(4)}*ih';
+          final sc = cropScale(cr);
           filters.add(
-              '${cropInput}crop=$cw:$ch:$cx:$cy,scale=$scaleW:$scaleH[vcrop]');
+              '${cropInput}crop=$cw:$ch:$cx:$cy,$sc[vcrop]');
         }
       } else {
         // 다중 크롭 구간 — trim+crop per segment, then concat, then scale
         _buildMultiSegmentCrop(
-            filters, cropSegments, cropInput, scaleW, scaleH);
+            filters, cropSegments, cropInput, origW, origH);
       }
     }
 
@@ -356,13 +370,38 @@ class FFmpegCommandBuilder {
     filters.add('${audioLabels.join()}concat=n=$n:v=0:a=1[aout]');
   }
 
+  /// 다중 크롭 구간: 각 구간을 crop → 통일 해상도로 scale → concat
+  ///
+  /// concat 필터는 모든 입력의 해상도가 동일해야 하므로,
+  /// 모든 구간을 동일한 출력 해상도(종횡비 유지 기준)로 맞춘다.
   static void _buildMultiSegmentCrop(List<String> filters,
-      List<CropSegment> segments, String inputLabel, int scaleW, int scaleH) {
+      List<CropSegment> segments, String inputLabel, int origW, int origH) {
     final cropLabels = <String>[];
     const fps = 30;
     const transitionDurationSec = 0.3;
     final transitionFrames = (transitionDurationSec * fps).round(); // 9
-    final scaleUp = ',scale=$scaleW:$scaleH';
+
+    // 모든 구간에 통일된 출력 해상도 결정:
+    // 첫 번째 hasCrop 구간의 종횡비를 기준으로 한다.
+    // 세로 기준으로 원본 높이에 맞추고, 가로는 종횡비에 따라 결정.
+    final refSeg = segments.firstWhere((s) => s.hasCrop, orElse: () => segments.first);
+    final refCr = refSeg.cropRect;
+    final cropAR = (refCr.width * origW) / (refCr.height * origH);
+    final origAR = origW / origH;
+    final int outW;
+    final int outH;
+    if (cropAR > origAR) {
+      // 크롭이 더 넓음 → 가로를 원본에 맞추고 세로는 비율 유지
+      outW = origW % 2 == 0 ? origW : origW + 1;
+      final h = (outW / cropAR).round();
+      outH = h % 2 == 0 ? h : h + 1;
+    } else {
+      // 크롭이 더 좁음 → 세로를 원본에 맞추고 가로는 비율 유지
+      outH = origH % 2 == 0 ? origH : origH + 1;
+      final w = (outH * cropAR).round();
+      outW = w % 2 == 0 ? w : w + 1;
+    }
+    final scaleUp = ',scale=$outW:$outH';
 
     for (int i = 0; i < segments.length; i++) {
       final seg = segments[i];
@@ -405,8 +444,9 @@ class FFmpegCommandBuilder {
             'crop=$cw:$ch:$cx:$cy$scaleUp[vc$i]',
           );
         } else {
+          // 크롭 없는 구간도 통일 해상도로 맞춤
           filters.add(
-            '${inputLabel}trim=start=$startSec:end=$endSec,setpts=PTS-STARTPTS[vc$i]',
+            '${inputLabel}trim=start=$startSec:end=$endSec,setpts=PTS-STARTPTS$scaleUp[vc$i]',
           );
         }
       }

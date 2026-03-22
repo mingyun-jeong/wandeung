@@ -107,10 +107,10 @@ class GymSettingSchedule {
       submitterEmail: map['submitted_by_email'] as String?,
       status: map['status'] as String? ?? 'approved',
       createdAt: map['created_at'] != null
-          ? DateTime.parse(map['created_at'] as String)
+          ? DateTime.parse(map['created_at'] as String).toLocal()
           : null,
       updatedAt: map['updated_at'] != null
-          ? DateTime.parse(map['updated_at'] as String)
+          ? DateTime.parse(map['updated_at'] as String).toLocal()
           : null,
     );
   }

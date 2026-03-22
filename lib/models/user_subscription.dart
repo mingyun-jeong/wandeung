@@ -40,13 +40,13 @@ class UserSubscription {
         platform: map['platform'] ?? 'android',
         storeTransactionId: map['store_transaction_id'],
         startedAt: map['started_at'] != null
-            ? DateTime.parse(map['started_at'])
+            ? DateTime.parse(map['started_at']).toLocal()
             : null,
         expiresAt: map['expires_at'] != null
-            ? DateTime.parse(map['expires_at'])
+            ? DateTime.parse(map['expires_at']).toLocal()
             : null,
-        createdAt: DateTime.parse(map['created_at']),
-        updatedAt: DateTime.parse(map['updated_at']),
+        createdAt: DateTime.parse(map['created_at']).toLocal(),
+        updatedAt: DateTime.parse(map['updated_at']).toLocal(),
       );
 }
 

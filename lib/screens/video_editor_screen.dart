@@ -16,6 +16,8 @@ import '../providers/upload_queue_provider.dart';
 import '../providers/video_editor_provider.dart';
 import '../config/supabase_config.dart';
 import '../models/user_subscription.dart';
+import '../providers/app_config_provider.dart';
+import '../providers/bonus_save_provider.dart';
 import '../providers/subscription_provider.dart';
 import '../services/video_export_service.dart';
 import '../services/video_upload_service.dart';
@@ -454,10 +456,10 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
     super.dispose();
   }
 
-  void _showStorageFullSheet(int currentUsage) {
+  void _showStorageFullSheet(int currentUsage, int storageLimit) {
     final usedMB = currentUsage / 1024 / 1024;
-    final limitMB = freeStorageLimitBytes / 1024 / 1024;
-    final ratio = (currentUsage / freeStorageLimitBytes).clamp(0.0, 1.0);
+    final limitMB = storageLimit / 1024 / 1024;
+    final ratio = (currentUsage / storageLimit).clamp(0.0, 1.0);
 
     showModalBottomSheet(
       context: context,
@@ -580,11 +582,17 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
       if (userId != null) {
         final tier = ref.read(subscriptionTierProvider);
         if (tier == SubscriptionTier.free) {
+          final storageLimit = await ref.read(freeStorageLimitBytesProvider.future);
           final currentUsage =
               await VideoUploadService.getCloudUsage(userId);
-          if (currentUsage >= freeStorageLimitBytes) {
-            if (mounted) _showStorageFullSheet(currentUsage);
-            return;
+          if (currentUsage >= storageLimit) {
+            final bonusNotifier = ref.read(bonusSaveProvider.notifier);
+            if (bonusNotifier.hasBonus) {
+              await bonusNotifier.consume();
+            } else {
+              if (mounted) _showStorageFullSheet(currentUsage, storageLimit);
+              return;
+            }
           }
         }
       }

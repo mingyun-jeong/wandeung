@@ -4,7 +4,6 @@ import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../config/r2_config.dart';
-import '../providers/subscription_provider.dart';
 
 /// 클라우드 용량 초과 예외
 class StorageQuotaExceededException implements Exception {
@@ -22,13 +21,13 @@ class VideoUploadService {
   static final _supabase = Supabase.instance.client;
 
   /// 사용자의 클라우드 사용량 조회 (바이트)
+  /// 클라우드 모드 레코드의 총 용량 (업로드 대기 중인 것 포함)
   static Future<int> getCloudUsage(String userId) async {
     final response = await _supabase
         .from('climbing_records')
         .select('file_size_bytes')
         .eq('user_id', userId)
-        .eq('local_only', false)
-        .not('video_path', 'like', '/%');
+        .eq('local_only', false);
 
     int total = 0;
     for (final row in response as List) {
@@ -43,13 +42,14 @@ class VideoUploadService {
     required String userId,
     required int fileSizeBytes,
     required bool isPro,
+    required int storageLimitBytes,
   }) async {
     if (isPro) return; // Pro는 무제한
 
     final currentUsage = await getCloudUsage(userId);
-    if (currentUsage + fileSizeBytes > freeStorageLimitBytes) {
+    if (currentUsage + fileSizeBytes > storageLimitBytes) {
       throw StorageQuotaExceededException(
-          currentUsage, freeStorageLimitBytes);
+          currentUsage, storageLimitBytes);
     }
   }
 

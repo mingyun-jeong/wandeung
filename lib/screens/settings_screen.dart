@@ -5,6 +5,7 @@ import '../models/user_subscription.dart';
 import '../providers/camera_settings_provider.dart';
 import '../providers/connectivity_provider.dart';
 import '../providers/gallery_save_path_provider.dart';
+import '../providers/app_config_provider.dart';
 import '../providers/subscription_provider.dart';
 import '../providers/upload_queue_provider.dart';
 
@@ -482,9 +483,10 @@ class _CloudUsageIndicator extends ConsumerWidget {
           style: TextStyle(fontSize: 12, color: ReclimColors.textTertiary)),
       ),
       data: (usedBytes) {
-        const limitBytes = freeStorageLimitBytes;
+        final limitAsync = ref.watch(freeStorageLimitBytesProvider);
+        final limitBytes = limitAsync.valueOrNull ?? (500 * 1024 * 1024);
         final usedMB = usedBytes / 1024 / 1024;
-        const limitMB = freeStorageLimitBytes / 1024 / 1024;
+        final limitMB = limitBytes / 1024 / 1024;
         final ratio = (usedBytes / limitBytes).clamp(0.0, 1.0);
 
         return Padding(

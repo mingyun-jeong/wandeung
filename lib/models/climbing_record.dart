@@ -57,6 +57,7 @@ class ClimbingRecord {
           'video_duration_seconds': videoDurationSeconds,
         if (videoQuality != null) 'video_quality': videoQuality,
         'local_only': localOnly,
+        if (fileSize != null) 'file_size_bytes': fileSize,
       };
 
   factory ClimbingRecord.fromMap(Map<String, dynamic> map) => ClimbingRecord(

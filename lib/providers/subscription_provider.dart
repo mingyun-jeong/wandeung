@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/user_subscription.dart';
+import 'app_config_provider.dart';
 
 /// 사용자 구독 정보 (DB에서 조회)
 final userSubscriptionProvider = FutureProvider<UserSubscription?>((ref) async {
@@ -84,8 +85,7 @@ final cloudUsageProvider = FutureProvider.autoDispose<int>((ref) async {
         .from('climbing_records')
         .select('file_size_bytes')
         .eq('user_id', userId)
-        .eq('local_only', false)
-        .not('video_path', 'like', '/%');
+        .eq('local_only', false);
 
     int total = 0;
     for (final row in response as List) {
@@ -99,18 +99,18 @@ final cloudUsageProvider = FutureProvider.autoDispose<int>((ref) async {
   }
 });
 
-/// Free 티어 최대 용량 (500MB)
-const freeStorageLimitBytes = 500 * 1024 * 1024; // 500 MB
-
 /// 남은 용량 (바이트)
 final remainingStorageProvider = Provider.autoDispose<int>((ref) {
   final tier = ref.watch(subscriptionTierProvider);
-  if (tier == SubscriptionTier.pro) return freeStorageLimitBytes; // 무제한
+  final limitAsync = ref.watch(freeStorageLimitBytesProvider);
+  final limit = limitAsync.valueOrNull ?? 500 * 1024 * 1024;
+
+  if (tier == SubscriptionTier.pro) return limit; // 무제한
 
   final usage = ref.watch(cloudUsageProvider);
   return usage.when(
-    data: (used) => freeStorageLimitBytes - used,
-    loading: () => freeStorageLimitBytes,
-    error: (_, __) => freeStorageLimitBytes,
+    data: (used) => limit - used,
+    loading: () => limit,
+    error: (_, __) => limit,
   );
 });

@@ -18,6 +18,7 @@ class MainActivity : FlutterActivity() {
         val plugins: List<Pair<String, () -> FlutterPlugin>> = listOf(
             "app_links" to { com.llfbandit.app_links.AppLinksPlugin() },
             "camera_android_camerax" to { io.flutter.plugins.camerax.CameraAndroidCameraxPlugin() },
+            "connectivity_plus" to { dev.fluttercommunity.plus.connectivity.ConnectivityPlugin() },
             "ffmpeg_kit_flutter_new" to { com.antonkarpenko.ffmpegkit.FFmpegKitFlutterPlugin() },
             "file_picker" to { com.mr.flutter.plugin.filepicker.FilePickerPlugin() },
             "flutter_plugin_android_lifecycle" to { io.flutter.plugins.flutter_plugin_android_lifecycle.FlutterAndroidLifecyclePlugin() },
@@ -25,6 +26,7 @@ class MainActivity : FlutterActivity() {
             "gal" to { studio.midoridesign.gal.GalPlugin() },
             "geolocator_android" to { com.baseflow.geolocator.GeolocatorPlugin() },
             "get_thumbnail_video" to { xyz.justsoft.video_thumbnail.VideoThumbnailPlugin() },
+            "google_mobile_ads" to { io.flutter.plugins.googlemobileads.GoogleMobileAdsPlugin() },
             "google_sign_in_android" to { io.flutter.plugins.googlesignin.GoogleSignInPlugin() },
             "image_picker_android" to { io.flutter.plugins.imagepicker.ImagePickerPlugin() },
             "package_info_plus" to { dev.fluttercommunity.plus.packageinfo.PackageInfoPlugin() },

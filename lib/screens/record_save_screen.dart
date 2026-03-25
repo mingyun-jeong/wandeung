@@ -12,9 +12,12 @@ import 'package:ffmpeg_kit_flutter_new/ffprobe_kit.dart';
 import '../config/r2_config.dart';
 import '../config/supabase_config.dart';
 import '../models/user_subscription.dart';
+import '../providers/app_config_provider.dart';
+import '../providers/bonus_save_provider.dart';
 import '../providers/subscription_provider.dart';
 import '../providers/upload_queue_provider.dart';
 import '../services/video_export_service.dart';
+import '../services/ad_service.dart';
 import '../services/video_upload_service.dart';
 import '../models/climbing_gym.dart';
 import '../models/climbing_record.dart';
@@ -289,6 +292,9 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
     }
   }
 
+
+  bool _skipQuotaCheck = false;
+
   Future<void> _saveRecord() async {
     final color = _isEditMode ? _editColor : ref.read(cameraSettingsProvider).color;
     final grade = _isEditMode ? _editGrade : ref.read(cameraSettingsProvider).grade;
@@ -323,21 +329,30 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
         final isPro = tier == SubscriptionTier.pro;
 
         // Free 티어 클라우드 용량 체크
-        if (isCloudMode && !isPro) {
+        if (isCloudMode && !isPro && !_skipQuotaCheck) {
+          final storageLimit = await ref.read(freeStorageLimitBytesProvider.future);
           final fileSize = await File(widget.videoPath!).length();
           final userId = SupabaseConfig.client.auth.currentUser!.id;
           final currentUsage = await VideoUploadService.getCloudUsage(userId);
-          if (currentUsage + fileSize > freeStorageLimitBytes) {
-            if (mounted) {
-              setState(() => _isSaving = false);
-              _showStorageFullSheet(currentUsage);
+          debugPrint('[QuotaCheck] usage=${currentUsage ~/ 1024 ~/ 1024}MB + file=${fileSize ~/ 1024 ~/ 1024}MB / limit=${storageLimit ~/ 1024 ~/ 1024}MB');
+          if (currentUsage + fileSize > storageLimit) {
+            final bonusNotifier = ref.read(bonusSaveProvider.notifier);
+            if (bonusNotifier.hasBonus) {
+              await bonusNotifier.consume();
+            } else {
+              if (mounted) {
+                setState(() => _isSaving = false);
+                _showStorageFullSheet(currentUsage, storageLimit);
+              }
+              return;
             }
-            return;
           }
         }
+        _skipQuotaCheck = false;
 
         // 캐시 → 영구 저장소로 이동 (rename은 거의 즉시)
         final persistentPath = await _moveToPersistentStorage(widget.videoPath!);
+        final fileSizeBytes = await File(persistentPath).length();
 
         // DB insert (썸네일·길이·화질은 백그라운드에서 패치)
         final savedRecord = await RecordService.saveRecord(
@@ -351,6 +366,7 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
           tags: _tags,
           scales: ref.read(allColorScalesProvider).valueOrNull,
           localOnly: !isCloudMode,
+          fileSizeBytes: isCloudMode ? fileSizeBytes : null,
         );
 
         // 백그라운드 작업에 필요한 값을 pop 전에 캡처
@@ -434,10 +450,10 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
     }
   }
 
-  void _showStorageFullSheet(int currentUsage) {
+  void _showStorageFullSheet(int currentUsage, int storageLimit) {
     final usedMB = currentUsage / 1024 / 1024;
-    const limitMB = freeStorageLimitBytes / 1024 / 1024;
-    final ratio = (currentUsage / freeStorageLimitBytes).clamp(0.0, 1.0);
+    final limitMB = storageLimit / 1024 / 1024;
+    final ratio = (currentUsage / storageLimit).clamp(0.0, 1.0);
 
     showModalBottomSheet(
       context: context,
@@ -485,7 +501,7 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              '클라우드 저장 공간을 모두 사용했어요.\n기존 영상을 삭제하면 공간을 확보할 수 있어요.',
+              '클라우드 저장 공간을 모두 사용했어요.\n광고를 시청하면 추가로 저장할 수 있어요.',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 14,
@@ -528,19 +544,56 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
               ],
             ),
             const SizedBox(height: 24),
-            // 확인 버튼
+            // 광고 보고 저장하기 버튼
             SizedBox(
               width: double.infinity,
-              child: FilledButton(
-                onPressed: () => Navigator.pop(context),
+              child: FilledButton.icon(
+                onPressed: () {
+                  Navigator.pop(context);
+                  if (!AdService.isRewardedAdReady) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('광고를 불러오는 중이에요. 잠시 후 다시 시도해주세요.'),
+                      ),
+                    );
+                    AdService.loadRewardedAd();
+                    return;
+                  }
+                  AdService.showRewardedAd(
+                    onRewarded: () {
+                      ref.read(bonusSaveProvider.notifier).grantBonus();
+                      _skipQuotaCheck = true;
+                      _saveRecord();
+                    },
+                  );
+                },
+                icon: const Icon(Icons.play_circle_outline, size: 20),
+                label: const Text(
+                  '광고 보고 저장하기',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                ),
                 style: FilledButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
+              ),
+            ),
+            const SizedBox(height: 10),
+            // 닫기 버튼
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton(
+                onPressed: () => Navigator.pop(context),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
                 child: const Text(
-                  '확인',
+                  '닫기',
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                 ),
               ),

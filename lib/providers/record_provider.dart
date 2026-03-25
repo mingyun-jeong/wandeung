@@ -377,6 +377,7 @@ class RecordService {
     List<GymColorScale>? scales,
     String? videoQuality,
     bool localOnly = false,
+    int? fileSizeBytes,
   }) async {
     final userId = _supabase.auth.currentUser!.id;
 
@@ -398,6 +399,7 @@ class RecordService {
       videoDurationSeconds: videoDurationSeconds,
       videoQuality: videoQuality,
       localOnly: localOnly,
+      fileSize: fileSizeBytes,
     );
 
     final response = await _supabase

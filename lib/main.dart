@@ -5,12 +5,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'config/supabase_config.dart';
+import 'services/ad_service.dart';
 import 'app.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await dotenv.load();
   await SupabaseConfig.initialize();
+  AdService.initialize(); // 광고 SDK 초기화 (백그라운드 로드)
 
   // FFmpeg drawtext용 시스템 폰트 디렉토리 등록 (실패해도 앱 구동에 영향 없음)
   try {

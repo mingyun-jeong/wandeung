@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/instagram_icon.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -129,7 +130,7 @@ class GymDetailScreen extends ConsumerWidget {
 
               if (gym.instagramUrl != null)
                 _InfoTile(
-                  icon: Icons.camera_alt_outlined,
+                  iconWidget: const InstagramIcon(size: 22),
                   label: _extractInstagramHandle(gym.instagramUrl!),
                   subText: gym.instagramUrl!,
                   trailing: const Icon(
@@ -205,14 +206,16 @@ class GymDetailScreen extends ConsumerWidget {
 
 /// 정보 타일 (구글맵 스타일 리스트 아이템)
 class _InfoTile extends StatelessWidget {
-  final IconData icon;
+  final IconData? icon;
+  final Widget? iconWidget;
   final String label;
   final String? subText;
   final Widget? trailing;
   final VoidCallback? onTap;
 
   const _InfoTile({
-    required this.icon,
+    this.icon,
+    this.iconWidget,
     required this.label,
     this.subText,
     this.trailing,
@@ -227,7 +230,7 @@ class _InfoTile extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
         child: Row(
           children: [
-            Icon(icon, size: 22, color: const Color(0xFF757575)),
+            iconWidget ?? Icon(icon, size: 22, color: const Color(0xFF757575)),
             const SizedBox(width: 16),
             Expanded(
               child: Column(

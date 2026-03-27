@@ -22,6 +22,27 @@ final userPositionProvider = FutureProvider<Position?>((ref) async {
 
 final searchQueryProvider = StateProvider<String>((ref) => '');
 
+/// 한글+영문 조합 이름에서 영문 부분 제거
+String _cleanGymName(String name) {
+  // 한글이 포함되어 있는지 확인
+  final hasKorean = RegExp(r'[가-힣]').hasMatch(name);
+  if (!hasKorean) return name; // 영문만인 경우 그대로 반환
+
+  // 괄호 안 영문 제거: (ALLEZ CLIMBING), (pogoclimb) 등
+  var cleaned = name.replaceAll(RegExp(r'\s*\([^)]*[a-zA-Z][^)]*\)'), '');
+
+  // 연속된 영문+공백 블록 제거 (끝부분): 'THECLIMB B HONGDAE, SEOUL'
+  cleaned = cleaned.replaceAll(RegExp(r'\s*[-–]?\s*[A-Za-z][A-Za-z\s,&.\-]*$'), '');
+
+  // 앞쪽 영문 블록 제거 (뒤에 한글 괄호가 오는 경우): 'Waverock Namcheon(웨이브락남천점)'
+  cleaned = cleaned.replaceAll(RegExp(r'^[A-Za-z][A-Za-z\s]*(?=\()'), '');
+
+  // 남은 괄호 정리
+  cleaned = cleaned.replaceAll(RegExp(r'[()]'), '');
+
+  return cleaned.trim();
+}
+
 Future<List<ClimbingGym>> _searchGooglePlaces({
   required String searchQuery,
   required String apiKey,
@@ -64,7 +85,7 @@ Future<List<ClimbingGym>> _searchGooglePlaces({
         final lng = (location?['lng'] as num?)?.toDouble();
         return ClimbingGym(
           id: null,
-          name: item['name'] ?? '',
+          name: _cleanGymName(item['name'] ?? ''),
           address: item['formatted_address'],
           latitude: lat,
           longitude: lng,

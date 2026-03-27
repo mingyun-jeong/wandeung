@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'instagram_icon.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../providers/camera_settings_provider.dart';
 import '../providers/gym_color_scale_provider.dart';
+import '../providers/gym_instagram_provider.dart';
 import 'gym_map_sheet.dart';
 import 'gym_selection_sheet.dart';
 
@@ -32,13 +35,9 @@ class CameraGymOverlay extends ConsumerWidget {
               children: [
                 const Icon(Icons.location_on, color: Colors.white, size: 18),
                 const SizedBox(width: 6),
-                ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 140),
-                  child: Text(
-                    gymName,
-                    style: const TextStyle(color: Colors.white, fontSize: 13),
-                    overflow: TextOverflow.ellipsis,
-                  ),
+                Text(
+                  gymName.length > 8 ? '${gymName.substring(0, 8)}..' : gymName,
+                  style: const TextStyle(color: Colors.white, fontSize: 13),
                 ),
                 const SizedBox(width: 4),
                 const Icon(Icons.arrow_drop_down,
@@ -67,8 +66,19 @@ class CameraGymOverlay extends ConsumerWidget {
             ),
           ),
         ],
+
+        // Instagram icon — opens instagram page (DB에서 place_id로 조회)
+        if (settings.selectedGym?.googlePlaceId != null)
+          _InstagramButton(placeId: settings.selectedGym!.googlePlaceId!),
       ],
     );
+  }
+
+  static void _openInstagram(String url) async {
+    final uri = Uri.parse(url);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
   }
 
   void _showGymSelection(BuildContext context, WidgetRef ref) {
@@ -86,6 +96,32 @@ class CameraGymOverlay extends ConsumerWidget {
           ref.read(cameraSettingsProvider.notifier).setGrade(lv1.vMin);
         }
       },
+    );
+  }
+}
+
+class _InstagramButton extends ConsumerWidget {
+  final String placeId;
+  const _InstagramButton({required this.placeId});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final instagramUrl = ref.watch(gymInstagramByPlaceIdProvider(placeId)).valueOrNull;
+    if (instagramUrl == null) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.only(left: 6),
+      child: GestureDetector(
+        onTap: () => CameraGymOverlay._openInstagram(instagramUrl),
+        child: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: const BoxDecoration(
+            color: Colors.black54,
+            shape: BoxShape.circle,
+          ),
+          child: const InstagramIcon(size: 18),
+        ),
+      ),
     );
   }
 }

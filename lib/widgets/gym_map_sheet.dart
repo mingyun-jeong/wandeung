@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'instagram_icon.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
@@ -636,7 +637,7 @@ class _InstagramIconButton extends ConsumerWidget {
             await launchUrl(uri, mode: LaunchMode.externalApplication);
           }
         },
-        icon: const Icon(Icons.camera_alt_outlined, size: 20),
+        icon: const InstagramIcon(size: 20),
         tooltip: 'Instagram',
         style: IconButton.styleFrom(
           foregroundColor: colorScheme.primary,

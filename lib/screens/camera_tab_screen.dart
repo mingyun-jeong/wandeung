@@ -128,11 +128,13 @@ class _CameraTabScreenState extends ConsumerState<CameraTabScreen>
       if (mounted) {
         final minZoom = await controller.getMinZoomLevel();
         final maxZoom = await controller.getMaxZoomLevel();
+        final defaultZoom = 0.6.clamp(minZoom, maxZoom);
+        await controller.setZoomLevel(defaultZoom);
         setState(() {
           _controller = controller;
           _minZoom = minZoom;
           _maxZoom = maxZoom;
-          _currentZoom = minZoom;
+          _currentZoom = defaultZoom;
           _errorMessage = null;
         });
       }

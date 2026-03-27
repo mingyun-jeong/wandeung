@@ -170,9 +170,9 @@ class UploadCompression {
 
   static const String preset = 'fast';
 
-  /// Free 티어: 720p CRF 28 압축
+  /// Free 티어: 720p CRF 25 압축
   static const int freeTargetHeight = 720;
-  static const int freeCrf = 28;
+  static const int freeCrf = 25;
 
   /// Pro 티어: 1080p 원본 그대로 (재인코딩 없음)
   static const int proTargetHeight = 1080;

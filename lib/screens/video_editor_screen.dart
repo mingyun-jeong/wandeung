@@ -14,11 +14,11 @@ import '../providers/record_provider.dart';
 import '../providers/subtitle_provider.dart';
 import '../providers/upload_queue_provider.dart';
 import '../providers/video_editor_provider.dart';
-import '../config/supabase_config.dart';
-import '../models/user_subscription.dart';
-import '../providers/app_config_provider.dart';
-import '../providers/bonus_save_provider.dart';
-import '../providers/subscription_provider.dart';
+// import '../config/supabase_config.dart'; // 오픈 프로모션: 비활성화
+// import '../models/user_subscription.dart'; // 오픈 프로모션: 비활성화
+// import '../providers/app_config_provider.dart'; // 오픈 프로모션: 비활성화
+// import '../providers/bonus_save_provider.dart'; // 오픈 프로모션: 비활성화
+// import '../providers/subscription_provider.dart'; // 오픈 프로모션: 비활성화
 import '../services/video_export_service.dart';
 import '../services/video_upload_service.dart';
 import '../utils/thumbnail_utils.dart';
@@ -456,109 +456,8 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
     super.dispose();
   }
 
-  void _showStorageFullSheet(int currentUsage, int storageLimit) {
-    final usedMB = currentUsage / 1024 / 1024;
-    final limitMB = storageLimit / 1024 / 1024;
-    final ratio = (currentUsage / storageLimit).clamp(0.0, 1.0);
-
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      backgroundColor: Colors.white,
-      builder: (context) => SafeArea(
-        child: Padding(
-        padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.grey[300],
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            const SizedBox(height: 24),
-            Container(
-              width: 64,
-              height: 64,
-              decoration: BoxDecoration(
-                color: const Color(0xFFFEE2E2),
-                borderRadius: BorderRadius.circular(32),
-              ),
-              child: const Icon(
-                Icons.cloud_off_rounded,
-                size: 32,
-                color: Color(0xFFEF4444),
-              ),
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              '저장 공간이 부족해요',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              '클라우드 저장 공간을 모두 사용했어요.\n기존 영상을 삭제하면 공간을 확보할 수 있어요.',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey[600],
-                height: 1.5,
-              ),
-            ),
-            const SizedBox(height: 20),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text('사용량',
-                    style: TextStyle(fontSize: 12, color: Colors.grey[500])),
-                Text(
-                  '${usedMB.toStringAsFixed(1)} MB / ${limitMB.toStringAsFixed(0)} MB',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFFEF4444),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(4),
-              child: LinearProgressIndicator(
-                value: ratio,
-                minHeight: 8,
-                backgroundColor: const Color(0xFFF0F0F0),
-                valueColor:
-                    const AlwaysStoppedAnimation<Color>(Color(0xFFEF4444)),
-              ),
-            ),
-            const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton(
-                onPressed: () => Navigator.pop(context),
-                style: FilledButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child: const Text(
-                  '확인',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                ),
-              ),
-            ),
-          ],
-        ),
-      )),
-    );
-  }
+  // 오픈 프로모션: 용량 초과 팝업 비활성화
+  // void _showStorageFullSheet(int currentUsage, int storageLimit) { ... }
 
   /// 내보내기 실행
   Future<void> _handleExport() async {
@@ -576,27 +475,28 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
       if (!wifiConfirmed || !mounted) return;
     }
 
+    // 오픈 프로모션: 용량 제한 비활성화 (무제한)
     // Free 티어 클라우드 용량 체크
-    if (!isLocalOnly) {
-      final userId = SupabaseConfig.client.auth.currentUser?.id;
-      if (userId != null) {
-        final tier = ref.read(subscriptionTierProvider);
-        if (tier == SubscriptionTier.free) {
-          final storageLimit = await ref.read(freeStorageLimitBytesProvider.future);
-          final currentUsage =
-              await VideoUploadService.getCloudUsage(userId);
-          if (currentUsage >= storageLimit) {
-            final bonusNotifier = ref.read(bonusSaveProvider.notifier);
-            if (bonusNotifier.hasBonus) {
-              await bonusNotifier.consume();
-            } else {
-              if (mounted) _showStorageFullSheet(currentUsage, storageLimit);
-              return;
-            }
-          }
-        }
-      }
-    }
+    // if (!isLocalOnly) {
+    //   final userId = SupabaseConfig.client.auth.currentUser?.id;
+    //   if (userId != null) {
+    //     final tier = ref.read(subscriptionTierProvider);
+    //     if (tier == SubscriptionTier.free) {
+    //       final storageLimit = await ref.read(freeStorageLimitBytesProvider.future);
+    //       final currentUsage =
+    //           await VideoUploadService.getCloudUsage(userId);
+    //       if (currentUsage >= storageLimit) {
+    //         final bonusNotifier = ref.read(bonusSaveProvider.notifier);
+    //         if (bonusNotifier.hasBonus) {
+    //           await bonusNotifier.consume();
+    //         } else {
+    //           if (mounted) _showStorageFullSheet(currentUsage, storageLimit);
+    //           return;
+    //         }
+    //       }
+    //     }
+    //   }
+    // }
 
     const quality = ExportQuality.original;
 

@@ -17,7 +17,9 @@ final freeStorageLimitBytesProvider = FutureProvider<int>((ref) async {
     debugPrint('[AppConfig] raw value=$value (${value.runtimeType})');
     if (value is int) return value;
     if (value is num) return value.toInt();
-    return int.tryParse(value.toString()) ?? _defaultFreeStorageLimitBytes;
+    // jsonb 컬럼에 문자열로 저장된 경우 따옴표 제거 후 파싱
+    final str = value.toString().replaceAll('"', '').trim();
+    return int.tryParse(str) ?? _defaultFreeStorageLimitBytes;
   } catch (e) {
     debugPrint('[AppConfig] free_storage_limit_bytes 조회 실패, 기본값 사용: $e');
     return _defaultFreeStorageLimitBytes;

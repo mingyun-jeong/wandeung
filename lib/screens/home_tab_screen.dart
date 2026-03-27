@@ -17,6 +17,7 @@ import '../screens/record_save_screen.dart';
 import '../screens/video_playback_screen.dart';
 import '../utils/constants.dart';
 import '../widgets/reclim_app_bar.dart';
+import '../widgets/upload_status_indicator.dart';
 
 class HomeTabScreen extends ConsumerWidget {
   const HomeTabScreen({super.key});
@@ -935,6 +936,17 @@ class _RecordGridCard extends StatelessWidget {
                             size: 18,
                           ),
                         ),
+                      ),
+                    ),
+                  // 클라우드 업로드 상태 (좌하단 영상길이 옆)
+                  if (record.id != null)
+                    Positioned(
+                      left: 2,
+                      top: 36,
+                      child: UploadStatusIndicator(
+                        recordId: record.id!,
+                        isLocalVideo: record.isLocalVideo,
+                        localOnly: record.localOnly,
                       ),
                     ),
                   // 영상 길이 (좌하단)

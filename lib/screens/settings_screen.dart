@@ -513,15 +513,37 @@ class _CloudUsageIndicator extends ConsumerWidget {
                       color: ReclimColors.textSecondary,
                     ),
                   ),
-                  Text(
-                    '${usedMB.toStringAsFixed(1)} MB / ${limitMB.toStringAsFixed(0)} MB',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: ratio > 0.9
-                          ? Colors.red
-                          : ReclimColors.textSecondary,
-                    ),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        '${usedMB.toStringAsFixed(1)} MB / ',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: ReclimColors.textSecondary,
+                        ),
+                      ),
+                      Text(
+                        '${limitMB.toStringAsFixed(0)} MB',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: ReclimColors.textTertiary,
+                          decoration: TextDecoration.lineThrough,
+                          decorationColor: ReclimColors.textTertiary,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      const Text(
+                        '무제한',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                          color: ReclimColors.accent,
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),

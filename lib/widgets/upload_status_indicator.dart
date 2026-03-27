@@ -23,14 +23,14 @@ class UploadStatusIndicator extends ConsumerWidget {
     if (status == null && !isLocalVideo) {
       return const Padding(
         padding: EdgeInsets.all(4),
-        child: Icon(Icons.cloud_done, size: 16, color: Colors.blue),
+        child: Icon(Icons.cloud_done, size: 16, color: Color(0xFF00E676)),
       );
     }
 
     if (status == UploadStatus.uploaded) {
       return const Padding(
         padding: EdgeInsets.all(4),
-        child: Icon(Icons.cloud_done, size: 16, color: Colors.blue),
+        child: Icon(Icons.cloud_done, size: 16, color: Color(0xFF00E676)),
       );
     }
 

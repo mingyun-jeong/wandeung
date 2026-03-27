@@ -5,6 +5,7 @@ import 'package:path/path.dart' as p;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 import '../providers/camera_settings_provider.dart';
 import '../providers/gym_color_scale_provider.dart';
 import '../utils/cache_cleanup.dart';
@@ -56,6 +57,7 @@ class _CameraTabScreenState extends ConsumerState<CameraTabScreen>
       _isRecording = false;
       _timer?.cancel();
       _recordingSeconds = 0;
+      WakelockPlus.disable();
       controllerToDispose?.dispose();
     } else if (state == AppLifecycleState.resumed) {
       if (_controller == null && !_isInitializing && _hasEverInitialized) {
@@ -155,10 +157,12 @@ class _CameraTabScreenState extends ConsumerState<CameraTabScreen>
           _recordingSeconds = 0;
         });
         _timer?.cancel();
+        WakelockPlus.disable();
         return;
       }
       final file = await _controller!.stopVideoRecording();
       _timer?.cancel();
+      WakelockPlus.disable();
       if (!mounted) return;
 
       // .temp → .mp4로 변환 (캐시에 유지, 저장 시에만 영구 저장소로 이동)
@@ -188,6 +192,7 @@ class _CameraTabScreenState extends ConsumerState<CameraTabScreen>
       try {
         await _controller!.startVideoRecording();
         if (!mounted) return;
+        WakelockPlus.enable();
         _timer = Timer.periodic(const Duration(seconds: 1), (_) {
           if (mounted) setState(() => _recordingSeconds++);
         });
@@ -224,6 +229,7 @@ class _CameraTabScreenState extends ConsumerState<CameraTabScreen>
     WidgetsBinding.instance.removeObserver(this);
     _controller?.dispose();
     _timer?.cancel();
+    WakelockPlus.disable();
     CacheCleanup.clearAppCache();
     super.dispose();
   }
@@ -249,6 +255,7 @@ class _CameraTabScreenState extends ConsumerState<CameraTabScreen>
         _isRecording = false;
         _timer?.cancel();
         _recordingSeconds = 0;
+        WakelockPlus.disable();
         if (mounted) setState(() {});
         controllerToDispose?.dispose();
       }

@@ -10,7 +10,7 @@ final favoriteGymsProvider = FutureProvider<List<ClimbingGym>>((ref) async {
 
   final response = await SupabaseConfig.client
       .from('user_favorite_gyms')
-      .select('gym_id, climbing_gyms(id, name, address, latitude, longitude, google_place_id, brand_name)')
+      .select('gym_id, climbing_gyms(id, name, address, latitude, longitude, google_place_id, brand_name, instagram_url)')
       .eq('user_id', userId)
       .order('created_at', ascending: false);
 
@@ -31,7 +31,7 @@ final recommendedGymsProvider = FutureProvider<List<ClimbingGym>>((ref) async {
   // 기록에서 gym_id별 방문 횟수 집계
   final response = await SupabaseConfig.client
       .from('climbing_records')
-      .select('gym_id, climbing_gyms(id, name, address, latitude, longitude, google_place_id, brand_name)')
+      .select('gym_id, climbing_gyms(id, name, address, latitude, longitude, google_place_id, brand_name, instagram_url)')
       .eq('user_id', userId)
       .isFilter('parent_record_id', null)
       .not('gym_id', 'is', null);

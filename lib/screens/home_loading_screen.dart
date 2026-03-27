@@ -47,17 +47,35 @@ class _HomeLoadingScreenState extends ConsumerState<HomeLoadingScreen>
     _progressController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 3),
-    )..forward();
+    );
 
     _pulseController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1200),
-    )..repeat(reverse: true);
+    );
 
     _dotController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1800),
-    )..repeat();
+    );
+
+    _checkEntryModeAndStart();
+  }
+
+  Future<void> _checkEntryModeAndStart() async {
+    final prefs = await SharedPreferences.getInstance();
+    final isCameraEntry = prefs.getBool('entry_mode_camera') ?? false;
+    if (isCameraEntry) {
+      // 촬영 모드 진입 시 로딩 애니메이션 건너뜀
+      ref.read(bottomNavIndexProvider.notifier).state = 2;
+      if (mounted) setState(() => _done = true);
+      return;
+    }
+
+    // 일반 모드: 로딩 애니메이션 시작
+    _progressController.forward();
+    _pulseController.repeat(reverse: true);
+    _dotController.repeat();
 
     Timer(const Duration(seconds: 3), () {
       if (mounted) {
@@ -97,12 +115,7 @@ class _HomeLoadingScreenState extends ConsumerState<HomeLoadingScreen>
     }
   }
 
-  Future<void> _applyEntryModeAndFinish() async {
-    final prefs = await SharedPreferences.getInstance();
-    final isCameraEntry = prefs.getBool('entry_mode_camera') ?? false;
-    if (isCameraEntry) {
-      ref.read(bottomNavIndexProvider.notifier).state = 2;
-    }
+  void _applyEntryModeAndFinish() {
     if (mounted) setState(() => _done = true);
   }
 

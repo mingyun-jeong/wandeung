@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../models/climbing_gym.dart';
 import '../providers/gym_stats_provider.dart';
 
@@ -10,15 +12,12 @@ class GymDetailScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final colorScheme = Theme.of(context).colorScheme;
     final hasLocation = gym.latitude != null && gym.longitude != null;
-    final latLng = hasLocation
-        ? LatLng(gym.latitude!, gym.longitude!)
-        : null;
+    final latLng =
+        hasLocation ? LatLng(gym.latitude!, gym.longitude!) : null;
 
-    final activeUsers = gym.id != null
-        ? ref.watch(gymCrowdednessProvider(gym.id!))
-        : null;
+    final activeUsers =
+        gym.id != null ? ref.watch(gymCrowdednessProvider(gym.id!)) : null;
 
     return Scaffold(
       appBar: AppBar(
@@ -36,12 +35,13 @@ class GymDetailScreen extends ConsumerWidget {
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           child: Column(
-        children: [
-          // 지도 영역
-          SizedBox(
-            height: 300,
-            child: hasLocation
-                ? GoogleMap(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // 지도 영역 (인터랙티브)
+              if (hasLocation)
+                SizedBox(
+                  height: 240,
+                  child: GoogleMap(
                     initialCameraPosition: CameraPosition(
                       target: latLng!,
                       zoom: 16,
@@ -54,93 +54,157 @@ class GymDetailScreen extends ConsumerWidget {
                       ),
                     },
                     myLocationButtonEnabled: false,
-                    zoomControlsEnabled: true,
+                    zoomControlsEnabled: false,
                     mapToolbarEnabled: false,
-                  )
-                : Container(
-                    color: const Color(0xFFF0F0F0),
-                    child: Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.location_off_outlined,
-                            size: 48,
-                            color: colorScheme.onSurface.withOpacity(0.3),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            '위치 정보가 없습니다',
-                            style: TextStyle(
-                              color: colorScheme.onSurface.withOpacity(0.5),
-                            ),
-                          ),
-                        ],
-                      ),
+                  ),
+                )
+              else
+                Container(
+                  height: 240,
+                  color: const Color(0xFFF0F0F0),
+                  child: const Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.location_off_outlined,
+                          size: 48,
+                          color: Color(0xFFBDBDBD),
+                        ),
+                        SizedBox(height: 8),
+                        Text(
+                          '위치 정보가 없습니다',
+                          style: TextStyle(color: Color(0xFF9E9E9E)),
+                        ),
+                      ],
                     ),
                   ),
-          ),
-
-          // 암장 정보
-          Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Icon(
-                      Icons.location_on,
-                      color: colorScheme.primary,
-                      size: 20,
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        gym.name,
-                        style: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                  ],
                 ),
-                if (gym.address != null) ...[
-                  const SizedBox(height: 12),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Icon(
-                        Icons.map_outlined,
-                        size: 18,
-                        color: colorScheme.onSurface.withOpacity(0.5),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          gym.address!,
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: colorScheme.onSurface.withOpacity(0.7),
-                            height: 1.4,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
 
-                // 실시간 활동 유저
-                if (activeUsers != null) ...[
-                  const SizedBox(height: 20),
-                  _ActiveUsersCard(activeUsers: activeUsers),
-                ],
-              ],
-            ),
+              // 암장 이름
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 4),
+                child: Text(
+                  gym.name,
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w700,
+                    height: 1.2,
+                  ),
+                ),
+              ),
+
+              // 실시간 활동 유저
+              if (activeUsers != null)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+                  child: _ActiveUsersCard(activeUsers: activeUsers),
+                ),
+
+              const SizedBox(height: 16),
+              const Divider(height: 1, indent: 20, endIndent: 20),
+              const SizedBox(height: 8),
+
+              // 정보 리스트
+              if (gym.address != null)
+                _InfoTile(
+                  icon: Icons.location_on_outlined,
+                  label: gym.address!,
+                ),
+
+              if (gym.instagramUrl != null)
+                _InfoTile(
+                  icon: Icons.camera_alt_outlined,
+                  label: _extractInstagramHandle(gym.instagramUrl!),
+                  subText: gym.instagramUrl!,
+                  trailing: const Icon(
+                    Icons.open_in_new,
+                    size: 16,
+                    color: Color(0xFF9E9E9E),
+                  ),
+                  onTap: () async {
+                    final uri = Uri.parse(gym.instagramUrl!);
+                    if (await canLaunchUrl(uri)) {
+                      await launchUrl(uri, mode: LaunchMode.externalApplication);
+                    }
+                  },
+                ),
+
+              const SizedBox(height: 20),
+            ],
           ),
-        ],
+        ),
       ),
+    );
+  }
+
+  String _extractInstagramHandle(String url) {
+    final uri = Uri.tryParse(url);
+    if (uri == null) return url;
+    final path = uri.path.replaceAll('/', '');
+    return '@$path';
+  }
+}
+
+/// 정보 타일 (구글맵 스타일 리스트 아이템)
+class _InfoTile extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String? subText;
+  final Widget? trailing;
+  final VoidCallback? onTap;
+
+  const _InfoTile({
+    required this.icon,
+    required this.label,
+    this.subText,
+    this.trailing,
+    this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+        child: Row(
+          children: [
+            Icon(icon, size: 22, color: const Color(0xFF757575)),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      height: 1.4,
+                      color: Color(0xFF424242),
+                    ),
+                  ),
+                  if (subText != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 2),
+                      child: Text(
+                        subText!,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Color(0xFF9E9E9E),
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            if (trailing != null) ...[
+              const SizedBox(width: 8),
+              trailing!,
+            ],
+          ],
         ),
       ),
     );
@@ -155,53 +219,42 @@ class _ActiveUsersCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return activeUsers.when(
       loading: () => const SizedBox(
-        height: 56,
+        height: 24,
         child: Center(
           child: SizedBox(
-            width: 20,
-            height: 20,
+            width: 16,
+            height: 16,
             child: CircularProgressIndicator(strokeWidth: 2),
           ),
         ),
       ),
       error: (_, __) => const SizedBox.shrink(),
       data: (count) {
-        final dotColor = count == 0
-            ? Colors.grey[400]!
-            : const Color(0xFF4CAF50);
-
-        return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          decoration: BoxDecoration(
-            color: const Color(0xFFF0F0F0),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Row(
-            children: [
-              // 깜빡이는 점 (활동 중일 때)
-              Container(
-                width: 8,
-                height: 8,
-                decoration: BoxDecoration(
-                  color: dotColor,
-                  shape: BoxShape.circle,
-                ),
+        return Row(
+          children: [
+            Container(
+              width: 8,
+              height: 8,
+              decoration: BoxDecoration(
+                color: count > 0
+                    ? const Color(0xFF4CAF50)
+                    : const Color(0xFFBDBDBD),
+                shape: BoxShape.circle,
               ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  count > 0
-                      ? '최근 1시간 동안 $count명이 등반을 기록 중이에요!'
-                      : '최근 1시간 동안 등반 기록이 없네요ㅠ 주변 지인들에게 리클림 앱을 소개해보세요~!',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey[700],
-                    height: 1.3,
-                  ),
-                ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              count > 0
+                  ? '지금 $count명이 등반 중'
+                  : '현재 등반 중인 사람이 없어요',
+              style: TextStyle(
+                fontSize: 14,
+                color: count > 0
+                    ? const Color(0xFF4CAF50)
+                    : const Color(0xFF9E9E9E),
               ),
-            ],
-          ),
+            ),
+          ],
         );
       },
     );

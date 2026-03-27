@@ -220,7 +220,7 @@ final recentGymsProvider = FutureProvider<List<ClimbingGym>>((ref) async {
 
   final response = await SupabaseConfig.client
       .from('climbing_records')
-      .select('climbing_gyms(id, name, address, latitude, longitude, google_place_id, brand_name), recorded_at')
+      .select('climbing_gyms(id, name, address, latitude, longitude, google_place_id, brand_name, instagram_url), recorded_at')
       .eq('user_id', userId)
       .isFilter('parent_record_id', null)
       .not('gym_id', 'is', null)

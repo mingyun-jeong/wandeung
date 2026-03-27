@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../models/climbing_gym.dart';
 import '../providers/gym_provider.dart';
 
@@ -583,8 +584,28 @@ class _GymMapSheetState extends ConsumerState<GymMapSheet> {
                 ],
               ),
             ),
+            if (gym.instagramUrl != null)
+              Padding(
+                padding: const EdgeInsets.only(left: 8),
+                child: IconButton(
+                  onPressed: () async {
+                    final uri = Uri.parse(gym.instagramUrl!);
+                    if (await canLaunchUrl(uri)) {
+                      await launchUrl(uri, mode: LaunchMode.externalApplication);
+                    }
+                  },
+                  icon: const Icon(Icons.camera_alt_outlined, size: 20),
+                  tooltip: 'Instagram',
+                  style: IconButton.styleFrom(
+                    foregroundColor: colorScheme.primary,
+                    backgroundColor: colorScheme.primaryContainer.withOpacity(0.5),
+                    padding: const EdgeInsets.all(8),
+                    minimumSize: const Size(36, 36),
+                  ),
+                ),
+              ),
             if (_isPickMode) ...[
-              const SizedBox(width: 12),
+              const SizedBox(width: 8),
               FilledButton(
                 onPressed: () => widget.onGymSelected!(gym),
                 style: FilledButton.styleFrom(

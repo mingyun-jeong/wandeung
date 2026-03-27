@@ -17,7 +17,6 @@ import '../providers/bonus_save_provider.dart';
 import '../providers/subscription_provider.dart';
 import '../providers/upload_queue_provider.dart';
 import '../services/video_export_service.dart';
-import '../services/ad_service.dart';
 import '../services/video_upload_service.dart';
 import '../models/climbing_gym.dart';
 import '../models/climbing_record.dart';
@@ -544,32 +543,19 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
               ],
             ),
             const SizedBox(height: 24),
-            // 광고 보고 저장하기 버튼
+            // 추가 저장 버튼
             SizedBox(
               width: double.infinity,
               child: FilledButton.icon(
                 onPressed: () {
                   Navigator.pop(context);
-                  if (!AdService.isRewardedAdReady) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('광고를 불러오는 중이에요. 잠시 후 다시 시도해주세요.'),
-                      ),
-                    );
-                    AdService.loadRewardedAd();
-                    return;
-                  }
-                  AdService.showRewardedAd(
-                    onRewarded: () {
-                      ref.read(bonusSaveProvider.notifier).grantBonus();
-                      _skipQuotaCheck = true;
-                      _saveRecord();
-                    },
-                  );
+                  ref.read(bonusSaveProvider.notifier).grantBonus();
+                  _skipQuotaCheck = true;
+                  _saveRecord();
                 },
-                icon: const Icon(Icons.play_circle_outline, size: 20),
+                icon: const Icon(Icons.save_outlined, size: 20),
                 label: const Text(
-                  '광고 보고 저장하기',
+                  '그래도 저장하기',
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                 ),
                 style: FilledButton.styleFrom(

@@ -54,3 +54,29 @@ android/key.properties
 
 # Firebase
 android/app/google-services.json
+
+# Credentials & secrets
+*.pem
+*.p12
+*.key
+*.cert
+*.crt
+*.env.*
+.env.local
+.env.production
+credentials.json
+service-account*.json
+**/secrets/
+
+# Database dumps & exports
+*.sql
+*.dump
+*.sqlite
+*.db
+climbing_gyms_rows.json
+
+# Ad-hoc scripts
+scripts/
+
+# Supabase temp
+supabase/.temp/

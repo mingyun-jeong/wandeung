@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/climbing_gym.dart';
+import '../providers/gym_photo_provider.dart';
 import '../providers/gym_stats_provider.dart';
 
 class GymDetailScreen extends ConsumerWidget {
@@ -19,6 +19,10 @@ class GymDetailScreen extends ConsumerWidget {
     final activeUsers =
         gym.id != null ? ref.watch(gymCrowdednessProvider(gym.id!)) : null;
 
+    final photosAsync = gym.googlePlaceId != null
+        ? ref.watch(gymPhotoProvider(gym.googlePlaceId!))
+        : null;
+
     return Scaffold(
       appBar: AppBar(
         title: Text(
@@ -31,54 +35,65 @@ class GymDetailScreen extends ConsumerWidget {
           if (gym.id != null) {
             ref.invalidate(gymCrowdednessProvider(gym.id!));
           }
+          if (gym.googlePlaceId != null) {
+            ref.invalidate(gymPhotoProvider(gym.googlePlaceId!));
+          }
         },
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 지도 영역 (인터랙티브)
-              if (hasLocation)
-                SizedBox(
-                  height: 240,
-                  child: GoogleMap(
-                    initialCameraPosition: CameraPosition(
-                      target: latLng!,
-                      zoom: 16,
-                    ),
-                    markers: {
-                      Marker(
-                        markerId: MarkerId(gym.id ?? gym.name),
-                        position: latLng,
-                        infoWindow: InfoWindow(title: gym.name),
+              // 썸네일 사진
+              if (photosAsync != null)
+                photosAsync.when(
+                  data: (photos) {
+                    if (photos.isEmpty) return const SizedBox.shrink();
+                    return SizedBox(
+                      height: 220,
+                      child: PageView.builder(
+                        itemCount: photos.length,
+                        itemBuilder: (context, index) => Image.network(
+                          photos[index],
+                          height: 220,
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                          loadingBuilder: (_, child, progress) {
+                            if (progress == null) return child;
+                            return Container(
+                              color: const Color(0xFFF0F0F0),
+                              child: const Center(
+                                child: SizedBox(
+                                  width: 24,
+                                  height: 24,
+                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                ),
+                              ),
+                            );
+                          },
+                          errorBuilder: (_, __, ___) => Container(
+                            color: const Color(0xFFF0F0F0),
+                            child: const Center(
+                              child: Icon(Icons.image_not_supported_outlined,
+                                  size: 40, color: Color(0xFFBDBDBD)),
+                            ),
+                          ),
+                        ),
                       ),
-                    },
-                    myLocationButtonEnabled: false,
-                    zoomControlsEnabled: false,
-                    mapToolbarEnabled: false,
-                  ),
-                )
-              else
-                Container(
-                  height: 240,
-                  color: const Color(0xFFF0F0F0),
-                  child: const Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.location_off_outlined,
-                          size: 48,
-                          color: Color(0xFFBDBDBD),
-                        ),
-                        SizedBox(height: 8),
-                        Text(
-                          '위치 정보가 없습니다',
-                          style: TextStyle(color: Color(0xFF9E9E9E)),
-                        ),
-                      ],
+                    );
+                  },
+                  loading: () => Container(
+                    height: 220,
+                    color: const Color(0xFFF0F0F0),
+                    child: const Center(
+                      child: SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
                     ),
                   ),
+                  error: (_, __) => const SizedBox.shrink(),
                 ),
 
               // 암장 이름
@@ -130,7 +145,49 @@ class GymDetailScreen extends ConsumerWidget {
                   },
                 ),
 
-              const SizedBox(height: 20),
+              // 지도 영역
+              if (hasLocation) ...[
+                const SizedBox(height: 8),
+                const Divider(height: 1, indent: 20, endIndent: 20),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
+                  child: const Text(
+                    '위치',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF424242),
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: SizedBox(
+                      height: 200,
+                      child: GoogleMap(
+                        initialCameraPosition: CameraPosition(
+                          target: latLng!,
+                          zoom: 16,
+                        ),
+                        markers: {
+                          Marker(
+                            markerId: MarkerId(gym.id ?? gym.name),
+                            position: latLng,
+                            infoWindow: InfoWindow(title: gym.name),
+                          ),
+                        },
+                        myLocationButtonEnabled: false,
+                        zoomControlsEnabled: false,
+                        mapToolbarEnabled: false,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+
+              const SizedBox(height: 24),
             ],
           ),
         ),

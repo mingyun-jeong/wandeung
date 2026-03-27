@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/climbing_gym.dart';
+import '../providers/gym_instagram_provider.dart';
 import '../providers/gym_provider.dart';
 
 final _mapPickerQueryProvider = StateProvider<String>((ref) => '');
@@ -507,12 +508,12 @@ class _GymMapSheetState extends ConsumerState<GymMapSheet> {
           ),
         ),
 
-        _buildBottomCard(colorScheme),
+        _buildBottomCard(colorScheme, ref),
       ],
     );
   }
 
-  Widget _buildBottomCard(ColorScheme colorScheme) {
+  Widget _buildBottomCard(ColorScheme colorScheme, WidgetRef ref) {
     final gym = _tappedGym ?? widget.selectedGym;
 
     if (gym == null) {
@@ -584,26 +585,11 @@ class _GymMapSheetState extends ConsumerState<GymMapSheet> {
                 ],
               ),
             ),
-            if (gym.instagramUrl != null)
-              Padding(
-                padding: const EdgeInsets.only(left: 8),
-                child: IconButton(
-                  onPressed: () async {
-                    final uri = Uri.parse(gym.instagramUrl!);
-                    if (await canLaunchUrl(uri)) {
-                      await launchUrl(uri, mode: LaunchMode.externalApplication);
-                    }
-                  },
-                  icon: const Icon(Icons.camera_alt_outlined, size: 20),
-                  tooltip: 'Instagram',
-                  style: IconButton.styleFrom(
-                    foregroundColor: colorScheme.primary,
-                    backgroundColor: colorScheme.primaryContainer.withOpacity(0.5),
-                    padding: const EdgeInsets.all(8),
-                    minimumSize: const Size(36, 36),
-                  ),
-                ),
-              ),
+            _InstagramIconButton(
+              gymName: gym.name,
+              directUrl: gym.instagramUrl,
+              colorScheme: colorScheme,
+            ),
             if (_isPickMode) ...[
               const SizedBox(width: 8),
               FilledButton(
@@ -616,6 +602,47 @@ class _GymMapSheetState extends ConsumerState<GymMapSheet> {
               ),
             ],
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// 인스타그램 아이콘 버튼 (directUrl이 없으면 DB에서 조회)
+class _InstagramIconButton extends ConsumerWidget {
+  final String gymName;
+  final String? directUrl;
+  final ColorScheme colorScheme;
+
+  const _InstagramIconButton({
+    required this.gymName,
+    required this.directUrl,
+    required this.colorScheme,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final instagramUrl = directUrl ??
+        ref.watch(gymInstagramProvider(gymName)).valueOrNull;
+
+    if (instagramUrl == null) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.only(left: 8),
+      child: IconButton(
+        onPressed: () async {
+          final uri = Uri.parse(instagramUrl);
+          if (await canLaunchUrl(uri)) {
+            await launchUrl(uri, mode: LaunchMode.externalApplication);
+          }
+        },
+        icon: const Icon(Icons.camera_alt_outlined, size: 20),
+        tooltip: 'Instagram',
+        style: IconButton.styleFrom(
+          foregroundColor: colorScheme.primary,
+          backgroundColor: colorScheme.primaryContainer.withOpacity(0.5),
+          padding: const EdgeInsets.all(8),
+          minimumSize: const Size(36, 36),
         ),
       ),
     );

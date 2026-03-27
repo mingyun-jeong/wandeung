@@ -19,13 +19,19 @@ class UploadStatusIndicator extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final status = ref.watch(uploadStatusProvider(recordId));
 
-    // 클라우드 완료: 아이콘 숨김 (정상 상태이므로 표시 불필요)
+    // 클라우드 완료: 업로드 완료 아이콘 표시
     if (status == null && !isLocalVideo) {
-      return const SizedBox.shrink();
+      return const Padding(
+        padding: EdgeInsets.all(4),
+        child: Icon(Icons.cloud_done, size: 16, color: Colors.blue),
+      );
     }
 
     if (status == UploadStatus.uploaded) {
-      return const SizedBox.shrink();
+      return const Padding(
+        padding: EdgeInsets.all(4),
+        child: Icon(Icons.cloud_done, size: 16, color: Colors.blue),
+      );
     }
 
     // 로컬 전용 모드: 로컬 아이콘

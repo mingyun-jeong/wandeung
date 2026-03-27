@@ -81,13 +81,13 @@ final entryModeCameraProvider =
 });
 
 class EntryModeCameraNotifier extends StateNotifier<bool> {
-  EntryModeCameraNotifier() : super(false) {
+  EntryModeCameraNotifier() : super(true) {
     _load();
   }
 
   Future<void> _load() async {
     final prefs = await SharedPreferences.getInstance();
-    state = prefs.getBool(_entryModeKey) ?? false;
+    state = prefs.getBool(_entryModeKey) ?? true;
   }
 
   Future<void> toggle() async {

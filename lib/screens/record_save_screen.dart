@@ -16,7 +16,6 @@ import '../providers/app_config_provider.dart';
 import '../providers/bonus_save_provider.dart';
 import '../providers/subscription_provider.dart';
 import '../providers/upload_queue_provider.dart';
-import '../services/video_export_service.dart';
 import '../services/video_upload_service.dart';
 import '../models/climbing_gym.dart';
 import '../models/climbing_record.dart';
@@ -365,7 +364,9 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
           tags: _tags,
           scales: ref.read(allColorScalesProvider).valueOrNull,
           localOnly: !isCloudMode,
-          fileSizeBytes: isCloudMode ? fileSizeBytes : null,
+          // file_size_bytes는 업로드 완료 후 실제 압축 크기로 기록됨
+          // INSERT 시점에 원본 크기를 기록하면 다른 기기에서 부풀려진 용량이 보이는 문제가 있음
+          fileSizeBytes: null,
         );
 
         // 백그라운드 작업에 필요한 값을 pop 전에 캡처
@@ -684,19 +685,10 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
           }
         }
 
-        String uploadPath = videoPath;
-        try {
-          uploadPath = await VideoExportService.compressForUpload(
-            inputPath: videoPath,
-            isPro: isPro,
-          );
-          debugPrint('업로드 준비 완료: $uploadPath (Pro=$isPro)');
-        } catch (e) {
-          debugPrint('업로드 압축 실패, 원본 사용: $e');
-        }
+        // 압축은 processQueue에서 일괄 수행 (이중 압축 방지)
         uploadQueueNotifier.enqueue(
           recordId: recordId,
-          localVideoPath: uploadPath,
+          localVideoPath: videoPath,
         );
       }
 

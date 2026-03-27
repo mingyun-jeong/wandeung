@@ -14,7 +14,7 @@ void main() {
   group('UploadCompression', () {
     test('Free tier settings', () {
       expect(UploadCompression.freeTargetHeight, 720);
-      expect(UploadCompression.freeCrf, 28);
+      expect(UploadCompression.freeCrf, 25);
     });
 
     test('Pro tier settings', () {

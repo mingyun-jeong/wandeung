@@ -3,7 +3,7 @@ import 'package:cling/models/climbing_record.dart';
 
 void main() {
   group('ClimbingRecord', () {
-    test('fileSize is not included in toInsertMap (updated via upload service)', () {
+    test('fileSize is included in toInsertMap when set', () {
       final record = ClimbingRecord(
         userId: 'user1',
         grade: 'v3',
@@ -11,6 +11,20 @@ void main() {
         status: 'completed',
         recordedAt: DateTime(2026, 3, 16),
         fileSize: 25000000,
+      );
+
+      final map = record.toInsertMap();
+      expect(map.containsKey('file_size_bytes'), isTrue);
+      expect(map['file_size_bytes'], 25000000);
+    });
+
+    test('fileSize is not included in toInsertMap when null', () {
+      final record = ClimbingRecord(
+        userId: 'user1',
+        grade: 'v3',
+        difficultyColor: 'red',
+        status: 'completed',
+        recordedAt: DateTime(2026, 3, 16),
       );
 
       final map = record.toInsertMap();

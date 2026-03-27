@@ -34,6 +34,16 @@ class SettingsScreen extends ConsumerWidget {
           '환경설정',
           style: TextStyle(fontWeight: FontWeight.w700, fontSize: 18),
         ),
+        actions: [
+          if (isCloudMode)
+            IconButton(
+              icon: const Icon(Icons.refresh_rounded, size: 22),
+              tooltip: '사용량 새로고침',
+              onPressed: () {
+                ref.invalidate(cloudUsageProvider);
+              },
+            ),
+        ],
       ),
       body: SafeArea(
         child: ListView(

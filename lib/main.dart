@@ -17,9 +17,9 @@ void main() async {
   // FFmpeg drawtext용 시스템 폰트 디렉토리 등록 (실패해도 앱 구동에 영향 없음)
   try {
     if (Platform.isAndroid) {
-      await FFmpegKitConfig.setFontDirectory('/system/fonts');
+      await FFmpegKitConfig.setFontDirectory('/system/fonts', {});
     } else if (Platform.isIOS) {
-      await FFmpegKitConfig.setFontDirectory('/System/Library/Fonts');
+      await FFmpegKitConfig.setFontDirectory('/System/Library/Fonts', {});
     }
   } catch (e) {
     debugPrint('FFmpegKit font directory 설정 실패: $e');

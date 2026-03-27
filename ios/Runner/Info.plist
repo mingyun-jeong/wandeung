@@ -51,10 +51,14 @@
 		<string>등반 영상에 소리를 녹음하기 위해 마이크 접근이 필요합니다</string>
 		<key>NSLocationWhenInUseUsageDescription</key>
 		<string>근처 클라이밍장을 자동으로 찾기 위해 위치 정보가 필요합니다</string>
-		<key>GADApplicationIdentifier</key>
-		<string>ca-app-pub-6951210541539723~6602000810</string>
+		<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+		<string>근처 클라이밍장을 자동으로 찾기 위해 위치 정보가 필요합니다</string>
+		<key>NSPhotoLibraryUsageDescription</key>
+		<string>등반 영상을 저장하고 불러오기 위해 사진 라이브러리 접근이 필요합니다</string>
 		<key>UIStatusBarHidden</key>
 		<false/>
+		<key>GIDClientID</key>
+		<string>597513393042-evurdl7pqdcvuhnrk77dc3f8vbigp2pf.apps.googleusercontent.com</string>
 		<key>CFBundleURLTypes</key>
 		<array>
 			<dict>

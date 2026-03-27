@@ -39,7 +39,7 @@ class ReclimApp extends ConsumerWidget {
         ),
         useMaterial3: true,
         scaffoldBackgroundColor: ReclimColors.surface,
-        cardTheme: CardTheme(
+        cardTheme: CardThemeData(
           elevation: 0,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
@@ -97,7 +97,7 @@ class ReclimApp extends ConsumerWidget {
             ),
           ),
         ),
-        dialogTheme: const DialogTheme(
+        dialogTheme: const DialogThemeData(
           backgroundColor: Colors.white,
           surfaceTintColor: Colors.transparent,
         ),

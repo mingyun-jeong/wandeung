@@ -1,13 +1,59 @@
+import 'dart:io';
+
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/user_subscription.dart';
 import 'subscription_provider.dart';
 
+/// 네트워크 인터페이스로 Wi-Fi 연결 여부를 직접 확인
+/// Android: wlan0, iOS: en0
+Future<bool> checkWifiByInterface() async {
+  try {
+    final interfaces = await NetworkInterface.list();
+    final names = interfaces.map((i) => i.name).toList();
+    // Android: wlan0, wlan1 등 / iOS: en0
+    final hasWifi = interfaces.any(
+      (i) => i.name.startsWith('wlan') || i.name == 'en0',
+    );
+    debugPrint('[Connectivity] interface check: wifi=$hasWifi, interfaces=$names');
+    return hasWifi;
+  } catch (e) {
+    debugPrint('[Connectivity] interface check failed: $e');
+    return false;
+  }
+}
+
+/// connectivity_plus가 wifi를 누락한 경우 NetworkInterface로 보정
+Future<List<ConnectivityResult>> _correctResults(
+    List<ConnectivityResult> results) async {
+  if (results.contains(ConnectivityResult.wifi)) return results;
+  if (results.contains(ConnectivityResult.none) || results.isEmpty) {
+    return results;
+  }
+  // connectivity_plus가 wifi를 보고하지 않지만 실제 Wi-Fi 인터페이스가 있으면 보정
+  if (await checkWifiByInterface()) {
+    return [...results, ConnectivityResult.wifi];
+  }
+  return results;
+}
+
 /// 현재 네트워크 연결 상태 스트림
-final connectivityProvider = StreamProvider<List<ConnectivityResult>>((ref) {
-  return Connectivity().onConnectivityChanged;
+/// connectivity_plus가 Wi-Fi를 누락하는 경우 NetworkInterface로 보정
+final connectivityProvider =
+    StreamProvider<List<ConnectivityResult>>((ref) async* {
+  final connectivity = Connectivity();
+
+  // 현재 상태 emit (보정 포함)
+  final initial = await connectivity.checkConnectivity();
+  yield await _correctResults(initial);
+
+  // 이후 변경 스트림 (보정 포함)
+  await for (final results in connectivity.onConnectivityChanged) {
+    yield await _correctResults(results);
+  }
 });
 
 /// 현재 Wi-Fi 연결 여부

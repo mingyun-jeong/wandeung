@@ -6,6 +6,7 @@ import 'package:video_player/video_player.dart';
 import '../config/r2_config.dart';
 import '../models/climbing_record.dart';
 import '../utils/constants.dart';
+import '../services/ad_service.dart';
 import '../widgets/reclim_app_bar.dart';
 import '../app.dart';
 
@@ -33,6 +34,7 @@ class _VideoCompareScreenState extends State<VideoCompareScreen> {
   String? _error1;
   String? _error2;
   bool _isSyncPlaying = false;
+  bool _hasShownAd = false;
 
   @override
   void initState() {
@@ -156,6 +158,12 @@ class _VideoCompareScreenState extends State<VideoCompareScreen> {
     final c1 = _controller1;
     final c2 = _controller2;
     if (c1 == null && c2 == null) return;
+
+    // 첫 동시 재생 시 전면 광고 표시
+    if (!_hasShownAd && !_isSyncPlaying) {
+      _hasShownAd = true;
+      AdService.showInterstitial();
+    }
 
     if (_isSyncPlaying) {
       _isSyncPlaying = false;

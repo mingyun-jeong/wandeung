@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 
 import '../config/r2_config.dart';
+import '../providers/connectivity_provider.dart';
 import '../app.dart';
 
 /// 다운로드 작업을 제어하기 위한 토큰.
@@ -175,17 +176,7 @@ Future<bool> confirmIfNotWifi(
   String message = '영상을 편집하려면 먼저 다운로드해야 합니다.\n\nWi-Fi에 연결되어 있지 않습니다. 모바일 데이터로 다운로드하시겠습니까?',
   String confirmLabel = '다운로드',
 }) async {
-  bool isWifi;
-  try {
-    final interfaces = await NetworkInterface.list();
-    debugPrint('[Wi-Fi 체크] interfaces: ${interfaces.map((i) => i.name).toList()}');
-    // Android Wi-Fi 인터페이스명: wlan0
-    isWifi = interfaces.any((i) => i.name.startsWith('wlan'));
-  } catch (e) {
-    debugPrint('[Wi-Fi 체크] 오류: $e');
-    isWifi = false;
-  }
-  debugPrint('[Wi-Fi 체크] isWifi: $isWifi');
+  final isWifi = await checkWifiByInterface();
   if (isWifi) return true;
 
   final confirmed = await showModalBottomSheet<bool>(

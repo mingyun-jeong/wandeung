@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../app.dart';
 import '../models/gym_setting_schedule.dart';
 import '../utils/constants.dart';
+import '../widgets/banner_ad_widget.dart';
 
 class SettingScheduleDetailScreen extends StatelessWidget {
   final GymSettingSchedule schedule;
@@ -54,10 +55,13 @@ class SettingScheduleDetailScreen extends StatelessWidget {
           style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 18),
         ),
       ),
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+      body: Column(
+        children: [
+          Expanded(
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
             // ─── 헤더 카드: 암장 정보 ───
             Container(
               width: double.infinity,
@@ -197,8 +201,15 @@ class SettingScheduleDetailScreen extends StatelessWidget {
                 )),
 
             const SizedBox(height: 32),
-          ],
-        ),
+                ],
+              ),
+            ),
+          ),
+          const SafeArea(
+            top: false,
+            child: BannerAdWidget(),
+          ),
+        ],
       ),
     );
   }

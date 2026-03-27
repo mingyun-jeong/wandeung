@@ -479,6 +479,15 @@ class _CloudCard extends ConsumerWidget {
   }
 }
 
+String _formatStorageSize(int bytes) {
+  const gb = 1024 * 1024 * 1024;
+  const mb = 1024 * 1024;
+  if (bytes >= gb) {
+    return '${(bytes / gb).toStringAsFixed(1)} GB';
+  }
+  return '${(bytes / mb).toStringAsFixed(1)} MB';
+}
+
 // ─── 클라우드 사용량 프로그레스 바 ────────────────────────────────
 class _CloudUsageIndicator extends ConsumerWidget {
   @override
@@ -495,8 +504,7 @@ class _CloudUsageIndicator extends ConsumerWidget {
       data: (usedBytes) {
         final limitAsync = ref.watch(freeStorageLimitBytesProvider);
         final limitBytes = limitAsync.valueOrNull ?? (500 * 1024 * 1024);
-        final usedMB = usedBytes / 1024 / 1024;
-        final limitMB = limitBytes / 1024 / 1024;
+        final usedLabel = _formatStorageSize(usedBytes);
         final ratio = (usedBytes / limitBytes).clamp(0.0, 1.0);
 
         return Padding(
@@ -517,7 +525,7 @@ class _CloudUsageIndicator extends ConsumerWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        '${usedMB.toStringAsFixed(1)} MB / ',
+                        '$usedLabel / ',
                         style: const TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
@@ -525,7 +533,7 @@ class _CloudUsageIndicator extends ConsumerWidget {
                         ),
                       ),
                       Text(
-                        '${limitMB.toStringAsFixed(0)} MB',
+                        _formatStorageSize(limitBytes.toInt()),
                         style: const TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,

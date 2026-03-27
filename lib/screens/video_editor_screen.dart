@@ -19,6 +19,7 @@ import '../providers/video_editor_provider.dart';
 // import '../providers/app_config_provider.dart'; // 오픈 프로모션: 비활성화
 // import '../providers/bonus_save_provider.dart'; // 오픈 프로모션: 비활성화
 // import '../providers/subscription_provider.dart'; // 오픈 프로모션: 비활성화
+import '../services/ad_service.dart';
 import '../services/video_export_service.dart';
 import '../services/video_upload_service.dart';
 import '../utils/thumbnail_utils.dart';
@@ -564,6 +565,9 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
         await Future<void>.delayed(const Duration(milliseconds: 400));
         if (!mounted) return;
         Navigator.pop(context); // 바텀시트 닫기
+
+        // 내보내기 완료 후 전면 광고 표시
+        AdService.showInterstitial();
 
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(

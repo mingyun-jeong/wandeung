@@ -32,6 +32,7 @@ import '../widgets/gym_map_sheet.dart';
 import '../widgets/tag_input.dart';
 import '../widgets/reclim_app_bar.dart';
 import '../utils/cache_cleanup.dart';
+import '../services/ad_service.dart';
 import '../utils/video_download_cache.dart';
 import '../utils/thumbnail_utils.dart';
 import 'records_tab_screen.dart';
@@ -604,6 +605,20 @@ class _RecordSaveScreenState extends ConsumerState<RecordSaveScreen> {
 
   Future<void> _downloadToGallery() async {
     if (_savingToGallery) return;
+
+    // 보상형 광고 표시 (광고가 없으면 바로 진행)
+    if (AdService.isRewardedReady) {
+      bool rewarded = false;
+      final shown = AdService.showRewarded(onRewarded: () {
+        rewarded = true;
+      });
+      if (shown) {
+        // 광고가 닫힐 때까지 잠시 대기
+        await Future<void>.delayed(const Duration(milliseconds: 500));
+        if (!rewarded || !mounted) return;
+      }
+    }
+
     setState(() => _savingToGallery = true);
 
     try {

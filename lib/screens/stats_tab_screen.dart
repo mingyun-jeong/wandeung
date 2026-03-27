@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/stats_provider.dart';
 import '../widgets/gym_stats_tab.dart';
+import '../widgets/banner_ad_widget.dart';
 import '../widgets/reclim_app_bar.dart';
 import '../app.dart';
 
@@ -57,11 +58,21 @@ class _StatsTabScreenState extends ConsumerState<StatsTabScreen>
           ],
         ),
       ),
-      body: TabBarView(
-        controller: _tabController,
+      body: Column(
         children: [
-          _buildMyStatsTab(),
-          const GymStatsTab(),
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
+              children: [
+                _buildMyStatsTab(),
+                const GymStatsTab(),
+              ],
+            ),
+          ),
+          const SafeArea(
+            top: false,
+            child: BannerAdWidget(),
+          ),
         ],
       ),
     );

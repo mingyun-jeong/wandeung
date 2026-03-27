@@ -697,6 +697,7 @@ class _WeeklySettingSection extends ConsumerWidget {
             ),
           ),
           ...entries.map((entry) => _WeeklySettingCard(
+                gymId: entry.schedule.gymId,
                 gymName: entry.schedule.gymName ?? '',
                 sectors: entry.sectors,
                 dateStr: entry.dateStr,
@@ -708,10 +709,12 @@ class _WeeklySettingSection extends ConsumerWidget {
 }
 
 class _WeeklySettingCard extends StatelessWidget {
+  final String gymId;
   final String gymName;
   final List<SettingSector> sectors;
   final String dateStr;
   const _WeeklySettingCard({
+    required this.gymId,
     required this.gymName,
     required this.sectors,
     required this.dateStr,
@@ -735,7 +738,17 @@ class _WeeklySettingCard extends StatelessWidget {
     final sectorNames = sectors.map((s) => s.name).join(', ');
     final isToday = _isToday(dateStr);
 
-    return Container(
+    return GestureDetector(
+      onTap: () {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => GymDetailScreen(
+              gym: ClimbingGym(id: gymId, name: gymName),
+            ),
+          ),
+        );
+      },
+      child: Container(
       width: double.infinity,
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(14),
@@ -797,6 +810,7 @@ class _WeeklySettingCard extends StatelessWidget {
           ),
         ],
       ),
+    ),
     );
   }
 }

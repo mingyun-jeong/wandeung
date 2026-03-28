@@ -55,6 +55,8 @@
 		<string>근처 클라이밍장을 자동으로 찾기 위해 위치 정보가 필요합니다</string>
 		<key>NSPhotoLibraryUsageDescription</key>
 		<string>등반 영상을 저장하고 불러오기 위해 사진 라이브러리 접근이 필요합니다</string>
+		<key>NSUserTrackingUsageDescription</key>
+		<string>무료 영상 편집, 클라우드 저장, 통계 기능을 유지하기 위해 광고가 표시됩니다</string>
 		<key>GADApplicationIdentifier</key>
 		<string>ca-app-pub-6951210541539723~6602000810</string>
 		<key>SKAdNetworkItems</key>

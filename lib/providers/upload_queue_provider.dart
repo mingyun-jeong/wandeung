@@ -279,10 +279,11 @@ class UploadQueueNotifier extends StateNotifier<List<UploadTask>> {
           final isPro =
               _ref.read(subscriptionTierProvider) == SubscriptionTier.pro;
 
-          // Free 티어: 720p 압축 후 업로드
+          // 에디터에서 추출한 영상(isExport)은 이미 인코딩됨 → 재압축 불필요
+          // Free 티어 원본 영상만 720p 압축
           String uploadPath = task.localVideoPath;
-          if (!isPro) {
-            debugPrint('[UploadQueue] Free 티어 — 720p 압축 시작');
+          if (!isPro && !task.isExport) {
+            debugPrint('[UploadQueue] Free 티어 원본 — 720p 압축 시작');
             uploadPath = await VideoExportService.compressForUpload(
               inputPath: task.localVideoPath,
               isPro: false,

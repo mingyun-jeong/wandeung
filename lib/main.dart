@@ -13,8 +13,6 @@ void main() async {
   await dotenv.load();
   await SupabaseConfig.initialize();
   await AdService.initialize();
-  AdService.preloadInterstitial();
-  AdService.preloadRewarded();
 
   // FFmpeg drawtext용 시스템 폰트 디렉토리 등록 (실패해도 앱 구동에 영향 없음)
   try {

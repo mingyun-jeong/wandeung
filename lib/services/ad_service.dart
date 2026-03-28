@@ -1,6 +1,8 @@
 import 'dart:io' show Platform;
 
+import 'package:app_tracking_transparency/app_tracking_transparency.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 /// AdMob 광고 서비스
@@ -20,11 +22,28 @@ class AdService {
       bool.fromEnvironment('ENABLE_ADS', defaultValue: true);
   static bool get isAdEnabled => _enableAds;
 
-  /// SDK 초기화 (main에서 1회 호출)
+  /// MobileAds SDK만 초기화 (main에서 호출)
   static Future<void> initialize() async {
+    debugPrint('[AdService] initialize 시작 (isAdEnabled=$isAdEnabled, _initialized=$_initialized)');
     if (_initialized || !isAdEnabled) return;
     await MobileAds.instance.initialize();
     _initialized = true;
+    debugPrint('[AdService] MobileAds SDK 초기화 완료');
+  }
+
+  /// iOS ATT 권한 요청 후 광고 사전 로드 (첫 화면 빌드 후 호출)
+  static Future<void> requestTrackingAndPreload() async {
+    debugPrint('[AdService] requestTrackingAndPreload 시작');
+    if (!isAdEnabled) {
+      debugPrint('[AdService] 광고 비활성화 상태 — 스킵');
+      return;
+    }
+    if (Platform.isIOS) {
+      final status = await AppTrackingTransparency.requestTrackingAuthorization();
+      debugPrint('[AdService] ATT 권한 상태: $status');
+    }
+    preloadInterstitial();
+    preloadRewarded();
   }
 
   // ---------------------------------------------------------------------------

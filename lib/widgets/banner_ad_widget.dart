@@ -22,12 +22,14 @@ class _BannerAdWidgetState extends State<BannerAdWidget> {
   }
 
   Future<void> _loadAd() async {
+    debugPrint('[BannerAd] 로드 시작 (adUnitId=${AdService.bannerAdUnitId})');
     final banner = BannerAd(
       adUnitId: AdService.bannerAdUnitId,
       size: AdSize.banner,
       request: const AdRequest(),
       listener: BannerAdListener(
         onAdLoaded: (ad) {
+          debugPrint('[BannerAd] 로드 성공');
           if (mounted) {
             setState(() {
               _bannerAd = ad as BannerAd;

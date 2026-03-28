@@ -607,19 +607,11 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen> {
           }
 
           // 로컬 전용이 아닌 경우에만 업로드 큐 등록
+          // 추출 영상은 이미 인코딩되었으므로 재압축 없이 바로 업로드
           if (!isLocalOnly) {
-            String uploadPath = result.outputPath;
-            try {
-              uploadPath = await VideoExportService.compressForUpload(
-                inputPath: result.outputPath,
-              );
-              debugPrint('업로드 압축 완료: $uploadPath');
-            } catch (e) {
-              debugPrint('업로드 압축 실패, 원본 사용: $e');
-            }
             ref.read(uploadQueueProvider.notifier).enqueue(
               recordId: savedExport.id!,
-              localVideoPath: uploadPath,
+              localVideoPath: result.outputPath,
               isExport: true,
             );
           }

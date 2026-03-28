@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/auth_provider.dart';
+import '../services/ad_service.dart';
 import 'home_loading_screen.dart';
 import 'login_screen.dart';
 
@@ -78,6 +80,11 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     );
 
     _startAnimations();
+
+    // 첫 프레임 렌더링 후 ATT 권한 요청 + 광고 사전 로드
+    SchedulerBinding.instance.addPostFrameCallback((_) {
+      AdService.requestTrackingAndPreload();
+    });
   }
 
   void _startAnimations() async {

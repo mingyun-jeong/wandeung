@@ -155,7 +155,10 @@ class MediaSegment {
 /// 내보내기 품질 설정
 enum ExportQuality {
   /// 원본 화질 — 해상도 변환 없이 내보내기
-  original(0, 20, '원본 화질');
+  original(0, 20, '원본 화질'),
+
+  /// 업로드용 — Free 티어 클라우드 업로드 최적화 (720p)
+  upload(720, 25, '클라우드 최적화');
 
   final int targetHeight; // 0이면 원본 유지
   final int crf;

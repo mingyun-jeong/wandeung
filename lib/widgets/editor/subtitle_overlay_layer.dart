@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../models/subtitle_item.dart';
 import '../../providers/subtitle_provider.dart';
+import '../../utils/overlay_scale.dart';
 
 /// 비디오 프리뷰 위에 현재 시간에 해당하는 자막을 표시하고 드래그로 위치 조절
 /// 선택된 자막에는 인라인 편집 툴바(크기/기울기/굵기) 표시
@@ -83,7 +84,8 @@ class SubtitleOverlayLayer extends ConsumerWidget {
                           : null,
                       child: Transform.rotate(
                         angle: item.rotation,
-                        child: _SubtitleDisplay(item: item),
+                        child: _SubtitleDisplay(
+                            item: item, previewSize: previewSize),
                       ),
                     ),
                   ),
@@ -271,31 +273,36 @@ class _ToolDivider extends StatelessWidget {
 
 class _SubtitleDisplay extends StatelessWidget {
   final SubtitleItem item;
-  const _SubtitleDisplay({required this.item});
+  final Size previewSize;
+  const _SubtitleDisplay({required this.item, required this.previewSize});
 
   @override
   Widget build(BuildContext context) {
+    final scale = overlayScale(previewSize.height);
+    final scaledFontSize = item.fontSize * scale;
+    final scaledStrokeWidth = item.strokeWidth * scale;
+
     // 항상 최소 그림자를 적용하여 영상 위에서 텍스트가 보이도록 함
     final shadows = item.hasShadow
         ? [
-            const Shadow(
-              color: Color(0x80000000),
-              offset: Offset(1, 1),
-              blurRadius: 2,
+            Shadow(
+              color: const Color(0x80000000),
+              offset: Offset(1 * scale, 1 * scale),
+              blurRadius: 2 * scale,
             ),
           ]
         : [
-            const Shadow(
-              color: Color(0xAA000000),
-              offset: Offset(0.5, 0.5),
-              blurRadius: 1,
+            Shadow(
+              color: const Color(0xAA000000),
+              offset: Offset(0.5 * scale, 0.5 * scale),
+              blurRadius: 1 * scale,
             ),
           ];
 
     Widget text = Text(
       item.text,
       style: TextStyle(
-        fontSize: item.fontSize,
+        fontSize: scaledFontSize,
         color: item.color,
         fontWeight: item.isBold ? FontWeight.w800 : FontWeight.normal,
         shadows: shadows,
@@ -308,11 +315,11 @@ class _SubtitleDisplay extends StatelessWidget {
           Text(
             item.text,
             style: TextStyle(
-              fontSize: item.fontSize,
+              fontSize: scaledFontSize,
               fontWeight: item.isBold ? FontWeight.w800 : FontWeight.normal,
               foreground: Paint()
                 ..style = PaintingStyle.stroke
-                ..strokeWidth = item.strokeWidth
+                ..strokeWidth = scaledStrokeWidth
                 ..color = item.strokeColor!,
             ),
           ),
@@ -323,10 +330,11 @@ class _SubtitleDisplay extends StatelessWidget {
 
     if (item.backgroundColor != null) {
       return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+        padding: EdgeInsets.symmetric(
+            horizontal: 6 * scale, vertical: 3 * scale),
         decoration: BoxDecoration(
           color: item.backgroundColor!.withOpacity(0.6),
-          borderRadius: BorderRadius.circular(4),
+          borderRadius: BorderRadius.circular(4 * scale),
         ),
         child: text,
       );

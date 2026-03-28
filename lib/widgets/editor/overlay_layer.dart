@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../models/video_edit_models.dart';
 import '../../providers/video_editor_provider.dart';
+import '../../utils/overlay_scale.dart';
 
 /// 비디오 프리뷰 위에 표시되는 드래그 가능한 오버레이 레이어
 class OverlayLayer extends ConsumerWidget {
@@ -162,7 +163,8 @@ class _InteractiveStickerState extends State<_InteractiveSticker> {
                 )
               : null,
           padding: widget.isSelected ? const EdgeInsets.all(2) : null,
-          child: _OverlaySticker(item: widget.item),
+          child: _OverlaySticker(
+              item: widget.item, previewSize: widget.previewSize),
         ),
       ),
     );
@@ -172,10 +174,13 @@ class _InteractiveStickerState extends State<_InteractiveSticker> {
 /// V-Grade 스티커 위젯 (record_card.dart의 _GradeBadge 스타일 기반)
 class _OverlaySticker extends StatelessWidget {
   final OverlayItem item;
-  const _OverlaySticker({required this.item});
+  final Size previewSize;
+  const _OverlaySticker({required this.item, required this.previewSize});
 
   @override
   Widget build(BuildContext context) {
+    final scale = overlayScale(previewSize.height);
+    final scaledFontSize = item.fontSize * scale;
     final bgColor = item.backgroundColor;
 
     // 배경색이 없으면 이모지 전용: 배경/그림자 없이 텍스트만 표시
@@ -183,7 +188,7 @@ class _OverlaySticker extends StatelessWidget {
       return Text(
         item.text,
         style: TextStyle(
-          fontSize: item.fontSize,
+          fontSize: scaledFontSize,
         ),
       );
     }
@@ -192,15 +197,16 @@ class _OverlaySticker extends StatelessWidget {
         bgColor.computeLuminance() > 0.7;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      padding: EdgeInsets.symmetric(
+          horizontal: 14 * scale, vertical: 8 * scale),
       decoration: BoxDecoration(
         color: bgColor,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(14 * scale),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.3),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
+            blurRadius: 6 * scale,
+            offset: Offset(0, 2 * scale),
           ),
         ],
       ),
@@ -209,7 +215,7 @@ class _OverlaySticker extends StatelessWidget {
         style: TextStyle(
           color: isLight ? Colors.black87 : Colors.white,
           fontWeight: FontWeight.w800,
-          fontSize: item.fontSize,
+          fontSize: scaledFontSize,
         ),
       ),
     );

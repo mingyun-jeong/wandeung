@@ -8,6 +8,7 @@ import 'package:path_provider/path_provider.dart';
 
 import '../models/subtitle_item.dart';
 import '../models/video_edit_models.dart';
+import '../utils/overlay_scale.dart';
 
 /// 텍스트를 PNG 이미지로 렌더링하는 서비스.
 ///
@@ -45,7 +46,7 @@ class SubtitleImageRenderer {
     required ui.Size videoResolution,
     required String outputPath,
   }) async {
-    final scale = videoResolution.height / 800;
+    final scale = overlayScale(videoResolution.height);
     final fontSize = item.fontSize * scale;
 
     // 텍스트 측정
@@ -167,7 +168,7 @@ class SubtitleImageRenderer {
     required ui.Size videoResolution,
     required String outputPath,
   }) async {
-    final scale = videoResolution.height / 800;
+    final scale = overlayScale(videoResolution.height);
     final fontSize = item.fontSize * scale;
     final strokeWidth = item.strokeWidth * scale;
 

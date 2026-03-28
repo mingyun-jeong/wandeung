@@ -537,10 +537,6 @@ class _RecentGymChip extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final activeUsers = gym.id != null
-        ? ref.watch(gymCrowdednessProvider(gym.id!)).valueOrNull ?? 0
-        : 0;
-
     return GestureDetector(
       onTap: () {
         Navigator.of(context).push(
@@ -573,26 +569,6 @@ class _RecentGymChip extends ConsumerWidget {
                 color: ReclimColors.textSecondary,
               ),
             ),
-            if (activeUsers > 0) ...[
-              const SizedBox(width: 6),
-              Container(
-                width: 6,
-                height: 6,
-                decoration: const BoxDecoration(
-                  color: Color(0xFF4CAF50),
-                  shape: BoxShape.circle,
-                ),
-              ),
-              const SizedBox(width: 3),
-              Text(
-                '$activeUsers',
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF4CAF50),
-                ),
-              ),
-            ],
           ],
         ),
       ),

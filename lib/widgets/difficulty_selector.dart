@@ -123,7 +123,7 @@ class DifficultySelector extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     level != null
-                        ? 'Lv.${level.level}'
+                        ? level.vRangeLabel
                         : dc.korean,
                     style: TextStyle(
                       fontSize: 10,
@@ -134,14 +134,6 @@ class DifficultySelector extends StatelessWidget {
                           : colorScheme.onSurface.withOpacity(0.5),
                     ),
                   ),
-                  if (level != null)
-                    Text(
-                      level.vRangeLabel,
-                      style: TextStyle(
-                        fontSize: 8,
-                        color: colorScheme.onSurface.withOpacity(0.4),
-                      ),
-                    ),
                 ],
               ),
             );
